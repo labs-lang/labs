@@ -1,79 +1,13 @@
 ﻿// Learn more about F# at http://fsharp.org
 
 open System
-
-type Point = int * int
-
-let d (p1: Point, p2: Point) =
-    (float ((fst p1) - (fst p2)))**2.0 + (float ((snd p1) - (snd p2)))**2.0
-    |> sqrt;;
-
-type AttrVal =
-    | Int of int
-    | String of string
-    | P of Point
-
-type Val = int
-type Tval = Val * DateTime
-let timeof ( tv: Tval ) = snd tv
-
-type Tkey = string
-type Tpair = Tkey * Tval
-
-type Interface = Map<string, AttrVal>
-
-let initLoc p = Map.empty<string, AttrVal>.Add("loc", p)
-
-
-/// A timestamped map. Each key has one pair (value, timestamp)
-type Tmap = 
-    private { d : Map<Tkey, Tval> }
-   
-    static member Empty = 
-        {Tmap.d = Map.empty<Tkey, Tval>}
-    
-    static member (!=) (left: Tmap, right: Tmap) = 
-        not (left.d = right.d)
-
-    static member (+) (left: Tmap, right: Tpair) = 
-        let isNewer = 
-            right
-            |> fst
-            |> left.d.TryFind 
-            |> Option.forall (fun v -> timeof (snd right) > timeof v)
-        if isNewer then {left with d = left.d.Add right } else left
-
-    member this.Item
-        with get(k) = this.d.TryFind(k)
-
-type Action =
-    | Attr of string * AttrVal
-    | Put of Tpair
-    | Await of Tkey * Val
-    override this.ToString() = 
-        match this with
-        | Attr(a, v) -> sprintf "[%s := %s]" a (v.ToString())
-        | Put(p) -> sprintf "{%s <- %A}" (fst p) (fst (snd p))
-        | Await(k, v) -> sprintf "<%A = %A>" k v
-
-[<StructuredFormatDisplay("{AsString}")>]
-type Process = 
-    | Nil
-    | Proxy of string * Lazy<Process>
-    | Prefix of Action * Process
-    static member ( ^. )(left: Action, right: Process) =
-        Prefix(left, right)
-    member this.AsString = this.ToString()        
-    override this.ToString() =
-        match this with
-        | Nil -> "0"
-        | Proxy(name, p) -> name 
-        | Prefix(action, proc) -> sprintf "%s.%s" (action.ToString()) proc.AsString
-
+open Buzz.Types
+open Buzz.Functions
+open Buzz.LStig
 
 #nowarn "0342"
 type Comp = 
-    private { K: Tmap; I : Interface; P : Process }
+    private { K: LStig; I : Interface; P : Process }
 
     interface IComparable with
         member x.CompareTo y =
@@ -115,7 +49,7 @@ type Comp =
                     |> List.map (fun (c, a, nc) -> (this, a, nc))
                 else []
     
-    member this.Check(k: Tkey, v: Val) =
+    member this.Check(k: Key, v: Val) =
         this.K.[k]
         |> Option.exists (fun p -> v.Equals(fst p))
 
@@ -173,7 +107,7 @@ let print x =
     x
 
 /// Return a Put action with a "fresh" timestamp
-let PutNow (k:Tkey, v:Val) =
+let PutNow (k:Key, v:Val) =
     Put((k, (v, DateTime.Now)))
 
 
@@ -195,7 +129,7 @@ let main argv =
 
     // Stub component
     let comp = {
-        Comp.K = Tmap.Empty; 
+        Comp.K = LStig.Empty; 
         I = initLoc (P(0,0));
         P = Nil
     }
