@@ -1,0 +1,14 @@
+﻿<Properties StartupConfiguration="{7CB9C9A0-793A-43F3-8A34-6C1EBEBEA20C}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="buzz/Program.fs">
+    <Files>
+      <File FileName="buzz/Program.fs" Line="14" Column="17" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.buzz PreferredExecutionTarget="MonoDevelop.Default" />
+  <MultiItemStartupConfigurations />
+</Properties>
