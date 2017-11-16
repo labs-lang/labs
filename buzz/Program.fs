@@ -76,19 +76,26 @@ let apply sys (cmp, lbl, nextCmp) =
                 then {c with P = Put(pair) ^. c.P}
                 else c)
             |> Set.add nextCmp
-            |> Some
-        | _ -> Some(newSys.Add(nextCmp))
+        | _ -> newSys.Add(nextCmp)
 
-/// Return the evolution of `sys` after performing a random transition.
-/// If no transition is available, return `sys`
-let step(sys: Sys) = 
-    let t = pickRandom (transitions sys)
-    t |> (Option.bind << apply) sys
-    |> Option.defaultValue sys
 
-/// Returns true if sys cannot perform any transition
+/// Returns true if sys cannot perform any transition.
 let isIdle (sys:Sys) =
     transitions sys |> Seq.isEmpty
+
+/// <summary>
+/// Returns the evolution of <c>sys</c> after performing a random transition.
+/// If no transition is available, returns <c>sys</c>.
+/// </summary>
+let step(sys: Sys) = 
+    if (isIdle sys) then sys
+    else
+    sys
+    |> transitions
+    |> pickRandom
+    |> Option.get
+    |> apply sys
+
 
 let print x =
     printfn "----\n%A" (x)
