@@ -4,42 +4,8 @@ open System
 open Buzz.Types
 open Buzz.Functions
 open Buzz.LStig
+open Buzz.Component
 
-type Comp = 
-    private { K: LStig; I : Interface; P : Process }
-    
-    member this.IsIdle() =
-        match this.P with
-        | Nil -> true
-        | _ -> false
-
-    /// Implement semantics of components
-    member this.Transitions() =
-        match this.P.Transition() with
-        | None -> []
-        | Some(action, next) ->
-            match action with
-            | Attr(a, v) -> [(this, Eps, {this with I=this.I.Add(a, v); P=next})]
-            | Put(pair) when this.K = this.K + pair -> 
-                [(this, Eps, {this with P=next})]
-            | Put(pair) ->
-                [(this, Write(this.I.["loc"], pair), {this with K=this.K + pair; P=next})]
-            | LazyPut(k, v) ->
-                let pair = (k, (v, DateTime.Now))
-                if this.K=this.K + pair 
-                    then [(this, Eps, {this with P=next})]
-                    else [(this, Write(this.I.["loc"], pair), {this with K=this.K + pair; P=next})]
-            | Await(k,v) ->
-                if this.Check(k,v) then
-                    {this with P = next}.Transitions()
-                    |> List.map (fun (c, l, nc) -> (this, l, nc))
-                 else []
-    
-    member this.Check(k: Key, v: Val) =
-        this.K.[k]
-        |> Option.exists (fun p -> v.Equals(fst p))
-
-and CompTransition = Comp * Label * Comp
 
 /// A system is a set of components
 type Sys = Set<Comp>
