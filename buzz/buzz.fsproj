@@ -7,6 +7,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Functions.fs" />
     <Compile Include="LStig.fs" />
+    <Compile Include="Component.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>
