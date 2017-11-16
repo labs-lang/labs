@@ -1,9 +1,0 @@
-/Users/luca/Projects/buzz/buzz/bin/Debug/netcoreapp2.0/buzz.deps.json
-/Users/luca/Projects/buzz/buzz/bin/Debug/netcoreapp2.0/buzz.runtimeconfig.json
-/Users/luca/Projects/buzz/buzz/bin/Debug/netcoreapp2.0/buzz.runtimeconfig.dev.json
-/Users/luca/Projects/buzz/buzz/bin/Debug/netcoreapp2.0/buzz.dll
-/Users/luca/Projects/buzz/buzz/bin/Debug/netcoreapp2.0/buzz.pdb
-/Users/luca/Projects/buzz/buzz/obj/Debug/netcoreapp2.0/buzz.fsproj.CoreCompileInputs.cache
-/Users/luca/Projects/buzz/buzz/obj/Debug/netcoreapp2.0/buzz.dll
-/Users/luca/Projects/buzz/buzz/obj/Debug/netcoreapp2.0/buzz.pdb
-/Users/luca/Projects/buzz/buzz/obj/Debug/netcoreapp2.0/buzz.fsprojResolveAssemblyReference.cache
