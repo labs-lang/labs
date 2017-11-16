@@ -5,61 +5,46 @@ open Buzz.Types
 open Buzz.Functions
 open Buzz.LStig
 
-#nowarn "0342"
 type Comp = 
     private { K: LStig; I : Interface; P : Process }
-
-    interface IComparable with
-        member x.CompareTo y =
-            match y with
-            | :? Comp as yComp -> hash(x).CompareTo(hash(yComp))
-            | _ -> 1
-        
-    //override x.Equals y = 
-        //match y with
-        //| :? Comp as yComp -> not (x <> yComp)
-        //| _ -> false
-
-    member this.Distance(other: Comp) =
-        let myLoc = this.I.["loc"]
-        let hisLoc = other.I.["loc"]
-        match (myLoc, hisLoc) with
-        | (Int(a), Int(b)) -> abs (a - b) |> float
-        | (String(a), String(b)) -> infinity
-        | (P(p1), P(p2)) -> d(p1, p2)
-        | _ -> infinity
     
     member this.IsIdle() =
         match this.P with
         | Nil -> true
         | _ -> false
 
+    /// Implement semantics of components
     member this.Transitions() =
-        match this.P with
-        | Proxy(_, proc) -> {this with P = proc.Value }.Transitions()
-        | Nil -> []
-        | Prefix(action, proc) -> 
+        match this.P.Transition() with
+        | None -> []
+        | Some(action, next) ->
             match action with
-            | Attr(a, v) -> [(this, action, {this with I=this.I.Add(a, v); P=proc})]
-            | Put(pair) -> [(this, action, {this with K=this.K + pair; P=proc})]
-            | Await(k, v) -> 
-                // The awareness operator is atomic
-                if this.Check(k,v) then 
-                    {this with P = proc}.Transitions()
-                    |> List.map (fun (c, a, nc) -> (this, a, nc))
-                else []
+            | Attr(a, v) -> [(this, Eps, {this with I=this.I.Add(a, v); P=next})]
+            | Put(pair) when this.K = this.K + pair -> 
+                [(this, Eps, {this with P=next})]
+            | Put(pair) ->
+                [(this, Write(this.I.["loc"], pair), {this with K=this.K + pair; P=next})]
+            | LazyPut(k, v) ->
+                let pair = (k, (v, DateTime.Now))
+                if this.K=this.K + pair 
+                    then [(this, Eps, {this with P=next})]
+                    else [(this, Write(this.I.["loc"], pair), {this with K=this.K + pair; P=next})]
+            | Await(k,v) ->
+                if this.Check(k,v) then
+                    {this with P = next}.Transitions()
+                    |> List.map (fun (c, l, nc) -> (this, l, nc))
+                 else []
     
     member this.Check(k: Key, v: Val) =
         this.K.[k]
         |> Option.exists (fun p -> v.Equals(fst p))
 
-and CompTransition = Comp * Action * Comp
+and CompTransition = Comp * Label * Comp
 
 /// A system is a set of components
 type Sys = Set<Comp>
 
 let rng = Random()
-let DELTA = 1.0
 
 /// Helper: choose random element from a Seq
 let pickRandom seq =
@@ -74,27 +59,29 @@ let transitions (sys: Sys) =
 
 /// Apply a transition to system `sys`. Return Some(s) if sys can perform the
 /// given transition and become `s`, otherwise None
-let apply sys ((cmp, action, nextCmp):CompTransition) =
-    let isValid = transitions sys |> Set.contains (cmp, action, nextCmp)
+let apply sys ((cmp, lbl, nextCmp):CompTransition) =
+    let prova = transitions sys
+
+    let isValid = sys.Contains cmp
     if not isValid then None else
+
         let newSys = sys.Remove(cmp)
-        match action with
-        | Put(p) when cmp.K != nextCmp.K -> 
+        match lbl with
+        | Write(l, pair) ->
             newSys
-            |> Set.map (fun c -> 
-                if cmp.Distance(c) <= DELTA
-                then match c.P with
-                     | Prefix(a, _) when a = action -> c
-                     | _ -> {c with P= action ^. c.P }
+            |> Set.map( 
+                fun c -> 
+                if link(l, c.I.["loc"])
+                then {c with P = Put(pair) ^. c.P}
                 else c)
-            |> Set.add (nextCmp)
+            |> Set.add nextCmp
             |> Some
         | _ -> Some(newSys.Add(nextCmp))
 
 /// Return the evolution of `sys` after performing a random transition.
 /// If no transition is available, return `sys`
 let step(sys: Sys) = 
-    let t = (pickRandom << transitions) sys
+    let t = pickRandom (transitions sys)
     t |> (Option.bind << apply) sys
     |> Option.defaultValue sys
 
@@ -106,26 +93,17 @@ let print x =
     printfn "----\n%A" (x)
     x
 
-/// Return a Put action with a "fresh" timestamp
-let PutNow (k:Key, v:Val) =
-    Put((k, (v, DateTime.Now)))
-
-
 [<EntryPoint>]
 let main argv = 
     printfn "Hello World from F#!"
 
     // Some basic processes
-    //let proc = PutNow("x", 1) ^. Nil
-    //let proc2 = Await("x", 1) ^. PutNow("x", 2) ^. Nil
+    let proc = LazyPut("x", 1) ^. Nil
+    let proc2 = Await("x", 1) ^. LazyPut("x", 2) ^. Nil
 
-    // We can also have recursive process definitions,
-    // but we must define them as unit -> Process functions
-    // to work well with F# type inference
-    let rec prova ():Process = PutNow("x", 1) ^. Await("x", 2) ^. Proxy("Pr1", lazy (prova()))
-    let rec prova2 ():Process = Await("x", 1) ^. PutNow("x", 2) ^. Proxy("Pr2", lazy (prova2()))
-
-
+   
+    let prova = Star(LazyPut("x", 1) ^. Await("x", 2))
+    let prova2 = Star(Await("x", 1) ^. LazyPut("x", 2))
 
     // Stub component
     let comp = {
@@ -137,14 +115,12 @@ let main argv =
     let points = [P(1,0); P(0,1); P(1,1)]
 
     let sys =
-        {comp with P = prova()}  ::
-        (
-        points
-        |> List.map (fun p -> {comp with I = initLoc p })
-        )
+        ( points |> List.map (fun p -> {comp with I = initLoc p }) )
         |> Set.ofList
-    
-    let mutable s = sys.Add {comp with P = prova2(); I = initLoc (P(2, 1)) }
+        |> Set.add {comp with P = prova}
+        |> Set.add {comp with P = prova2; I = initLoc (P(2, 1)) }
+
+    let mutable s = sys
     let mutable count = 0
 
     do (print s |> ignore)
@@ -154,6 +130,5 @@ let main argv =
         s <-  step s
         s |> Seq.sortBy (fun x -> x.K.["loc"]) |> List.ofSeq |> print |> ignore
         count <- count + 1 |> print
-        // printfn "%A" (transitions s)
 
     0 // return an integer exit code
