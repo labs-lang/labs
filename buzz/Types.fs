@@ -21,8 +21,6 @@ open System
 
         type Interface = Map<string, AttrVal>
 
-       
-        
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 
             | Nil
@@ -42,7 +40,6 @@ open System
             override this.ToString() =
                 match this with
                 | Nil -> "0"
-                //| Proxy(name, p) -> name 
                 | Seq(action, proc) -> sprintf "%s.%s" (action.ToString()) proc.AsString
                 | Act(a) -> a.ToString()
                 | Star(proc) -> sprintf "(%s)*" proc.AsString
@@ -51,7 +48,7 @@ open System
             member this.Transition() :(Action * Process) option =
                 match this with
                 | Nil -> None
-                | Seq(Nil, p) -> None
+                | Seq(Nil, _) -> None
                 | Star(Nil) -> None
                 // act
                 | Act(a) -> Some(a, Nil)
@@ -63,7 +60,6 @@ open System
                 | Star(p) -> 
                     p.Transition()
                     |> Option.bind (fun (l, next) -> Some(l, if next = Nil then this else next ^. this))
-                //| Proxy(_,_) -> None
         and Action =
         | Attr of string * AttrVal
         | Put of Tpair
