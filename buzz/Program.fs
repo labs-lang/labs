@@ -57,14 +57,15 @@ let transitions (sys: Sys) =
     |> Set.map Set.ofList
     |> Set.unionMany
 
-/// Apply a transition to system `sys`. Return Some(s) if sys can perform the
-/// given transition and become `s`, otherwise None
-let apply sys ((cmp, lbl, nextCmp):CompTransition) =
-    let prova = transitions sys
-
-    let isValid = sys.Contains cmp
-    if not isValid then None else
-
+/// <summary>Apply a transition to system <c>sys</c>.</summary>
+/// <remarks>Implements the semantics of a Buzz system.</remarks>
+/// <param name="sys">The system before the transition.</param>
+/// <param name="(cmp, lbl, nextCmp)">The transition to apply.</param>
+/// <returns>The system after performing the transition and become
+/// <c>s</c>.</returns>
+let apply sys (cmp, lbl, nextCmp) =
+    let isValid = Set.contains cmp sys
+    if not isValid then failwith "Incorrect transition" else
         let newSys = sys.Remove(cmp)
         match lbl with
         | Write(l, pair) ->
