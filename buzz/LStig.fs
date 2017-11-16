@@ -1,11 +1,19 @@
 ﻿namespace Buzz
-open System
 open Buzz.Functions
     module LStig = 
-    /// A timestamped map. Each key has one pair (value, timestamp)
+        /// A map where each key maps to a pair (value, timestamp)
+        [<StructuredFormatDisplay("{AsString}")>]
         type LStig = 
             private { d : Map<Key, Tval> }
            
+            member this.AsString =
+                this.d
+                |> Map.toSeq
+                |> Seq.map (fun (k, (v,_)) -> sprintf "%A=%A)" k v)
+                |> String.concat ","
+                |> sprintf "{%s}"
+
+
             static member Empty = 
                 {LStig.d = Map.empty<Key, Tval>}
             
