@@ -29,7 +29,7 @@ let transitions (sys: Sys) =
 /// <param name="(cmp, lbl, nextCmp)">The transition to apply.</param>
 /// <returns>The system after performing the transition and become
 /// <c>s</c>.</returns>
-let apply sys (cmp, lbl, nextCmp) =
+let apply (sys :Sys) (cmp, lbl, nextCmp) =
     let isValid = Set.contains cmp sys
     if not isValid then failwith "Incorrect transition" else
         let newSys = sys.Remove(cmp)
@@ -79,20 +79,14 @@ let main argv =
     let prova = Star(LazyPut("x", 1) ^. Await("x", 2))
     let prova2 = Star(Await("x", 1) ^. LazyPut("x", 2))
 
-    // Stub component
-    let comp = {
-        Comp.K = LStig.Empty; 
-        I = initLoc (P(0,0));
-        P = Nil
-    }
-
     let points = [P(1,0); P(0,1); P(1,1)]
 
     let sys =
-        ( points |> List.map (fun p -> {comp with I = initLoc p }) )
+        points 
+        |> List.map (fun p -> {Comp.Create() with I = initLoc p })
         |> Set.ofList
-        |> Set.add {comp with P = prova}
-        |> Set.add {comp with P = prova2; I = initLoc (P(2, 1)) }
+        |> Set.add {Comp.Create() with P = prova; I = initLoc (P(0,0))}
+        |> Set.add {Comp.Create() with P = prova2; I = initLoc (P(2, 1)) }
 
     let mutable s = sys
     let mutable count = 0
@@ -102,7 +96,7 @@ let main argv =
 
     while not (isIdle s) do 
         s <-  step s
-        s |> Seq.sortBy (fun x -> x.K.["loc"]) |> List.ofSeq |> print |> ignore
+        s |> Seq.sortBy (fun x -> x._Id) |> List.ofSeq |> print |> ignore
         count <- count + 1 |> print
 
     0 // return an integer exit code
