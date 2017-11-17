@@ -32,17 +32,26 @@ open Buzz.Functions
                     then [(this, Eps, next)]
                     else [(this, Write(this.I.["loc"], pair), {next with K=this.K + pair;})]
 
+                let Eval e: AttrVal =
+                    match e with
+                    | Const(c) -> c
+                    | K(k) -> 
+                        if this.K.[k].IsSome 
+                        then fst (this.K.[k].Value) 
+                        else failwith "%s not tound"
+                    | I(k) -> this.I.[k]
+
 
                 match this.P.Transition() with
                 | None -> []
                 | Some(action, next) ->
                     match action with
                     | Attr(a, v) ->
-                        [(this, Eps, {this with I=this.I.Add(a, v); P=next})]
+                        [(this, Eps, {this with I=this.I.Add(a, Eval v); P=next})]
                     | Put(pair) -> 
                         PutTransition pair next
-                    | LazyPut(k, v) ->
-                        let pair = (k, (v, DateTime.Now))
+                    | LazyPut(k, e) ->
+                        let pair = (k, (Eval e, DateTime.Now))
                         PutTransition pair next
                     | Await(k,v) ->
                         if this.Check(k,v) then
@@ -50,7 +59,7 @@ open Buzz.Functions
                             |> List.map (fun (c, l, nc) -> (this, l, nc))
                          else []
 
-            member this.Check(k: Key, v: Val) =
+            member this.Check(k: Key, v: AttrVal) =
                 this.K.[k]
                 |> Option.exists (fun p -> v.Equals(fst p))
 

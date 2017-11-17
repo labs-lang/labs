@@ -8,8 +8,7 @@ open System
             | String of string
             | P of Point
 
-        type Val = int
-        type Tval = Val * DateTime
+        type Tval = AttrVal * DateTime
 
         type Key = string
         type Tpair = Key * Tval
@@ -20,6 +19,11 @@ open System
             | Read of AttrVal * Tpair
 
         type Interface = Map<string, AttrVal>
+
+        type Expr =
+            | Const of AttrVal
+            | K of Key
+            | I of string
 
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 
@@ -61,16 +65,16 @@ open System
                     p.Transition()
                     |> Option.bind (fun (l, next) -> Some(l, if next = Nil then this else next ^. this))
         and Action =
-        | Attr of string * AttrVal
+        | Attr of string * Expr
         | Put of Tpair
-        | LazyPut of Key * Val
-        | Await of Key * Val
+        | LazyPut of Key * Expr
+        | Await of Key * AttrVal
         with
         static member ( ^. )(left: Action, right: Action) =
             Seq(Act(left), Act(right))
         override this.ToString() = 
             match this with
-            | Attr(a, v) -> sprintf "[%s := %s]" a (v.ToString())
+            | Attr(a, e) -> sprintf "[%s := %s]" a (e.ToString())
             | Put(p) -> sprintf "{%s <- %A}" (fst p) (fst (snd p))
             | LazyPut(k, v) -> sprintf "{%s <- %A}" k v
             | Await(k, v) -> sprintf "<%A = %A>" k v

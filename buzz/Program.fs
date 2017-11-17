@@ -3,7 +3,6 @@
 open System
 open Buzz.Types
 open Buzz.Functions
-open Buzz.LStig
 open Buzz.Component
 
 
@@ -72,12 +71,12 @@ let main argv =
     printfn "Hello World from F#!"
 
     // Some basic processes
-    let proc = LazyPut("x", 1) ^. Nil
-    let proc2 = Await("x", 1) ^. LazyPut("x", 2) ^. Nil
+    let proc = Attr("test", Const(Int(1))) ^. LazyPut("x", I("test")) ^. Nil
+    let proc2 = Await("x", Int(1)) ^. LazyPut("x", Const(Int(2))) ^. Nil
 
    
-    let prova = Star(LazyPut("x", 1) ^. Await("x", 2))
-    let prova2 = Star(Await("x", 1) ^. LazyPut("x", 2))
+    //let prova = Star(LazyPut("x", Int(1)) ^. Await("x", Int(2)))
+    //let prova2 = Star(Await("x", Int(1)) ^. LazyPut("x", Int(2)))
 
     let points = [P(1,0); P(0,1); P(1,1)]
 
@@ -85,8 +84,8 @@ let main argv =
         points 
         |> List.map (fun p -> {Comp.Create() with I = initLoc p })
         |> Set.ofList
-        |> Set.add {Comp.Create() with P = prova; I = initLoc (P(0,0))}
-        |> Set.add {Comp.Create() with P = prova2; I = initLoc (P(2, 1)) }
+        |> Set.add {Comp.Create() with P = proc; I = initLoc (P(0,0))}
+        |> Set.add {Comp.Create() with P = proc2; I = initLoc (P(2, 1)) }
 
     let mutable s = sys
     let mutable count = 0
