@@ -6,16 +6,22 @@ open Buzz.Functions
     module Component = 
         [<StructuredFormatDisplay("{AsString}")>]
         type Comp = 
-            public { K: LStig; I : Interface; P : Process }
+            public { K: LStig; I : Interface; P : Process; _Id : Guid }
+
+            /// Returns a new component.
+            static member Create() =
+                {
+                    Comp.K = LStig.Empty; 
+                    P = Nil;
+                    I = Map.empty<string, AttrVal>;
+                    _Id = Guid.NewGuid()
+                }
 
             member this.AsString =
-                sprintf "[\nK=%A\nI=%A\nP=%A\n]\n" 
+                sprintf "{K=%A\nI=%A\nP=%A}\n" 
                     this.K this.I this.P
-
+        
             member this.IsIdle() = this.P = Nil
-                //match this.P with
-                //| Nil -> true
-                //| _ -> false
 
             /// Implement semantics of components
             member this.Transitions() =
