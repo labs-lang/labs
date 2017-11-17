@@ -9,7 +9,7 @@ open Buzz.Functions
             member this.AsString =
                 this.d
                 |> Map.toSeq
-                |> Seq.map (fun (k, (v,_)) -> sprintf "%A=%A)" k v)
+                |> Seq.map (fun (k, (v,_)) -> sprintf "%s=%A" k v)
                 |> String.concat ","
                 |> sprintf "{%s}"
 
