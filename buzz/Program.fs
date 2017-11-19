@@ -41,7 +41,23 @@ let apply (sys :Sys) (cmp, lbl, nextCmp) =
                 then {c with P = Put(pair) ^. c.P}
                 else c)
             |> Set.add nextCmp
-        | _ -> newSys.Add(nextCmp)
+        | Read(l, pair) ->
+            newSys
+            |> Set.map(
+                fun c ->
+                    if link(l, c.I.["loc"])
+                    then 
+                        if c.K.Accepts pair
+                        then {c with P = Put(pair) ^. c.P}
+                        else 
+                            let cPair = c.K.TpairOf(fst pair).Value
+                            if not (fst (snd cPair) = fst (snd pair))
+                            then {c with P = Send(cPair) ^. c.P}
+                            else c
+                    else c
+            )
+            |> Set.add nextCmp
+        | Eps -> newSys.Add(nextCmp)
 
 
 /// Returns true if sys cannot perform any transition.
@@ -61,6 +77,13 @@ let step(sys: Sys) =
     |> Option.get
     |> apply sys
 
+let stepLabel sys =
+    if (isIdle sys) then (sys, None)
+    else
+        let t = sys |> transitions |> pickRandom |> Option.get
+        let _, lbl, _ = t
+        (apply sys t, Some(lbl))
+     
 
 let print x =
     printfn "----\n%A" (x)
@@ -72,7 +95,7 @@ let main argv =
 
     // Some basic processes
     let proc = Attr("test", Const(Int(1))) ^. LazyPut("x", I("test")) ^. Nil
-    let proc2 = Await("x", Int(1)) ^. LazyPut("x", Const(Int(2))) ^. Nil
+    let proc2 = Await("x", Int(1)) ^. LazyPut("y", K("x")) ^. Nil
 
    
     //let prova = Star(LazyPut("x", Int(1)) ^. Await("x", Int(2)))
@@ -94,7 +117,9 @@ let main argv =
     do (print count |> ignore)
 
     while not (isIdle s) do 
-        s <-  step s
+        let newS, lbl = stepLabel s
+        do (lbl.Value |> print |> ignore)
+        s <-  newS
         s |> Seq.sortBy (fun x -> x._Id) |> List.ofSeq |> print |> ignore
         count <- count + 1 |> print
 
