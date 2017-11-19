@@ -21,12 +21,16 @@ open Buzz.Functions
                 not (left.d = right.d)
 
             static member (+) (left: LStig, right: Tpair) = 
-                let isNewer = 
-                    right
-                    |> fst
-                    |> left.d.TryFind 
-                    |> Option.forall (fun v -> timeof (snd right) > timeof v)
-                if isNewer then {left with d = left.d.Add right } else left
+                if left.Accepts right then {left with d = left.d.Add right } else left
 
             member this.Item
                 with get(k) = this.d.TryFind(k)
+            
+            member this.TpairOf k =
+                this.d.TryFind(k)
+                |> Option.bind (fun p -> Some(k, p))
+
+            member this.Accepts (p : Tpair) = 
+                fst p
+                |> this.d.TryFind
+                |> Option.forall (fun v -> timeof (snd p) > timeof v)

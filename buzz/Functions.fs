@@ -5,9 +5,9 @@
             |> sqrt
         let timeof ( tv: Tval ) = snd tv
 
-        let initLoc p = Map.empty<string, AttrVal>.Add("loc", p)
+        let initLoc p = Map.empty<string, Val>.Add("loc", p)
 
-        let link(l1: AttrVal, l2: AttrVal) =
+        let link(l1: Val, l2: Val) =
             let DELTA = 1.0
 
             match (l1, l2) with
