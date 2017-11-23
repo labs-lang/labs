@@ -25,11 +25,11 @@ open System
             | Write of Val * Tpair
             | Read of Val * Tpair
 
-        type Interface = Map<string, Val>
+        type Interface = Map<Key, Val>
 
         type Expr =
             | Const of Val
-            | K of Key
+            | L of Key
             | I of string
             | Sum of Expr * Expr
 

@@ -1,13 +1,12 @@
 ﻿namespace Buzz
 open System
 open Buzz.LStig
-open Buzz.Functions
 
     module Component = 
         [<StructuredFormatDisplay("{AsString}")>]
         type Comp = 
             public {
-                K: LStig;
+                L: LStig;
                 I : Interface;
                 P : Process; 
                 _Id : Guid;
@@ -17,16 +16,16 @@ open Buzz.Functions
             /// Returns a new component.
             static member Create() =
                 {
-                    Comp.K = LStig.Empty; 
+                    Comp.L = LStig.Empty; 
                     P = Nil;
                     I = Map.empty<string, Val>;
                     _Id = Guid.NewGuid();
                     _Stack = []
                 }
-
+            
             member this.AsString =
                 sprintf "{K=%A\nI=%A\nP=%A}\n" 
-                    this.K this.I this.P
+                    this.L this.I this.P
         
             member this.IsIdle() = this.P = Nil
 
@@ -42,17 +41,17 @@ open Buzz.Functions
                 let ReadTr pair next =
                     (this, Read(this.I.["loc"], pair), next)
                 let WriteOrEps next stack pair =
-                    if this.K.Accepts pair 
-                    then [WriteTr pair {next with _Stack=stack; K=this.K + pair}]
+                    if this.L.Accepts pair 
+                    then [WriteTr pair {next with _Stack=stack; L=this.L + pair}]
                     else [EpsTr {next with _Stack=stack}]
                 
                 // Semantics of expressions
                 let rec Eval e :(Val option * Set<Key>)=
                     match e with
                     | Const(c) -> Some(c), Set.empty<Key>
-                    | K(k) -> 
-                        if this.K.[k].IsSome 
-                        then (Some(fst this.K.[k].Value) , Set.singleton k)
+                    | L(k) -> 
+                        if this.L.[k].IsSome 
+                        then (Some(fst this.L.[k].Value) , Set.singleton k)
                         else failwith << sprintf "%s not tound" <| k.ToString()
                     | I(k) -> (Some this.I.[k], Set.empty<Key>)
                     | Sum(e1, e2) -> 
@@ -66,7 +65,7 @@ open Buzz.Functions
                         | _ -> (None, Set.empty)                
                 match this._Stack with
                 | hd::tl -> 
-                    let pair = (hd, this.K.[hd].Value)
+                    let pair = (hd, this.L.[hd].Value)
                     [ReadTr pair {this with _Stack = tl}]
                 | [] -> 
                     match this.P.Transition() with
@@ -96,7 +95,7 @@ open Buzz.Functions
                              else []
 
             member this.Check(k: Key, v: Val) =
-                this.K.[k]
+                this.L.[k]
                 |> Option.exists (fun p -> v.Equals(fst p))
 
         and CompTransition = Comp * Label * Comp
