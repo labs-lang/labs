@@ -33,43 +33,62 @@ open Buzz.Functions
             /// Implement semantics of components
             member this.Transitions() =
 
-                let PutTransition pair nextP =
-                    let next = {this with P=nextP}
-                    if this.K=this.K + pair 
-                    then [(this, Eps, next)]
-                    else [(this, Write(this.I.["loc"], pair), {next with K=this.K + pair;})]
+                // Some helper functions
 
+                let EpsTr next =
+                    (this, Eps, next)
+                let WriteTr pair next =
+                    (this, Write(this.I.["loc"], pair), next)
+                let ReadTr pair next =
+                    (this, Read(this.I.["loc"], pair), next)
+                let WriteOrEps next stack pair =
+                    if this.K.Accepts pair 
+                    then [WriteTr pair {next with _Stack=stack; K=this.K + pair}]
+                    else [EpsTr {next with _Stack=stack}]
+                
                 // Semantics of expressions
-                let Eval e :(Val * Set<Key>)=
+                let rec Eval e :(Val option * Set<Key>)=
                     match e with
-                    | Const(c) -> c, Set.empty
+                    | Const(c) -> Some(c), Set.empty<Key>
                     | K(k) -> 
                         if this.K.[k].IsSome 
-                        then (fst this.K.[k].Value , Set.singleton k)
-                        else failwith "%s not tound"
-                    | I(k) -> (this.I.[k], Set.empty)
-                
+                        then (Some(fst this.K.[k].Value) , Set.singleton k)
+                        else failwith << sprintf "%s not tound" <| k.ToString()
+                    | I(k) -> (Some this.I.[k], Set.empty<Key>)
+                    | Sum(e1, e2) -> 
+                        let (v1, s1) = Eval e1
+                        let (v2, s2) = Eval e2
+                        match (v1, v2) with
+                        | (Some(x1), Some(x2)) -> 
+                            match (x1 + x2) with
+                            | Some(s) -> (Some(s), Set.union s1 s2)
+                            | None -> (None, Set.empty)
+                        | _ -> (None, Set.empty)                
                 match this._Stack with
                 | hd::tl -> 
                     let pair = (hd, this.K.[hd].Value)
-                    [(this, Read(this.I.["loc"], pair), {this with _Stack = tl})]
+                    [ReadTr pair {this with _Stack = tl}]
                 | [] -> 
                     match this.P.Transition() with
                     | None -> []
                     | Some(action, next) ->
+                        let nextThis = {this with P=next}
                         match action with
-                        | Attr(a, e) ->
+                        | Attr(a, e) -> 
                             let (v, keys) = Eval e
-                            [(this, Eps, {this with I=this.I.Add(a, v); P=next; _Stack = List.ofSeq keys})]
+                            v
+                            |> Option.bind (fun(x) -> [EpsTr {nextThis with I=this.I.Add(a, x); _Stack = List.ofSeq keys}] |> Some)
+                            |> Option.defaultValue [EpsTr {this with P=Nil}]
                         | Put(pair) -> 
-                            PutTransition pair next
+                            WriteOrEps nextThis [] pair
                         | Send(pair) ->
-                            [(this, Write(this.I.["loc"], pair), {this with P=next})]
+                            [(this, Write(this.I.["loc"], pair), nextThis)]
                         | LazyPut(k, e) ->
                             let (v, keys) = Eval e
-                            let pair = (k, (v, DateTime.Now))
-                            PutTransition pair next
-                            |> List.map (fun (c,l,n) -> (c,l, {n with _Stack = List.ofSeq keys}))
+                            let kList = List.ofSeq keys
+                            v
+                            |> Option.bind (fun(x) -> (k, (x, DateTime.Now)) |> WriteOrEps nextThis kList |> Some)
+                            |> Option.defaultValue [EpsTr {this with P=Nil}]
                         | Await(k,v) ->
                             if this.Check(k,v) then
                                 {this with P = next}.Transitions()
