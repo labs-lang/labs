@@ -8,6 +8,12 @@ open System
             | Int of int
             | String of string
             | P of Point
+            static member (+) (left: Val, right: Val) =
+                match (left, right) with
+                | (Int(a), Int(b)) -> Some(Int(a+b)) // Sum
+                | (P(p1), P(p2)) -> Some(P(fst p1 + fst p2, snd p1 + snd p2))
+                | (String(a), String(b)) -> Some(String(a + b)) // Concatenation
+                | _ -> None
 
         type Tval = Val * DateTime
 
@@ -25,6 +31,7 @@ open System
             | Const of Val
             | K of Key
             | I of string
+            | Sum of Expr * Expr
 
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 
