@@ -76,13 +76,16 @@ let step(sys: Sys) =
     |> pickRandom
     |> Option.get
     |> apply sys
+    |> project (torusProj 10 10)
 
+/// Performs a random transition and returns the new systen,
+/// along with its label
 let stepLabel sys =
-    if (isIdle sys) then (sys, None)
+    if (isIdle sys) then None
     else
         let t = sys |> transitions |> pickRandom |> Option.get
         let _, lbl, _ = t
-        (apply sys t, Some(lbl))
+        Some(apply sys t |> project (torusProj 10 10), lbl)
      
 
 let print x =
