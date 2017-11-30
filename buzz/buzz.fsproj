@@ -8,6 +8,7 @@
     <Compile Include="Functions.fs" />
     <Compile Include="LStig.fs" />
     <Compile Include="Component.fs" />
+    <Compile Include="System.fs" />
     <Compile Include="Chiron.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
