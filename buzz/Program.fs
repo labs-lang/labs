@@ -1,6 +1,7 @@
 ﻿// Learn more about F# at http://fsharp.org
 
 open System
+open System.IO
 open Buzz.Types
 open Buzz.Functions
 open Buzz.Component
@@ -12,38 +13,37 @@ let print x =
     printfn "----\n%A" (x)
     x
 
+/// n components move in random directions. When two component "meet", they
+/// start moving in the same direction.
 [<EntryPoint>]
-let main argv = 
-    printfn "Hello World from F#!"
+let swarm argv = 
+    let proc = LazyPut("dir", I("dir")) ^. Star(Act(Attr("loc", Sum(I("loc"),L("dir")))))
+    let n = 10
+    let xMax, yMax = 10, 10
 
-    // Some basic processes
-    let proc = Attr("test", Const(Int(1))) ^. LazyPut("x", I("test")) ^. Nil
-    let proc2 = Await("x", Int(1)) ^. LazyPut("y", K("x")) ^. Nil
+    let directions = seq {for x in [1..n] do yield randomDirection()}
+    let points = seq {for x in [1..n] do yield P(rng.Next(xMax+1), rng.Next(yMax+1))}
 
-   
-    //let prova = Star(LazyPut("x", Int(1)) ^. Await("x", Int(2)))
-    //let prova2 = Star(Await("x", Int(1)) ^. LazyPut("x", Int(2)))
+    let sys = 
+        Seq.map2 (fun d p -> [("loc", p); ("dir", d)] |> Map.ofSeq) directions points
+        |> Seq.map (fun i -> {Comp.Create() with I = i; P=proc})
+        |> Set.ofSeq
+    
+    sys
+    |> sysToJson
+    |> Json.format
+    |> print
+    |> ignore
 
-    let points = [P(1,0); P(0,1); P(1,1)]
+    use streamWriter = new StreamWriter("swarm.json", false)
 
-    let sys =
-        points 
-        |> List.map (fun p -> {Comp.Create() with I = initLoc p })
-        |> Set.ofList
-        |> Set.add {Comp.Create() with P = proc; I = initLoc (P(0,0))}
-        |> Set.add {Comp.Create() with P = proc2; I = initLoc (P(2, 1)) }
+    // this should *probably* go into a function in the Buzz.Chiron module.
+    // Oh well.
+    streamWriter.WriteLine "["
+    run sys (KeyConsensus ["dir"])
+    |> Seq.map (Json.format << sysToJson << fun (_,s,_) -> s)
+    |> String.concat ",\n"
+    |> streamWriter.WriteLine 
 
-    let mutable s = sys
-    let mutable count = 0
-
-    do (print s |> ignore)
-    do (print count |> ignore)
-
-    while not (isIdle s) do 
-        let newS, lbl = stepLabel s
-        do (lbl.Value |> print |> ignore)
-        s <-  newS
-        s |> Seq.sortBy (fun x -> x._Id) |> List.ofSeq |> print |> ignore
-        count <- count + 1 |> print
-
-    0 // return an integer exit code
+    streamWriter.WriteLine "]"
+    0
