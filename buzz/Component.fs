@@ -1,7 +1,7 @@
 ﻿namespace Buzz
 open System
 open Buzz.LStig
-
+    
     module Component = 
         [<StructuredFormatDisplay("{AsString}")>]
         type Comp = 
@@ -22,9 +22,9 @@ open Buzz.LStig
                     _Id = Guid.NewGuid();
                     _Stack = []
                 }
-            
+
             member this.AsString =
-                sprintf "{K=%A\nI=%A\nP=%A}\n" 
+                sprintf "{L=%A\nI=%A\nP=%A}\n" 
                     this.L this.I this.P
         
             member this.IsIdle() = this.P = Nil
