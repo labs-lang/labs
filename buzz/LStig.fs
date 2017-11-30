@@ -29,8 +29,13 @@ open Buzz.Functions
             member this.TpairOf k =
                 this.d.TryFind(k)
                 |> Option.bind (fun p -> Some(k, p))
-
+            
+            ///<summary>Returns <c>true</c> if the
+            ///stigmergy will change when <c>p</c> is inserted into it.
+            ///</summary> 
             member this.Accepts (p : Tpair) = 
                 fst p
                 |> this.d.TryFind
                 |> Option.forall (fun v -> timeof (snd p) > timeof v)
+            
+            member this.getMap = this.d
