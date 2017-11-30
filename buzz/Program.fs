@@ -37,32 +37,45 @@ let apply (sys :Sys) (cmp, lbl, nextCmp) =
             newSys
             |> Set.map( 
                 fun c -> 
-                if link(l, c.I.["loc"])
+                if (link l c.I.["loc"])
                 then {c with P = Put(pair) ^. c.P}
                 else c)
             |> Set.add nextCmp
         | Read(l, pair) ->
+            let (neighbors, others) =
             newSys
-            |> Set.map(
-                fun c ->
-                    if link(l, c.I.["loc"])
-                    then 
-                        if c.K.Accepts pair
-                        then {c with P = Put(pair) ^. c.P}
-                        else 
-                            let cPair = c.K.TpairOf(fst pair).Value
+                |> Set.partition (fun c -> link l c.I.["loc"])  
+            let (accepters, rejectors) =
+                neighbors
+                |> Set.partition (fun c -> c.L.Accepts pair)
+            
+            accepters
+            |> Set.map (fun c -> {c with P = Put(pair) ^. c.P})
+            |> Set.union 
+                (rejectors
+                |> Set.map (fun c -> 
+                    let cPair = c.L.TpairOf(fst pair).Value
                             if not (fst (snd cPair) = fst (snd pair))
                             then {c with P = Send(cPair) ^. c.P}
-                            else c
-                    else c
-            )
+                    else c))
+            |> Set.union others
             |> Set.add nextCmp
         | Eps -> newSys.Add(nextCmp)
-
 
 /// Returns true if sys cannot perform any transition.
 let isIdle (sys:Sys) =
     transitions sys |> Seq.isEmpty
+
+/// Use function lfunc to re-project the locations of components
+let project lfunc sys =
+    sys
+    |> Set.map (fun c -> 
+        let loc = c.I.["loc"] 
+        let newLoc = 
+            match loc with 
+            | P(p) -> P(lfunc p) 
+            | _ -> failwith "Error"
+        {c with I = c.I.Add("loc", newLoc)})
 
 /// <summary>
 /// Returns the evolution of <c>sys</c> after performing a random transition.
