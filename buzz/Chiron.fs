@@ -1,5 +1,6 @@
 ﻿namespace Buzz
 open Buzz.Component
+open Buzz.System
 open Chiron
 
     module Json = 
@@ -15,6 +16,13 @@ open Chiron
                 |> Object
             let l =
                 c.L.getMap
-                |> Map.map (fun k (v, _) -> ValToJson v)
+                |> Map.map (fun k -> ValToJson << fst)
                 |> Object
             Map.ofSeq ["L", l; "I", i; "id", c._Id.ToString() |> String] |> Object
+
+
+        let sysToJson (s:Sys) =
+            s 
+            |> Set.map compToJson
+            |> Set.toList
+            |> Array
