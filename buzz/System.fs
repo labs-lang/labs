@@ -7,11 +7,13 @@ open Buzz.Component
         type Sys = Set<Comp>
 
         type Condition =
+            | TT
             | FF
             | KeyConsensus of Key list
             | NumberOfSteps of int
             member this.HoldsFor (sys:Sys) (step) =
                 match this with
+                | TT -> true
                 | FF -> false
                 | KeyConsensus(keys) ->
                     let agreeOn (c1:Comp) (c2:Comp) k =
@@ -24,15 +26,12 @@ open Buzz.Component
                     v
                 | NumberOfSteps(n) -> step = n
 
-        /// Events are changes in the system that the programmer can use
-        /// to simulate a dynamic environment.
-        type Event = 
-            | SetAttr of Key * Val
-            member this.ApplyTo (sys:Sys) = 
-                match this with
-                | SetAttr(k,v) -> 
-                    sys
-                    |> Set.map (fun c -> {c with I = c.I.Add(k,v)})
+        /// <summary>Events are changes in the system that the programmer can
+        /// use to simulate a dynamic environment.</summary>
+        /// An event is a Condition * (Comp -> Comp) tuple.
+        /// When the system meets the condition, the function is applied to all
+        /// its components.
+        type Event = Condition * (Comp -> Comp)
 
         /// Return all available transitions for `sys`
         let transitions (sys: Sys) = 
@@ -85,16 +84,14 @@ open Buzz.Component
         let isIdle (sys:Sys) =
             transitions sys |> Seq.isEmpty
 
-        /// Use function lfunc to re-project the locations of components
-        let project lfunc sys =
-            sys
-            |> Set.map (fun c -> 
-                let loc = c.I.["loc"] 
-                let newLoc = 
-                    match loc with 
-                    | P(p) -> P(lfunc p) 
-                    | _ -> failwith "Error"
-                {c with I = c.I.Add("loc", newLoc)})
+        /// Use function lfunc to re-project the locations of component c.
+        let reproject lfunc c =
+            let loc = c.I.["loc"] 
+            let newLoc = 
+                match loc with 
+                | P(p) -> P(lfunc p) 
+                | _ -> failwith "Error"
+            {c with I = c.I.Add("loc", newLoc)}
 
         /// <summary>
         /// Returns the evolution of <c>sys</c> after performing a random transition.
@@ -108,35 +105,41 @@ open Buzz.Component
             |> pickRandom
             |> Option.get
             |> apply sys
-            |> project (torusProj 10 10)
+            //|> project (torusProj 10 10)
 
-        /// Performs a random transition and returns the new systen,
+        /// Performs a random transition and returns the new system,
         /// along with its label
         let stepLabel sys =
             if (isIdle sys) then None
             else
                 let t = sys |> transitions |> pickRandom |> Option.get
                 let _, lbl, _ = t
-                Some(apply sys t |> project (torusProj 10 10), lbl)
+                Some(apply sys t, lbl)//|> project (torusProj 10 10), lbl)
                                  
         let guidCheck sys =
             let ids = sys |> Set.map (fun c -> c._Id)
             ids.Count = sys.Count
-
+        
         ///<summary>
         /// Returns a trace of <c>sys</c> as a sequence of <c>Sys * Label</c> pairs.
         /// The trace ends when no transitions are available or the break condition
         /// <c>cond</c> is satisfied.
         /// Notice that the sequence might be infinite.
         ///</summary>
-        let rec run sys (breakCond:Condition) =
-            let rec s sys count = seq {
+        let rec run sys (breakCond:Condition) (events: Event list) =
+            let applyEvent count sys ((c,f):Event) =
+                if c.HoldsFor sys count then Set.map f sys else sys
+
+            let rec traceof sys count = seq {
                 if (breakCond.HoldsFor sys count) then ()
                 else
                     match stepLabel(sys) with
                     | Some(newSys, lbl) ->
-                        yield (count, newSys, lbl)
-                        yield! s newSys (count+1)
+                        let newSysWithEvents = 
+                            events 
+                            |> List.fold (applyEvent count) newSys
+                        yield (count, newSysWithEvents, lbl)
+                        yield! traceof newSysWithEvents (count+1)
                     | None -> ()
             }
-            s sys 1
+            traceof sys 1

@@ -40,7 +40,7 @@ let swarm argv =
     // this should *probably* go into a function in the Buzz.Chiron module.
     // Oh well.
     streamWriter.WriteLine "["
-    run sys (KeyConsensus ["dir"])
+    run sys (KeyConsensus ["dir"]) [(TT, reproject (torusProj 10 10))]
     |> Seq.map (Json.format << sysToJson << fun (_,s,_) -> s)
     |> String.concat ",\n"
     |> streamWriter.WriteLine 
