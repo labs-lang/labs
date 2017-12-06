@@ -128,7 +128,7 @@ open Buzz.Component
         ///</summary>
         let rec run sys (breakCond:Condition) (events: Event list) =
             let applyEvent count sys ((c,f):Event) =
-                if c.HoldsFor sys count then Set.map f sys else sys
+                (if c.HoldsFor sys count then Set.map f else id) sys
 
             let rec traceof sys count = seq {
                 if (breakCond.HoldsFor sys count) then ()
