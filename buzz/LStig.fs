@@ -1,5 +1,6 @@
 ﻿namespace Buzz
 open Buzz.Functions
+
     module LStig = 
         /// A map where each key maps to a pair (value, timestamp)
         [<StructuredFormatDisplay("{AsString}")>]
