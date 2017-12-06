@@ -39,6 +39,7 @@ open System
             | Term
             | Act of Action
             | Seq of Process * Process
+            | Choice of Process * Process
             | Star of Process
             static member ( ^. )(left: Process, right: Process) =
                 match left with
@@ -55,27 +56,29 @@ open System
                 | Nil -> "0"
                 | Term -> "1"
                 | Seq(action, proc) -> sprintf "%s.%s" (action.ToString()) proc.AsString
+                | Choice(p1,p2) -> sprintf "%s + %s" p1.AsString p2.AsString
                 | Act(a) -> a.ToString()
                 | Star(proc) -> sprintf "(%s)*" proc.AsString
 
-            // Structural semantics of processes
-            member this.Transition() :(Action * Process) option =
+            // Operational semantics of processes
+            member this.Commitments =
                 match this with
                 | Nil
-                | Term -> None
-                | Seq(Nil, _) -> None
-                | Star(Nil) -> None
+                | Term -> []
+                | Seq(Nil, _) -> []
+                | Star(Nil) -> []
                 // act
-                | Act(a) -> Some(a, Nil)
+                | Act(a) -> [(a, Term)]
                 // This pattern encodes both seq1 and seq2
-                | Seq (Term, p) -> p.Transition()
+                | Seq (Term, p) -> p.Commitments
+                | Choice(p1, p2) -> List.append p1.Commitments p2.Commitments
                 | Seq(p1, p2) ->
-                    p1.Transition()
-                    |> Option.bind (fun (l, next) -> Some(l, if next = Nil then p2 else next ^. p2) )
+                    p1.Commitments
+                    |> List.map (fun (l, next) -> (l, if next = Term then p2 else next ^. p2) )
                 // star1 and star2
                 | Star(p) -> 
-                    p.Transition()
-                    |> Option.bind (fun (l, next) -> Some(l, if next = Nil then this else next ^. this))
+                    p.Commitments
+                    |> List.map (fun (l, next) -> (l, if next = Term then this else next ^. this))
         and Action =
         | Attr of string * Expr
         | Put of Tpair
