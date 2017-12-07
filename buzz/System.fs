@@ -105,7 +105,6 @@ open Buzz.Component
             |> pickRandom
             |> Option.get
             |> apply sys
-            //|> project (torusProj 10 10)
 
         /// Performs a random transition and returns the new system,
         /// along with its label
@@ -114,7 +113,7 @@ open Buzz.Component
             else
                 let t = sys |> transitions |> pickRandom |> Option.get
                 let _, lbl, _ = t
-                Some(apply sys t, lbl)//|> project (torusProj 10 10), lbl)
+                Some(apply sys t, lbl)
                                  
         let guidCheck sys =
             let ids = sys |> Set.map (fun c -> c._Id)
