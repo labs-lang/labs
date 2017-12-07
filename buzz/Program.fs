@@ -17,7 +17,7 @@ let print x =
 /// start moving in the same direction.
 [<EntryPoint>]
 let swarm argv = 
-    let proc = LazyPut("dir", I("dir")) ^. Star(Act(Attr("loc", Sum(I("loc"),L("dir")))))
+    let proc = LazyPut("dir", I("dir")) ^. RecX(Attr("loc", Sum(I("loc"),L("dir"))) ^. X)
     let n = 10
     let xMax, yMax = 10, 10
 
