@@ -2,6 +2,16 @@
 open System
 
     module Functions = 
+
+        let inline xor a b = (a || b) && not (a && b)
+
+        /// "Correct" modulo operator
+        // http://gettingsharper.de/2012/02/28/how-to-implement-a-mathematically-correct-modulus-operator-in-f/
+        let inline modulo n m =
+            let mod' = n % m
+            if sign mod' >= 0 then mod'
+            else abs m + mod'
+
         let d (p1: Point, p2: Point) =
             (float ((fst p1) - (fst p2)))**2.0 + (float ((snd p1) - (snd p2)))**2.0
             |> sqrt
