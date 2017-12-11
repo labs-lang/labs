@@ -93,17 +93,18 @@ open System
                 RChoice(left, right)
             static member ( ^. ) (left: Action, right: recProcess) =
                 RSeq(left, right)
-            member this.unwind =
-                match this with
-                | RNil -> RNil
-                | X -> this
-                | RSeq(a, p) -> RSeq(a, p.unwind)
-                | RChoice(p, q) -> RChoice(p.unwind, q.unwind)
             member this.Commitments =
-                match this.unwind with
+                let rec replace x r = 
+                    match r with
+                    | RNil -> RNil
+                    | X -> x
+                    | RSeq(a, p) -> RSeq(a, replace x p)
+                    | RChoice(p1, p2) -> RChoice(replace x p1, replace x p2)
+
+                match this with
                 | RNil
                 | X -> []
-                | RSeq(a, p) -> [(a, RecX(p))]
+                | RSeq(a, p) -> [(a, RecX(replace this p))]
                 | RChoice(p, q) -> List.append p.Commitments q.Commitments
 
             member this.AsString = this.ToString()
