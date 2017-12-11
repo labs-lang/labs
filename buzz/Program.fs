@@ -37,13 +37,11 @@ let swarm argv =
 
     use streamWriter = new StreamWriter("swarm.json", false)
 
-    // this should *probably* go into a function in the Buzz.Chiron module.
-    // Oh well.
-    streamWriter.WriteLine "["
-    run sys (KeyConsensus ["dir"]) [(TT, reproject (torusProj 10 10))]
-    |> Seq.map (Json.format << sysToJson << fun (_,s,_) -> s)
-    |> String.concat ",\n"
+    //run sys (KeyConsensus ["dir"]) [(TT, (bounceL xMax yMax))]
+    run sys (NumberOfSteps 500) [(TT, (bounceL xMax yMax))]
+    |> Seq.toList
+    |> traceToJson
+    |> Json.format
     |> streamWriter.WriteLine 
 
-    streamWriter.WriteLine "]"
     0

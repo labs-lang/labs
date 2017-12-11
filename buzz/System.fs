@@ -33,6 +33,8 @@ open Buzz.Component
         /// its components.
         type Event = Condition * (Comp -> Comp)
 
+        type TraceStep = int * Sys * Label
+
         /// Return all available transitions for `sys`
         let transitions (sys: Sys) = 
             sys 

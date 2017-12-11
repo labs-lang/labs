@@ -26,3 +26,8 @@ open Chiron
             |> Set.map compToJson
             |> Set.toList
             |> Array
+
+        let traceToJson (t: TraceStep list) = 
+            t
+            |> List.map (sysToJson << fun (_,s,_) -> s)
+            |> Array
