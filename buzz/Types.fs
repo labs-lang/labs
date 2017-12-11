@@ -63,6 +63,8 @@ open System
         with
             static member ( ^. )(left: Action, right: Process) =
                 Seq(left, right)
+            static member ( + )(left: Process, right: Process) =
+                Choice(left, right)
 
             member this.Commitments = 
                 /// Returns a recProcess where all occurrences of X are 
@@ -87,6 +89,8 @@ open System
         | RChoice of recProcess * recProcess
         | X
         with
+            static member ( + )(left: recProcess, right: recProcess) =
+                RChoice(left, right)
             static member ( ^. ) (left: Action, right: recProcess) =
                 RSeq(left, right)
             member this.unwind =
