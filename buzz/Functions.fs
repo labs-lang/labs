@@ -34,8 +34,6 @@ open System
             | (x, y) when y>yMax -> tP (x, 0)
             | _ -> p
 
-        let rng = Random()
-
         /// Helper: choose random element from a Seq
         let pickRandom seq =
             Seq.tryItem ((Seq.length >> rng.Next) seq) seq

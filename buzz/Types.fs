@@ -2,6 +2,8 @@
 open System
     [<AutoOpen>]    
     module Types = 
+        let rng = Random()
+
         type Point = int * int
 
         type Val =
@@ -34,6 +36,7 @@ open System
         type Interface = Map<Key, Val>
 
         type Expr =
+            | RandomPoint of xMin:int * yMin:int * xMax:int * yMax:int
             | Const of Val
             | L of Key
             | I of string
@@ -44,7 +47,12 @@ open System
         | Put of Tpair
         | Send of Tpair
         | LazyPut of Key * Expr
+        // TODO: it might be better to create a generic Await with a dedicated
+        // expression type. Something like
+        // <x OP>
+        // OP ::= NIL | = v | !OP | OP /\ OP
         | Await of Key * Val
+        | AwaitNot of Key * Val
         with
             override this.ToString() = 
                 match this with
@@ -53,6 +61,7 @@ open System
                 | Send(p) -> sprintf "!(%s=%A)" (fst p) (fst (snd p))
                 | LazyPut(k, v) -> sprintf "{%s <- %A}" k v
                 | Await(k, v) -> sprintf "<%A = %A>" k v
+                | AwaitNot(k, v) -> sprintf "<%A != %A>" k v
 
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 
@@ -67,14 +76,23 @@ open System
                 Choice(left, right)
 
             member this.Commitments = 
-                /// Returns a recProcess where all occurrences of X are 
-                /// replaced by r itself.
+
+                /// Returns the process r where all occurrences of X are
+                /// replaced by x
+                let rec unwind (x:recProcess) r = 
+                    match r with
+                    | RNil -> Nil
+                    | X -> RecX(x)
+                    | RSeq(a, p) -> Seq(a, unwind x p)
+                    | RChoice(p1, p2) -> Choice(unwind x p1, unwind x p2)
+                    // rec x is idempotent: rec x. (rec x. P) = rec x. P
+                    | RRec(p) -> unwind p p
 
                 match this with
-                | Nil -> []
-                | Seq(a, p) -> [(a, p)]
-                | Choice(p, q) -> List.append p.Commitments q.Commitments
-                | RecX(r) -> r.Commitments
+                | Nil -> Seq.empty
+                | Seq(a, p) -> Seq.singleton (a, p)
+                | Choice(p, q) -> Seq.append p.Commitments q.Commitments
+                | RecX(r) -> (unwind r r).Commitments
                 member this.AsString = this.ToString()        
                 override this.ToString() =
                     match this with
@@ -87,26 +105,13 @@ open System
         | RNil
         | RSeq of Action * recProcess
         | RChoice of recProcess * recProcess
+        | RRec of recProcess
         | X
         with
             static member ( + )(left: recProcess, right: recProcess) =
                 RChoice(left, right)
             static member ( ^. ) (left: Action, right: recProcess) =
                 RSeq(left, right)
-            member this.Commitments =
-                let rec unwind x r = 
-                    match r with
-                    | RNil -> RNil
-                    | X -> x
-                    | RSeq(a, p) -> RSeq(a, unwind x p)
-                    | RChoice(p1, p2) -> RChoice(unwind x p1, unwind x p2)
-
-                match this with
-                | RNil
-                | X -> []
-                | RSeq(a, p) -> [(a, RecX(unwind this p))]
-                | RChoice(p, q) -> List.append p.Commitments q.Commitments
-
             member this.AsString = this.ToString()
             override this.ToString() =
                 match this with
@@ -114,3 +119,4 @@ open System
                 | X -> "X"
                 | RSeq(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
                 | RChoice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
+                | RRec(p) -> sprintf "recX.%s" p.AsString
