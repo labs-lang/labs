@@ -48,7 +48,7 @@ open Buzz.Component
         /// <param name="(cmp, lbl, nextCmp)">The transition to apply.</param>
         /// <returns>The system after performing the transition and become
         /// <c>s</c>.</returns>
-        let apply (sys :Sys) (cmp, lbl, nextCmp) =
+        let apply link (sys :Sys) (cmp, lbl, nextCmp) =
             let isValid = Set.contains cmp sys
             if not isValid then failwith "Incorrect transition" else
                 let newSys = sys.Remove(cmp)
@@ -99,42 +99,42 @@ open Buzz.Component
         /// Returns the evolution of <c>sys</c> after performing a random transition.
         /// If no transition is available, returns <c>sys</c>.
         /// </summary>
-        let step(sys: Sys) = 
+        let step(sys: Sys) link = 
             if (isIdle sys) then sys
             else
             sys
             |> transitions
             |> pickRandom
             |> Option.get
-            |> apply sys
+            |> apply link sys 
 
         /// Performs a random transition and returns the new system,
         /// along with its label
-        let stepLabel sys =
+        let stepLabel link sys =
             if (isIdle sys) then None
             else
                 let t = sys |> transitions |> pickRandom |> Option.get
                 let _, lbl, _ = t
-                Some(apply sys t, lbl)
+                Some(apply link sys t, lbl)
                                  
         let guidCheck sys =
             let ids = sys |> Set.map (fun c -> c._Id)
             ids.Count = sys.Count
         
         ///<summary>
-        /// Returns a trace of <c>sys</c> as a sequence of <c>Sys * Label</c> pairs.
+        /// Returns a trace of <c>sys</c> using <c>link</c> as the connectivity function.
         /// The trace ends when no transitions are available or the break condition
         /// <c>cond</c> is satisfied.
         /// Notice that the sequence might be infinite.
         ///</summary>
-        let rec run sys (breakCond:Condition) (events: Event list) =
+        let rec run sys link (breakCond:Condition) (events: Event list) =
             let applyEvent count sys ((c,f):Event) =
                 (if c.HoldsFor sys count then Set.map f else id) sys
 
             let rec traceof sys count = seq {
                 if (breakCond.HoldsFor sys count) then ()
                 else
-                    match stepLabel(sys) with
+                    match stepLabel link sys with
                     | Some(newSys, lbl) ->
                         let newSysWithEvents = 
                             events 

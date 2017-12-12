@@ -19,12 +19,10 @@ open System
 
         let initLoc p = Map.empty<string, Val>.Add("loc", p)
 
-        let link l1 l2 =
-            let DELTA = 2.0
-
+        let distanceLink delta l1 l2 =
             match (l1, l2) with
-            | (Int(a), Int(b)) -> (float >> abs) (a - b) <= DELTA
-            | (P(p1), P(p2)) -> d(p1, p2) <= DELTA
+            | (Int(a), Int(b)) -> (float >> abs) (a - b) <= delta
+            | (P(p1), P(p2)) -> d(p1, p2) <= delta
             | _ -> false
         
         let rec torusProj (xMax:int) (yMax:int) (p:Point) =
