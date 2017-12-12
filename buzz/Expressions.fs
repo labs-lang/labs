@@ -1,9 +1,13 @@
 ﻿namespace Buzz
+open System
 open Buzz.LStig
     module Expressions =
+
         /// Denotational semantic of expressions: Evaluation
         let rec eval : Expr -> Interface -> LStig -> Val option = function
             | Const(c) -> (fun i l -> Some c)
+            | RandomPoint(fromX, fromY, toX, toY) ->
+                fun i l -> Some <| P(rng.Next(fromX, toX+1), rng.Next(fromY, toY+1))
             | L(k) -> 
                 fun i l ->
                 if l.[k].IsSome
