@@ -69,10 +69,17 @@ open Buzz.Expressions
                             |> Some)
                         |> Option.defaultValue [EpsTr {this with P=Nil}]
                     | Await(k,v) ->
-                        if this.Check(k,v) then
+                        match this.L.[k] with
+                        | Some(w, _) when v = w ->
                             {this with P = next}.Transitions()
                             |> List.map (fun (c, l, nc) -> (this, l, nc))
-                         else []
+                        | _ -> []
+                    | AwaitNot(k,v) -> 
+                        match this.L.[k] with
+                        | Some(w, _) when v = w -> []
+                        | _ -> 
+                            {this with P = next}.Transitions()
+                            |> List.map (fun (c, l, nc) -> (this, l, nc))
 
                 match this._Stack with
                 | hd::tl -> 
@@ -80,11 +87,7 @@ open Buzz.Expressions
                     [ReadTr pair {this with _Stack = tl}]
                 | [] -> 
                     this.P.Commitments
-                    |> List.map MatchCommitment
+                    |> Seq.map MatchCommitment
                     |> List.concat
-
-            member this.Check(k: Key, v: Val) =
-                this.L.[k]
-                |> Option.exists (fun p -> v.Equals(fst p))
 
         and CompTransition = Comp * Label * Comp
