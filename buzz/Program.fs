@@ -84,7 +84,7 @@ let main argv =
     |> print
     |> ignore
    
-    use streamWriter = new StreamWriter("swarm.json", false)
+    use streamWriter = new StreamWriter("../out/swarm.json", false)
     //run sys () [(TT, (bounceL xMax yMax))]
     run sys link (KeyConsensus ["dir"]) [(TT, (bounceL xMax yMax)); (AtStep 300, setOkToZero)]
     |> Seq.toList
