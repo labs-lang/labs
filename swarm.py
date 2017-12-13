@@ -34,7 +34,7 @@ def make_frame(t):
         txt = gizeh.text(str.format("{}/{}", step, len(trace)),
                          fontfamily="sans",
                          fontsize=16,
-                         fill=(0, 0, 0), xy=(30, 10))
+                         fill=(0, 0, 0), xy=(50, 10))
         c.draw(surface)
         txt.draw(surface)
         if "dir" in comp["L"]:
