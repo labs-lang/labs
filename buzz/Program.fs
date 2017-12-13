@@ -6,6 +6,7 @@ open Buzz.Types
 open Buzz.Functions
 open Buzz.Component
 open Buzz.Json
+open Buzz.LStig
 open Buzz.System
 open Chiron
 
@@ -48,34 +49,49 @@ let bounceL xMax yMax c =
 
 /// n components move in random directions. When two component "meet", they
 /// start moving in the same direction.
-[<EntryPoint>]
-let swarm argv = 
-    let proc = LazyPut("dir", I("dir")) ^. RecX(Attr("loc", Sum(I("loc"),L("dir"))) ^. X)
-    let n = 10
-    let xMax, yMax = 50, 50
+let swarm n xMax yMax = 
+    let p1 = Attr("loc", Sum(I("loc"), RandomPoint(-1,-1,1,1))) ^. X
+    let p2 = 
+        Attr("dir", RandomPoint(-1,-1,1,1)) ^. 
+        LazyPut("dir", I("dir")) ^. 
+        RRec(Attr("loc", Sum(I("loc"),L("dir"))) ^. X)
 
+
+    let proc = RecX((Await("ok", Int(1)) ^. p1) + (AwaitNot("ok", Int(1)) ^. p2))
 
     let directions = seq {for x in [1..n] do yield randomDirection()}
     let points = seq {for x in [1..n] do yield P(rng.Next(xMax+1), rng.Next(yMax+1))}
+    let lstig = LStig.Empty + ("ok", (Int(1), DateTime.Now))
 
-    let sys = 
-        Seq.map2 (fun d p -> [("loc", p); ("dir", d)] |> Map.ofSeq) directions points
-        |> Seq.map (fun i -> {Comp.Create() with I = i; P=proc})
-        |> Set.ofSeq
-    
+    Seq.map2 (fun d p -> [("loc", p); ("dir", d)] |> Map.ofSeq) directions points
+    |> Seq.map (fun i -> {Comp.Create() with I = i; P = proc; L = lstig})
+    |> Set.ofSeq
+
+let update k v c = 
+    {c with L = c.L + (k, (v, DateTime.Now))}
+
+[<EntryPoint>]
+let main argv =
+    let xMax, yMax = 49, 49
+    let sys = swarm 10 xMax yMax
+
+    let link = distanceLink 5.0
+    let setOkToZero = update "ok" <| Int(0)
+
     sys
     |> sysToJson
     |> Json.format
     |> print
     |> ignore
-
+   
     use streamWriter = new StreamWriter("swarm.json", false)
-
-    //run sys (KeyConsensus ["dir"]) [(TT, (bounceL xMax yMax))]
-    run sys (NumberOfSteps 500) [(TT, (bounceL xMax yMax))]
+    //run sys () [(TT, (bounceL xMax yMax))]
+    run sys link (KeyConsensus ["dir"]) [(TT, (bounceL xMax yMax)); (AtStep 300, setOkToZero)]
     |> Seq.toList
+    |> (fun x -> print x.Length |> ignore; x)
     |> traceToJson
     |> Json.format
     |> streamWriter.WriteLine 
+
 
     0
