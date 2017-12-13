@@ -10,7 +10,8 @@ open Buzz.Component
             | TT
             | FF
             | KeyConsensus of Key list
-            | NumberOfSteps of int
+            | AtStep of int
+            | AfterStep of int
             member this.HoldsFor (sys:Sys) (step) =
                 match this with
                 | TT -> true
@@ -24,7 +25,8 @@ open Buzz.Component
                     let min = sys.MinimumElement
                     let v = Set.forall (fun c -> List.forall(agreeOn c min) keys) sys
                     v
-                | NumberOfSteps(n) -> step = n
+                | AtStep(n) -> step = n
+                | AfterStep(n) -> step > n
 
         /// <summary>Events are changes in the system that the programmer can
         /// use to simulate a dynamic environment.</summary>
@@ -99,7 +101,7 @@ open Buzz.Component
         /// Returns the evolution of <c>sys</c> after performing a random transition.
         /// If no transition is available, returns <c>sys</c>.
         /// </summary>
-        let step(sys: Sys) link = 
+        let step (sys: Sys) link = 
             if (isIdle sys) then sys
             else
             sys
