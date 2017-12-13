@@ -22,24 +22,29 @@ let trPoint triangleX triangleY (x,y) =
     (triangleX x, triangleY y)
 
 let changeDir changePoint (dx,dy) (x,y) =
-    let (x', y') = changePoint (x,y)
-    ((if x-x' <> 0 then -dx else dx), if y-y' <> 0 then -dy else dy)
+    let (xNew, yNew) = changePoint (x,y)
+    ((if x-xNew <> 0 then -dx else dx), if y-yNew <> 0 then -dy else dy)
 
 let bounce xMax yMax (c:Comp) =
     let updatePoint = trPoint (triangle xMax) (triangle yMax)
+    let loc =
+        match c.I.TryFind("loc") with
+        | Some(P(l)) -> l
+        | _ -> failwith <| sprintf "Component %A has no 'loc' attribute." c
 
-    let loc = c.I.["loc"]
-    let dir = c.I.["dir"]
-    match (loc, dir) with
-    | P(l), P(d) -> 
-    {c with I = c.I.Add("loc", P(updatePoint l)).Add("dir", P(changeDir updatePoint d l))}
-    | _ -> c
+    let newC = {c with I = c.I.Add("loc", P(updatePoint loc))}
+
+    match newC.I.TryFind("dir") with
+    | Some(P(d)) -> {newC with I = newC.I.Add("dir", P(changeDir updatePoint d loc))}
+    | _ -> newC
 
 let bounceL xMax yMax c =
-    let c' = bounce xMax yMax c
-    if c'.I.["dir"] <> c.I.["dir"]
-    then {c' with P = LazyPut("dir", I("dir"))^.c'.P}
-    else c'
+    let newC = bounce xMax yMax c
+    if newC.L.TpairOf("dir").IsSome then
+        match newC.I.["dir"], c.I.["dir"] with
+        | d1, d2 when d1 <> d2 -> {newC with P = LazyPut("dir", I("dir"))^. newC.P}
+        | _ -> newC
+    else newC
 
 /// n components move in random directions. When two component "meet", they
 /// start moving in the same direction.
