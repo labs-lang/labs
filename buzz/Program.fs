@@ -57,18 +57,18 @@ let swarm n xMax yMax =
         RRec(Attr("loc", Sum(I("loc"),L("dir"))) ^. X)
 
 
-    let proc = RecX((Await("ok", Int(1)) ^. p1) + (AwaitNot("ok", Int(1)) ^. p2))
+    let proc = RecX((Await(Compare(L("ok"), Equal, Const(Int(1)))) ^. p1)+ (Await(Neg(Compare(L("ok"), Equal, Const(Int(1))))) ^. p2))
 
     let directions = seq {for x in [1..n] do yield randomDirection()}
     let points = seq {for x in [1..n] do yield P(rng.Next(xMax+1), rng.Next(yMax+1))}
-    let lstig = LStig.Empty + ("ok", (Int(1), DateTime.Now))
+    let lstig = LStig.Empty + ("ok", (Int(1), globalClock()))
 
     Seq.map2 (fun d p -> [("loc", p); ("dir", d)] |> Map.ofSeq) directions points
     |> Seq.map (fun i -> {Comp.Create() with I = i; P = proc; L = lstig})
     |> Set.ofSeq
 
 let update k v c = 
-    {c with L = c.L + (k, (v, DateTime.Now))}
+    {c with L = c.L + (k, (v, globalClock()))}
 
 [<EntryPoint>]
 let main argv =

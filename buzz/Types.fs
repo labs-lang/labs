@@ -23,17 +23,19 @@ open System
                 | (P(p1), P(p2)) -> Some(P(fst p1 - fst p2, snd p1 - snd p2))
                 | _ -> None
 
-        type Tval = Val * DateTime
+        type Tval = Val * int
 
         type Key = string
         type Tpair = Key * Tval
+
+        type Interface = Map<Key, Val>
 
         type Label =
             | Eps
             | Write of Val * Tpair
             | Read of Val * Tpair
-
-        type Interface = Map<Key, Val>
+            | Qry of Interface * Tpair
+            | Put of Interface * Tpair
 
         type Expr =
             | RandomPoint of xMin:int * yMin:int * xMax:int * yMax:int
@@ -42,26 +44,39 @@ open System
             | I of string
             | Sum of Expr * Expr
 
+        ///<summmary>Boolean expression</summary>
+        type Op = 
+            | Equal
+            | Less
+            | Greater
+        type BExpr =
+            | True
+            | False
+            | Compare of Expr * Op * Expr
+            | Neg of BExpr
+            | Conj of BExpr * BExpr
+            | NilCheck of Expr 
+
         type Action =
         | Attr of string * Expr
-        | Put of Tpair
-        | Send of Tpair
+        //| Put of Tpair
+        //| Send of Tpair
         | LazyPut of Key * Expr
         // TODO: it might be better to create a generic Await with a dedicated
         // expression type. Something like
         // <x OP>
         // OP ::= NIL | = v | !OP | OP /\ OP
-        | Await of Key * Val
-        | AwaitNot of Key * Val
+        | Await of BExpr
+        //| AwaitNot of Key * Val
         with
             override this.ToString() = 
                 match this with
                 | Attr(a, e) -> sprintf "(%s := %s)" a (e.ToString())
-                | Put(p) -> sprintf "{%s <- %A}" (fst p) (fst (snd p))
-                | Send(p) -> sprintf "!(%s=%A)" (fst p) (fst (snd p))
+                //| Put(p) -> sprintf "{%s <- %A}" (fst p) (fst (snd p))
+                //| Send(p) -> sprintf "!(%s=%A)" (fst p) (fst (snd p))
                 | LazyPut(k, v) -> sprintf "{%s <- %A}" k v
-                | Await(k, v) -> sprintf "<%A = %A>" k v
-                | AwaitNot(k, v) -> sprintf "<%A != %A>" k v
+                | Await(b) -> sprintf "<%A>" b
+                //| AwaitNot(k, v) -> sprintf "<%A != %A>" k v
 
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 
@@ -120,3 +135,12 @@ open System
                 | RSeq(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
                 | RChoice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
                 | RRec(p) -> sprintf "recX.%s" p.AsString
+
+        let makeClock() =
+            let x = ref 0
+            let tick() =
+                x := !x + 1
+                !x
+            tick
+        
+        let globalClock = makeClock()

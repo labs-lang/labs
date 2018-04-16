@@ -11,8 +11,10 @@ open Buzz.Expressions
                 I : Interface;
                 P : Process; 
                 _Id : Guid;
-                _Stack : Key list
+                _StackP : Set<Key>;
+                _StackQ : Set<Key>;
             }
+
 
             /// Returns a new component.
             static member Create() =
@@ -21,7 +23,8 @@ open Buzz.Expressions
                     P = Nil;
                     I = Map.empty<string, Val>;
                     _Id = Guid.NewGuid();
-                    _Stack = []
+                    _StackP = Set.empty;
+                    _StackQ = Set.empty
                 }
 
             member this.AsString =
@@ -32,62 +35,39 @@ open Buzz.Expressions
 
             /// Implement semantics of components
             member this.Transitions() =
-
-                // Some helper functions
-
-                let EpsTr next =
+                let EpsTr (next:Comp) =
                     (this, Eps, next)
-                let WriteTr pair next =
-                    (this, Write(this.I.["loc"], pair), next)
-                let ReadTr pair next =
-                    (this, Read(this.I.["loc"], pair), next)
-                let WriteOrEps next stack pair =
-                    if this.L.Accepts pair 
-                    then WriteTr pair {next with _Stack=stack; L=this.L + pair}
-                    else EpsTr {next with _Stack=stack}
-                
-                let MatchCommitment (action, next) : (Comp * Label * Comp) list=
+                let TryEval expr comp : (Comp * Val) option =
+                    eval expr comp.I comp.L
+                    |> Option.bind (fun v -> 
+                        Some({comp with _StackQ = Set.union this._StackQ (keys expr)}, v))
+
+                let ProcessTransition (action, next) : (Comp * Label * Comp) list =
                     let nextThis = {this with P=next}
                     match action with
-                    | Attr(a, e) -> 
-                        let ks = List.ofSeq <| keys e
-                        eval e this.I this.L
-                        |> Option.bind  (fun v ->
-                            Some <| [EpsTr {nextThis with I=this.I.Add(a, v); _Stack = ks}])
-                        |> Option.defaultValue [EpsTr {this with P=Nil}]
-                    | Send(pair) ->
-                        [(this, Write(this.I.["loc"], pair), nextThis)]
-                    | Put(pair) -> 
-                        [WriteOrEps nextThis [] pair]
+                    | Attr(k, e) -> 
+                        let newComp = 
+                            TryEval e this
+                            |> Option.bind (fun (c, v) -> Some {c with P=next; I=this.I.Add(k, v)})
+                            // TODO: If the eval fails, the component terminates
+                            |> Option.defaultValue {this with P=Nil}
+                        [EpsTr newComp]
                     | LazyPut(k, e) ->
-                        let ks = List.ofSeq <| keys e
-                        eval e this.I this.L
-                        |> Option.bind (fun(x) -> 
-                            (k, (x, DateTime.Now)) 
-                            |> WriteOrEps nextThis ks
-                            |> List.singleton
-                            |> Some)
-                        |> Option.defaultValue [EpsTr {this with P=Nil}]
-                    | Await(k,v) ->
-                        match this.L.[k] with
-                        | Some(w, _) when v = w ->
-                            {this with P = next}.Transitions()
-                            |> List.map (fun (c, l, nc) -> (this, l, nc))
-                        | _ -> []
-                    | AwaitNot(k,v) -> 
-                        match this.L.[k] with
-                        | Some(w, _) when v = w -> []
-                        | _ -> 
-                            {this with P = next}.Transitions()
-                            |> List.map (fun (c, l, nc) -> (this, l, nc))
+                        let newComp = 
+                            TryEval e this
+                            |> Option.bind (fun (c, v) -> 
+                                let t = globalClock()
+                                Some {c with P=next; L=this.L + (k, (v, t))})
+                            // TODO: If the eval fails, the component terminates
+                            |> Option.defaultValue {this with P=Nil}
+                        [EpsTr newComp]
+                     | Await(b) ->
+                         if beval b this.I this.L then
+                             {this with P = next}.Transitions()
+                             |> List.map (fun (c, l, nc) -> (this, l, nc))
+                         else []
 
-                match this._Stack with
-                | hd::tl -> 
-                    let pair = (hd, this.L.[hd].Value)
-                    [ReadTr pair {this with _Stack = tl}]
-                | [] -> 
-                    this.P.Commitments
-                    |> Seq.map MatchCommitment
-                    |> List.concat
-
+                this.P.Commitments
+                |> Seq.map ProcessTransition
+                |> List.concat
         and CompTransition = Comp * Label * Comp
