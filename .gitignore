@@ -453,3 +453,4 @@ bower_components
 ### WebSharper ###
 Scripts/
 out
+*.gif
