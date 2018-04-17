@@ -37,11 +37,24 @@ open Buzz.Component
 
         type TraceStep = int * Sys * Label
 
+
+        let confirmTransitions (c:Comp) = 
+            c.EntriesQ()
+            |> Set.map (fun entry -> 
+                (c, Qry(c.I, entry), {c with _StackQ = c._StackQ.Remove (fst entry)}))
+        
+        let propagateTransitions (c:Comp) = 
+            c.EntriesP()
+            |> Set.map (fun entry -> 
+                (c, Put(c.I, entry), {c with _StackP = c._StackP.Remove (fst entry)}))
+
         /// Return all available transitions for `sys`
         let transitions (sys: Sys) = 
             sys 
             |> Set.map (fun c -> c.Transitions())
             |> Set.map Set.ofList
+            |> Set.union (Set.map propagateTransitions sys)
+            |> Set.union (Set.map confirmTransitions sys)
             |> Set.unionMany
 
         /// <summary>Apply a transition to system <c>sys</c>.</summary>
@@ -55,31 +68,39 @@ open Buzz.Component
             if not isValid then failwith "Incorrect transition" else
                 let newSys = sys.Remove(cmp)
                 match lbl with
-                | Write(l, pair) ->
+                //| Write(l, pair) -> newSys
+                | Put(i, (k, (v, t))) ->
                     newSys
-                    |> Set.map( 
-                        fun c -> 
-                        if (link l c.I.["loc"])
-                        then {c with P = Put(pair) ^. c.P}
-                        else c)
+                    |> Set.map (fun c ->
+                        if (link i c.I) then
+                            {c with 
+                                L = c.L + (k, (v,t));
+                                _StackP = c._StackP.Add k;
+                                _StackQ = c._StackQ.Remove k;
+                            }
+                         else c)
                     |> Set.add nextCmp
-                | Read(l, pair) ->
-                    let (neighbors, others) =
-                        newSys
-                        |> Set.partition (fun c -> link l c.I.["loc"])  
-                    let (accepters, rejectors) =
-                        neighbors
-                        |> Set.partition (fun c -> c.L.Accepts pair)
-                    
-                    accepters
-                    |> Set.map (fun c -> {c with P = Put(pair) ^. c.P})
-                    |> Set.union 
-                        (rejectors
-                        |> Set.map (fun c -> 
-                            let cPair = c.L.TpairOf(fst pair).Value
-                            if not (fst (snd cPair) = fst (snd pair))
-                            then {c with P = Send(cPair) ^. c.P}
-                            else c))
+                | Qry(i, (k, (v, t))) ->
+                    let (neighbors, others) = Set.partition (fun c -> link i c.I) newSys
+                    neighbors
+                    |> Set.map (fun c ->
+                        // olderValue = true if L(k)=nil or time(L, k) < t
+                        let olderValue = 
+                            c.L.TimeOf k
+                            |> Option.forall ((>=) t)
+                        if olderValue then
+                            // Rule QRY1 
+                            {c with 
+                                L = c.L + (k, (v,t));
+                                _StackP = c._StackP.Add k;
+                                _StackQ = c._StackQ.Remove k;
+                            }
+                        else
+                            // Rule QRY2
+                            {c with 
+                                _StackP = c._StackP.Add k;
+                            }
+                    )
                     |> Set.union others
                     |> Set.add nextCmp
                 | Eps -> newSys.Add(nextCmp)

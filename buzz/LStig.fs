@@ -31,6 +31,10 @@ open Buzz.Functions
                 this.d.TryFind(k)
                 |> Option.bind (fun p -> Some(k, p))
             
+            member this.TimeOf k =
+                this.d.TryFind k
+                |> Option.bind (Some << snd)
+           
             ///<summary>Returns <c>true</c> if the
             ///stigmergy will change when <c>p</c> is inserted into it.
             ///</summary> 

@@ -33,6 +33,18 @@ open Buzz.Expressions
         
             member this.IsIdle() = this.P = Nil
 
+            member this.EntriesQ() = 
+                this.Entries(this._StackQ)
+
+            member this.EntriesP() = 
+                this.Entries(this._StackP)
+
+            member private this.Entries(stack) =
+                stack
+                |> Set.map this.L.TpairOf
+                |> Set.filter Option.isSome
+                |> Set.map Option.get
+
             /// Implement semantics of components
             member this.Transitions() =
                 let EpsTr (next:Comp) =

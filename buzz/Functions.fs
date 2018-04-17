@@ -19,8 +19,10 @@ open System
 
         let initLoc p = Map.empty<string, Val>.Add("loc", p)
 
-        let distanceLink delta l1 l2 =
-            match (l1, l2) with
+
+
+        let distanceLink delta (i1:Interface) (i2:Interface) =
+            match (i1.["loc"], i2.["loc"]) with
             | (Int(a), Int(b)) -> (float >> abs) (a - b) <= delta
             | (P(p1), P(p2)) -> d(p1, p2) <= delta
             | _ -> false

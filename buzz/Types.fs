@@ -32,8 +32,6 @@ open System
 
         type Label =
             | Eps
-            | Write of Val * Tpair
-            | Read of Val * Tpair
             | Qry of Interface * Tpair
             | Put of Interface * Tpair
 
@@ -59,24 +57,14 @@ open System
 
         type Action =
         | Attr of string * Expr
-        //| Put of Tpair
-        //| Send of Tpair
         | LazyPut of Key * Expr
-        // TODO: it might be better to create a generic Await with a dedicated
-        // expression type. Something like
-        // <x OP>
-        // OP ::= NIL | = v | !OP | OP /\ OP
         | Await of BExpr
-        //| AwaitNot of Key * Val
         with
             override this.ToString() = 
                 match this with
                 | Attr(a, e) -> sprintf "(%s := %s)" a (e.ToString())
-                //| Put(p) -> sprintf "{%s <- %A}" (fst p) (fst (snd p))
-                //| Send(p) -> sprintf "!(%s=%A)" (fst p) (fst (snd p))
                 | LazyPut(k, v) -> sprintf "{%s <- %A}" k v
                 | Await(b) -> sprintf "<%A>" b
-                //| AwaitNot(k, v) -> sprintf "<%A != %A>" k v
 
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 

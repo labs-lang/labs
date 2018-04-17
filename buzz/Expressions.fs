@@ -30,11 +30,11 @@ open Buzz.LStig
         let rec beval : BExpr -> Interface -> LStig -> bool = function
         | True -> fun i l -> true
         | False -> fun i l -> false
-        | Cmp(e1, Equal, e2) ->
+        | Compare(e1, Equal, e2) ->
             fun i l -> (eval e1 i l) = (eval e2 i l)
-        | Cmp(e1, Less, e2) ->
+        | Compare(e1, Less, e2) ->
             fun i l -> (eval e1 i l) < (eval e2 i l)
-        | Cmp(e1, Greater, e2) ->
+        | Compare(e1, Greater, e2) ->
             fun i l -> (eval e1 i l) > (eval e2 i l)
         | Conj(b1, b2) -> 
             fun i l -> (beval b1 i l) && (beval b2 i l)
