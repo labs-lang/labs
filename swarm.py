@@ -4,7 +4,7 @@ import numpy as np
 import gizeh
 import moviepy.editor as mpy
 
-filename = "buzz/swarm.json"
+filename = "out/swarm.json"
 
 with open(filename, encoding='utf-8') as json_file:
     text = json_file.read()
