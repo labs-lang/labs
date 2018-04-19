@@ -70,12 +70,12 @@ open System
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 
         | Nil
-        | Seq of Action * Process
+        | Prefix of Action * Process
         | Choice of Process * Process
         | RecX of recProcess
         with
             static member ( ^. )(left: Action, right: Process) =
-                Seq(left, right)
+                Prefix(left, right)
             static member ( + )(left: Process, right: Process) =
                 Choice(left, right)
 
@@ -87,21 +87,21 @@ open System
                     match r with
                     | RNil -> Nil
                     | X -> RecX(x)
-                    | RSeq(a, p) -> Seq(a, unwind x p)
+                    | RSeq(a, p) -> Prefix(a, unwind x p)
                     | RChoice(p1, p2) -> Choice(unwind x p1, unwind x p2)
                     // rec x is idempotent: rec x. (rec x. P) = rec x. P
                     | RRec(p) -> unwind p p
 
                 match this with
                 | Nil -> Seq.empty
-                | Seq(a, p) -> Seq.singleton (a, p)
+                | Prefix(a, p) -> Seq.singleton (a, p)
                 | Choice(p, q) -> Seq.append p.Commitments q.Commitments
                 | RecX(r) -> (unwind r r).Commitments
                 member this.AsString = this.ToString()        
                 override this.ToString() =
                     match this with
                     | Nil -> "0"
-                    | Seq(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
+                    | Prefix(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
                     | Choice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
                     | RecX(r) -> sprintf "recX.(%s)" r.AsString
 
