@@ -57,14 +57,14 @@ open Buzz.Expressions
                 let ProcessTransition (action, next) : (Comp * Label * Comp) list =
                     let nextThis = {this with P=next}
                     match action with
-                    | Attr(k, e) -> 
+                    | AttrUpdate(k, e) -> 
                         let newComp = 
                             TryEval e this
                             |> Option.bind (fun (c, v) -> Some {c with P=next; I=this.I.Add(k, v)})
                             // TODO: If the eval fails, the component terminates
                             |> Option.defaultValue {this with P=Nil}
                         [EpsTr newComp]
-                    | LazyPut(k, e) ->
+                    | LStigUpdate(k, e) ->
                         let newComp = 
                             TryEval e this
                             |> Option.bind (fun (c, v) -> 

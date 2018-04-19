@@ -1,6 +1,6 @@
 ﻿namespace Buzz
-open System
 open Buzz.LStig
+
     module Expressions =
 
         /// Denotational semantic of expressions: Evaluation

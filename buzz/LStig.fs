@@ -15,8 +15,7 @@ open Buzz.Functions
                 |> sprintf "{%s}"
 
 
-            static member Empty = 
-                {LStig.d = Map.empty<Key, Tval>}
+            static member Empty = {LStig.d = Map.empty<Key, Tval>}
             
             static member (!=) (left: LStig, right: LStig) = 
                 not (left.d = right.d)
@@ -27,14 +26,16 @@ open Buzz.Functions
             member this.Item
                 with get(k) = this.d.TryFind(k)
             
-            member this.TpairOf k =
-                this.d.TryFind(k)
-                |> Option.bind (fun p -> Some(k, p))
+            member this.TpairOf (k:Key) = maybe {
+                let! entry = this.d.TryFind k
+                return (k, entry)
+            }
             
-            member this.TimeOf k =
-                this.d.TryFind k
-                |> Option.bind (Some << snd)
-           
+            member this.TimeOf (k:Key) = maybe {
+                let! entry = this.d.TryFind k
+                return snd entry
+            }
+
             ///<summary>Returns <c>true</c> if the
             ///stigmergy will change when <c>p</c> is inserted into it.
             ///</summary> 
@@ -42,5 +43,5 @@ open Buzz.Functions
                 fst p
                 |> this.d.TryFind
                 |> Option.forall (fun v -> timeof (snd p) > timeof v)
-            
+
             member this.getMap = this.d

@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Parsing.fs" />
+    <None Include="test.fsx" />
+    <PackageReference Include="FParsec" Version="1.0.3" />
+    <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
+  </ItemGroup>
+</Project>

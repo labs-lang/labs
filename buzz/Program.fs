@@ -43,18 +43,18 @@ let bounceL xMax yMax c =
     let newC = bounce xMax yMax c
     if newC.L.TpairOf("dir").IsSome then
         match newC.I.["dir"], c.I.["dir"] with
-        | d1, d2 when d1 <> d2 -> {newC with P = LazyPut("dir", I("dir"))^. newC.P}
+        | d1, d2 when d1 <> d2 -> {newC with P = LStigUpdate("dir", I("dir"))^. newC.P}
         | _ -> newC
     else newC
 
 /// n components move in random directions. When two component "meet", they
 /// start moving in the same direction.
 let swarm n xMax yMax = 
-    let p1 = Attr("loc", Sum(I("loc"), RandomPoint(-1,-1,1,1))) ^. X
+    let p1 = AttrUpdate("loc", Sum(I("loc"), RandomPoint(-1,-1,1,1))) ^. X
     let p2 = 
-        Attr("dir", RandomPoint(-1,-1,1,1)) ^. 
-        LazyPut("dir", I("dir")) ^. 
-        RRec(Attr("loc", Sum(I("loc"),L("dir"))) ^. X)
+        AttrUpdate("dir", RandomPoint(-1,-1,1,1)) ^. 
+        LStigUpdate("dir", I("dir")) ^. 
+        RRec(AttrUpdate("loc", Sum(I("loc"),L("dir"))) ^. X)
 
 
     let proc = RecX((Await(Compare(L("ok"), Equal, Const(Int(1)))) ^. p1)+ (Await(Neg(Compare(L("ok"), Equal, Const(Int(1))))) ^. p2))

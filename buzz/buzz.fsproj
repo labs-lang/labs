@@ -4,7 +4,6 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Types.fs" />
     <Compile Include="Functions.fs" />
     <Compile Include="LStig.fs" />
     <Compile Include="Expressions.fs" />
@@ -12,6 +11,9 @@
     <Compile Include="System.fs" />
     <Compile Include="Chiron.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Chiron" Version="6.2.1" />
