@@ -57,7 +57,9 @@ open Buzz.Expressions
                 let ProcessTransition (action, next) : (Comp * Label * Comp) list =
                     let nextThis = {this with P=next}
                     match action with
-                    | AttrUpdate(k, e) -> 
+                    | AttrUpdate(k, e) ->
+                        if not (this._StackP.IsEmpty && this._StackQ.IsEmpty) then []
+                        else
                         let newComp = 
                             TryEval e this
                             |> Option.bind (fun (c, v) -> Some {c with P=next; I=this.I.Add(k, v)})
@@ -65,6 +67,8 @@ open Buzz.Expressions
                             |> Option.defaultValue {this with P=Nil}
                         [EpsTr newComp]
                     | LStigUpdate(k, e) ->
+                        if not (this._StackP.IsEmpty && this._StackQ.IsEmpty) then []
+                        else
                         let newComp = 
                             TryEval e this
                             |> Option.bind (fun (c, v) -> 
