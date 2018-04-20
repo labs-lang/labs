@@ -13,17 +13,31 @@ let paction : Parser<_> =
         pbexpr .>> AWAIT |>> Await
     choice [pactionAwait; pactionAttr; pactionLstig]
 
+let precprocTerm, precprocTermRef = createParserForwardedToRef()
+let precproc, precprocRef = createParserForwardedToRef()
+
+do precprocTermRef :=
+    choice [
+        stringReturn "0" RNil;
+        stringReturn "X" X;
+        between (pchar '(') (pchar ')') precproc;
+        paction .>>. (PREFIX >>. precprocTerm) |>> RPrefix
+    ]
+
+do precprocRef :=
+    maybeTuple2 precprocTerm (betweenspaces (pchar '+') >>. precproc) RChoice
+    
+
 let pproc, pprocRef = createParserForwardedToRef()
 let pprocTerm, pprocTermRef = createParserForwardedToRef()
 
 do pprocTermRef :=
     let pprocNil = stringReturn "0" Nil
+    let pprocRec = (pstring "recX.") >>. precproc |>> Process.RecX
     let pprocParen = between (pchar '(') (pchar ')') pproc
     let pprocSeq =
         paction .>>. (PREFIX >>. pprocTerm) |>> Process.Prefix
-    choice [pprocSeq; pprocParen; pprocNil]
+    choice [pprocNil; pprocRec; pprocParen; pprocSeq]
 
-let pprocChoice : Parser<_> =
+do pprocRef := 
     maybeTuple2 pprocTerm (betweenspaces (pchar '+') >>. pproc) Process.Choice
-
-do pprocRef := choice [pprocChoice; pprocTerm]
