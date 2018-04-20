@@ -87,7 +87,7 @@ open System
                     match r with
                     | RNil -> Nil
                     | X -> RecX(x)
-                    | RSeq(a, p) -> Prefix(a, unwind x p)
+                    | RPrefix(a, p) -> Prefix(a, unwind x p)
                     | RChoice(p1, p2) -> Choice(unwind x p1, unwind x p2)
                     // rec x is idempotent: rec x. (rec x. P) = rec x. P
                     | RRec(p) -> unwind p p
@@ -107,7 +107,7 @@ open System
 
         and recProcess =
         | RNil
-        | RSeq of Action * recProcess
+        | RPrefix of Action * recProcess
         | RChoice of recProcess * recProcess
         | RRec of recProcess
         | X
@@ -115,13 +115,13 @@ open System
             static member ( + )(left: recProcess, right: recProcess) =
                 RChoice(left, right)
             static member ( ^. ) (left: Action, right: recProcess) =
-                RSeq(left, right)
+                RPrefix(left, right)
             member this.AsString = this.ToString()
             override this.ToString() =
                 match this with
                 | RNil -> "0"
                 | X -> "X"
-                | RSeq(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
+                | RPrefix(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
                 | RChoice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
                 | RRec(p) -> sprintf "recX.%s" p.AsString
 
