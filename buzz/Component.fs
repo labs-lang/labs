@@ -49,13 +49,13 @@ open Buzz.Expressions
             member this.Transitions() =
                 let EpsTr (next:Comp) =
                     (this, Eps, next)
-                let TryEval expr comp : (Comp * Val) option =
-                    eval expr comp.I comp.L
-                    |> Option.bind (fun v -> 
-                        Some({comp with _StackQ = Set.union this._StackQ (keys expr)}, v))
+                let TryEval expr c : (Comp * Val) option = maybe {
+                    let! v = eval expr c.I c.L
+                    let newC = {c with _StackQ = Set.union c._StackQ (keys expr)}
+                    return (newC, v)
+                }
 
                 let ProcessTransition (action, next) : (Comp * Label * Comp) list =
-                    let nextThis = {this with P=next}
                     match action with
                     | AttrUpdate(k, e) ->
                         if not (this._StackP.IsEmpty && this._StackQ.IsEmpty) then []
@@ -73,7 +73,7 @@ open Buzz.Expressions
                             TryEval e this
                             |> Option.bind (fun (c, v) -> 
                                 let t = globalClock()
-                                Some {c with P=next; L=this.L + (k, (v, t))})
+                                Some {c with P=next; L = this.L + (k, (v, t))})
                             // TODO: If the eval fails, the component terminates
                             |> Option.defaultValue {this with P=Nil}
                         [EpsTr newComp]
