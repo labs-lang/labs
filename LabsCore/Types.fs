@@ -38,17 +38,23 @@ open System
             | Put of Interface * Tpair
 
         type Expr =
-            | RandomPoint of xMin:int * yMin:int * xMax:int * yMax:int
             | Const of Val
             | L of Key
             | I of string
             | Sum of Expr * Expr
+            with 
+                override this.ToString() = 
+                    match this with
+                    | Const(v) -> v.ToString()
+                    | I(k) -> sprintf "I[%s]" k
+                    | L(k) -> sprintf "L[%s]" k
+                    | Sum(e1, e2) -> sprintf "%A %A" e1 e2
 
-        ///<summmary>Boolean expression</summary>
         type Op = 
             | Equal
             | Less
             | Greater
+        ///<summmary>Boolean expressions.</summary>
         type BExpr =
             | True
             | False
@@ -58,73 +64,49 @@ open System
             | NilCheck of Expr 
 
         type Action =
-        | AttrUpdate of string * Expr
+        | AttrUpdate of Key * Expr
         | LStigUpdate of Key * Expr
-        | Await of BExpr
+        | EnvWrite of Key * Expr
+        | EnvRead of Key * Key
         with
             override this.ToString() = 
                 match this with
                 | AttrUpdate(a, e) -> sprintf "I[%s] := %s" a (e.ToString())
-                | LStigUpdate(k, v) -> sprintf "L[%s] := %A]" k v
-                | Await(b) -> sprintf "%A?" b
+                | LStigUpdate(k, v) -> sprintf "L[%s] := %A" k v
+                | EnvWrite(k, v) -> sprintf "E[%s] := %A" k v
+                | EnvRead(j, k) -> sprintf "I[%s] := E[%s]" j k
+                //| Await(b) -> sprintf "%A?" b
 
         [<StructuredFormatDisplay("{AsString}")>]
         type Process = 
         | Nil
-        | Prefix of Action * Process
+        | Tick
+        | Base of Action
+        | Seq of Process * Process
         | Choice of Process * Process
-        | RecX of recProcess
+        | Par of Process * Process
+        | Await of BExpr * Process
+        | Name of string
         with
-            static member ( ^. )(left: Action, right: Process) =
-                Prefix(left, right)
+            static member ( ^. )(left: Process, right: Process) =
+                Seq(left, right)
             static member ( + )(left: Process, right: Process) =
                 Choice(left, right)
+            static member ( ^| )(left: Process, right: Process) =
+                Par(left, right)
 
-            member this.Commitments = 
-
-                /// Returns the process r where all occurrences of X are
-                /// replaced by x
-                let rec unwind (x:recProcess) r = 
-                    match r with
-                    | RNil -> Nil
-                    | X -> RecX(x)
-                    | RPrefix(a, p) -> Prefix(a, unwind x p)
-                    | RChoice(p1, p2) -> Choice(unwind x p1, unwind x p2)
-                    // rec x is idempotent: rec x. (rec x. P) = rec x. P
-                    | RRec(p) -> unwind p p
-
-                match this with
-                | Nil -> Seq.empty
-                | Prefix(a, p) -> Seq.singleton (a, p)
-                | Choice(p, q) -> Seq.append p.Commitments q.Commitments
-                | RecX(r) -> (unwind r r).Commitments
-                member this.AsString = this.ToString()        
-                override this.ToString() =
-                    match this with
-                    | Nil -> "0"
-                    | Prefix(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
-                    | Choice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
-                    | RecX(r) -> sprintf "recX.(%s)" r.AsString
-
-        and recProcess =
-        | RNil
-        | RPrefix of Action * recProcess
-        | RChoice of recProcess * recProcess
-        | RRec of recProcess
-        | X
-        with
-            static member ( + )(left: recProcess, right: recProcess) =
-                RChoice(left, right)
-            static member ( ^. ) (left: Action, right: recProcess) =
-                RPrefix(left, right)
-            member this.AsString = this.ToString()
+            member this.AsString = this.ToString()        
             override this.ToString() =
                 match this with
-                | RNil -> "0"
-                | X -> "X"
-                | RPrefix(a, p) -> sprintf "%s.%s" (a.ToString()) p.AsString
-                | RChoice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
-                | RRec(p) -> sprintf "recX.%s" p.AsString
+                | Nil -> "0"
+                | Tick -> "√"
+                | Base(a) -> a.ToString()
+                | Seq(p, q) -> sprintf "%s; %s" p.AsString q.AsString 
+                | Choice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
+                | Par(p, q) -> sprintf "%s | %s" p.AsString q.AsString
+                | Await(b, p) -> sprintf "%A -> %s" b p.AsString
+                | Name(s) -> s
+
 
         let makeClock() =
             let x = ref 0
