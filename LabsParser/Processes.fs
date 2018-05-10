@@ -4,40 +4,61 @@ open FParsec
 open Labs.Types
 open Expressions    
 
+
+let pEnvWrite =
+        envKey .>>. (betweenspaces ASSIGN >>. pexpr) |>> EnvWrite 
+
+/// Parses elementary processes ("actions")
 let paction : Parser<_> =
+    // Attributes can be set either to expression or environment values
     let pactionAttr = 
-        interfaceKey .>>. (betweenspaces ASSIGN >>. pexpr) |>> AttrUpdate
+        let envOrExpr k = 
+           (followedBy envKey >>. envKey |>> fun x -> EnvRead(k, x))
+           <|>
+           (pexpr |>> fun e -> AttrUpdate(k, e))
+
+        let key = interfaceKey .>> (betweenspaces ASSIGN)
+        key >>= envOrExpr
+
+    let pEnvRead =
+        interfaceKey .>>. (betweenspaces ASSIGN >>. envKey) |>> EnvRead 
+     
     let pactionLstig =
         lstigKey .>>. (betweenspaces ASSIGN >>. pexpr) |>> LStigUpdate
-    let pactionAwait =
-        pbexpr .>> AWAIT |>> Await
-    choice [pactionAwait; pactionAttr; pactionLstig]
 
-let precprocTerm, precprocTermRef = createParserForwardedToRef()
-let precproc, precprocRef = createParserForwardedToRef()
-
-do precprocTermRef :=
-    choice [
-        stringReturn "0" RNil;
-        stringReturn "X" X;
-        between (pchar '(') (pchar ')') precproc;
-        paction .>>. (PREFIX >>. precprocTerm) |>> RPrefix
-    ]
-
-do precprocRef :=
-    maybeTuple2 precprocTerm (betweenspaces (pchar '+') >>. precproc) RChoice
-    
+    choice [pactionLstig; pEnvWrite; pactionAttr]
 
 let pproc, pprocRef = createParserForwardedToRef()
 let pprocTerm, pprocTermRef = createParserForwardedToRef()
 
 do pprocTermRef :=
-    let pprocNil = stringReturn "0" Nil
-    let pprocRec = (pstring "recX.") >>. precproc |>> Process.RecX
-    let pprocParen = between (pchar '(') (pchar ')') pproc
-    let pprocSeq =
-        paction .>>. (PREFIX >>. pprocTerm) |>> Process.Prefix
-    choice [pprocNil; pprocRec; pprocParen; pprocSeq]
+    let pNil = stringReturn "0" Nil
+    let pTick = stringReturn "1" Tick
+    let pParen = between (pchar '(') (pchar ')') pproc
+    //let pSeq =  
+    //    printf "prova pSeq"
+    //    pprocTerm .>>. (SEQ >>. ws >>. pproc) |>> Process.Seq
+    //let pPar =
+    //    pprocTerm .>>. (PAR >>. ws >>. pproc) |>> Process.Par
+    //let pChoice =
+        //pprocTerm .>>. (CHOICE >>. ws >>. pproc) |>> Process.Choice
+    let pName =
+        IDENTIFIER .>> notFollowedBy (pchar '[') |>> Process.Name
+    choice [attempt pName; pNil; pTick; paction |>> Base; pParen]
 
 do pprocRef := 
-    maybeTuple2 pprocTerm (betweenspaces (pchar '+') >>. pproc) Process.Choice
+    // Returns a Process type from the corresponding char
+    let OP : Parser<_> = 
+        choice [
+            (charReturn '&' Process.Choice);
+            (charReturn '|' Process.Par);
+            (charReturn ';' Process.Seq);
+        ]
+    // Either returns a single term, or creates a choice/par/seq
+    // from two processes
+    maybeTuple2 (pprocTerm .>> ws) ((OP .>> ws) .>>. (pproc .>> ws)) (fun (a, (b, c)) -> b(a,c))
+
+let pInit, pInitRef = createParserForwardedToRef()
+
+do pInitRef :=
+    maybeTuple2 (pEnvWrite .>> ws |>> Base) (SEQ >>. ws >>. pInit) Seq
