@@ -1,0 +1,11 @@
+P1 = 1
+P2 = I[x] := 1 + 1; P2
+P3 = I[x] := 1; 1
+
+P4 = E[x] := 130
+P5 = I[prova] := E[x]
+
+# Example of a (very) invalid Init
+# Init = E[x] := L[ciao] | E[y] := 2; I[x] := 3
+
+Init = E[x] := 3 + 10; E[y] := 42
