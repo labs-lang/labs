@@ -33,6 +33,7 @@ open System
 
         type Label =
             | Eps
+            | Tick
             | Qry of Interface * Tpair
             | Put of Interface * Tpair
 
