@@ -1,7 +1,7 @@
 module Processes
 
 open FParsec
-open Buzz.Types
+open Labs.Types
 open Expressions    
 
 let paction : Parser<_> =

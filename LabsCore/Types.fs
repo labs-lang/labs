@@ -1,4 +1,4 @@
-namespace Buzz
+namespace Labs
 
 open System
     [<AutoOpen>]    

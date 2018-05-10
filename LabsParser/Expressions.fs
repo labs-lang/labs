@@ -1,5 +1,5 @@
 ﻿module internal Expressions
-open Buzz.Types
+open Labs.Types
 open FParsec
 
 /// Parser for values
