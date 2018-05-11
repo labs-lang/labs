@@ -1,5 +1,5 @@
 ﻿module internal Expressions
-open Labs.Types
+open Types
 open FParsec
 
 /// Parser for values

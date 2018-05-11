@@ -1,7 +1,7 @@
 ﻿module Parser
 
 open FParsec
-open Labs.Types
+open Types
 
 let pProc = Processes.pproc
 

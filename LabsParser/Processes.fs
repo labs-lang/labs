@@ -1,7 +1,7 @@
 module Processes
 
 open FParsec
-open Labs.Types
+open Types
 open Expressions    
 
 
