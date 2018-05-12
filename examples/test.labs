@@ -1,11 +1,21 @@
-P1 = 1
-P2 = I[x] := 1 + 1; P2
-P3 = I[x] := 1; 1
+# Global section
+Interface = [x, y, z]
+Stigmergy = [a, b, c]
+Environment = [i, j, k]
 
-P4 = E[x] := 130
-P5 = I[prova] := E[x]
+
+# Process section
+P1 = Skip
+P2 = x <- 1 + 1; P2
+P3 = x <- 1; Skip
+
+P4 = i <= 130
+P5 = y <- j
 
 # Example of a (very) invalid Init
-# Init = E[x] := L[ciao] | E[y] := 2; I[x] := 3
+# Init = i <= a | E[y] := 2; I[x] := 3
 
 Init = E[x] := 3 + 10; E[y] := 42
+
+# System is composed by 5 components running process P3
+# and 5 running P2
