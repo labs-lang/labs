@@ -3,7 +3,7 @@
 open FParsec
 open Types
 
-let pProc = Processes.pproc
+let private pProc = Processes.pproc
 
 type private Line =
     | Def of string * Process
