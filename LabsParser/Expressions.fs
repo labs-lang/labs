@@ -24,7 +24,7 @@ let pexprTerm =
     ]
 
 let private pexprSum = 
-    maybeTuple2 (pexprTerm .>> ws) ((pchar '+' .>> ws) >>. pexpr) Sum
+    maybeTuple2 (ws pexprTerm) ((ws (pchar '+')) >>. pexpr) Sum
 
 // assign to "pexprRef" the choice of the above parsers
 do pexprRef := pexprSum
@@ -42,16 +42,16 @@ let pbexpr, private pbexprRef = createParserForwardedToRef()
 let pbexprTerm : Parser<_> = 
     let pbexprNeg = NEG >>. pbexpr |>> Neg
     let pbexprCompare =
-        tuple3 pexpr (pbcompareop .>> ws) pexpr |>> Compare
+        tuple3 pexpr (ws pbcompareop) pexpr |>> Compare
     choice [
         attempt pbexprNeg;
         attempt pbexprCompare;
         stringReturn "true" True;
         stringReturn "false" False;
-    ] .>> ws
+    ]
 
 let private pbexprConj =
-    pbexprTerm .>>. ( CONJ >>. ws >>. pbexpr) |>> Conj
+    (ws pbexprTerm) .>>. ( (ws CONJ)  >>. pbexpr) |>> Conj
 
 do pbexprRef := 
     choice [attempt pbexprConj; pbexprTerm]

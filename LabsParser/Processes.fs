@@ -56,9 +56,4 @@ do pprocRef :=
         ]
     // Either returns a single term, or creates a choice/par/seq
     // from two processes
-    maybeTuple2 (pprocTerm .>> ws) ((OP .>> ws) .>>. (pproc .>> ws)) (fun (a, (b, c)) -> b(a,c))
-
-let pInit, pInitRef = createParserForwardedToRef()
-
-do pInitRef :=
-    maybeTuple2 (pEnvWrite .>> ws |>> Base) (SEQ >>. ws >>. pInit) Seq
+    maybeTuple2 (ws pprocTerm) ((ws OP) .>>. (ws pproc)) (fun (a, (b, c)) -> b a c)

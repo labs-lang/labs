@@ -9,14 +9,13 @@ type private Line =
     | Def of string * Process
     | Comment of unit
 
-let lineComment : Parser<_> = (skipChar '#') >>. skipRestOfLine false .>> ws
+let private lineComment : Parser<_> = (ws COMMENT) >>. skipRestOfLine false
 
-let pdef = 
+let private pdef = 
+    (ws IDENTIFIER) .>>. (ws (skipChar '=') >>. (ws pProc)) .>> optional lineComment
 
-    (IDENTIFIER .>> ws ) .>>. (pchar '=' >>. ws >>. pProc) .>> ws
-
-let full = 
-    (ws >>. many ((pdef |>> Def) <|> (lineComment |>> Comment)) .>> (ws .>> eof))
+let private processes = 
+    (spaces >>. many ((pdef |>> Def) <|> (lineComment |>> Comment)) |> ws)
     |>> List.choose (function Def(a,b) -> Some (a,b) | _ -> None)
 
-let pInit = Processes.pInit
+let parse = processes

@@ -18,8 +18,21 @@ let CHOICE : Parser<_> =        (skipChar '+')
 let COMMENT : Parser<_> =       (skipChar '#')
 //-----------------------------------------
 
-let IDENTIFIER : Parser<_> = (regex "[A-Z][A-Za-z0-9]*")
-let ws = spaces
+
+
+let isAlphanum x = isAsciiLetter x || isDigit x
+let isAlphanumlower x = isAsciiLower x || isDigit x
+
+let KEYNAME : Parser<_> =
+    asciiLower .>>. (manySatisfy isAlphanumlower)
+    |>> (fun (x, y) -> (string x) + y)
+
+let IDENTIFIER : Parser<_> = 
+    asciiUpper .>>. (manySatisfy isAlphanum)
+    |>> (fun (x, y) -> (string x) + y)
+
+/// Parse p and skip whitespace after.
+let ws p = p .>> spaces
 let btw beginchar endchar : Parser<_> = 
     between (pchar beginchar) (pchar endchar) (manySatisfy ((<>) endchar))
 let betweenBrackets = btw '[' ']'
