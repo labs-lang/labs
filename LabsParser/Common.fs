@@ -6,16 +6,16 @@ type Parser<'t> = Parser<'t, unit>
 
 // Tokens
 //-----------------------------------------
-let INTERFACE : Parser<_> =     (pchar 'I')
-let LSTIG : Parser<_> =         (pchar 'L')
-let ENV : Parser<_> =           (pchar 'E')
-let NEG : Parser<_> =           (pchar '!')
-let CONJ : Parser<_> =          (pchar '&')
-let ASSIGN : Parser<_> =        (pstring ":=")
-let AWAIT : Parser<_> =         (pchar '?')
-let SEQ : Parser<_> =           (pchar ';')
-let PAR : Parser<_> =           (pchar '|')
-let CHOICE : Parser<_> =        (pchar '+')
+let INTERFACE : Parser<_> =     (skipChar 'I')
+let LSTIG : Parser<_> =         (skipChar 'L')
+let ENV : Parser<_> =           (skipChar 'E')
+let NEG : Parser<_> =           (skipChar '!')
+let CONJ : Parser<_> =          (skipChar '&')
+let EQ : Parser<_> =            (skipChar '=')
+let SEQ : Parser<_> =           (skipChar ';')
+let PAR : Parser<_> =           (skipChar '|')
+let CHOICE : Parser<_> =        (skipChar '+')
+let COMMENT : Parser<_> =       (skipChar '#')
 //-----------------------------------------
 
 let IDENTIFIER : Parser<_> = (regex "[A-Z][A-Za-z0-9]*")
