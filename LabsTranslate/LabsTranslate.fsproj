@@ -4,8 +4,10 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="StepResult.fs" />
+    <Compile Include="Base.fs" />
     <Compile Include="Checks.fs" />
+    <Compile Include="Templates.fs" />
+    <Compile Include="Encode.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
