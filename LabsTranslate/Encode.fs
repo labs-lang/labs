@@ -19,8 +19,7 @@ let makeCounter (init: int) =
 /// Assigns a unique int to each key in the program.
 let enumerateKeys processes =
     let rec allKeysExpr = function
-    | I(x) -> Set.singleton x
-    | L(x) -> Set.singleton x
+    | K(x) -> Set.singleton x
     | Sum(e1, e2) -> Set.union (allKeysExpr e1) (allKeysExpr e2)
     | _ -> Set.empty
 

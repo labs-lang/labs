@@ -4,8 +4,6 @@ open FParsec
 open Types
 open Expressions    
 
-let pEnvWrite =
-        envKey .>>. (betweenspaces ASSIGN >>. pexpr) |>> EnvWrite 
 
 /// Parses elementary processes ("actions")
 let paction : Parser<_> =

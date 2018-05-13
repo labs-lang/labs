@@ -43,17 +43,13 @@ type SystemDef = {
 
 type Expr =
     | Const of Val
-    | L of Key
-    | I of Key
-    | E of Key
+    | K of Key
     | Sum of Expr * Expr
     with 
         override this.ToString() = 
             match this with
             | Const(v) -> v.ToString()
-            | I(k)
-            | L(k) 
-            | E(k) -> k
+            | K(k) -> k
             | Sum(e1, e2) -> sprintf "%A %A" e1 e2
 
 type Op = 

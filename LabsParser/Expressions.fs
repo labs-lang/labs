@@ -18,8 +18,7 @@ let pexpr, pexprRef = createParserForwardedToRef()
 
 let pexprTerm = 
     choice [
-        lstigKey |>> Expr.L; 
-        interfaceKey |>> Expr.I;
+        KEYNAME |>> K;
         pval |>> Const
     ]
 

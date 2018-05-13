@@ -35,15 +35,12 @@ let IDENTIFIER : Parser<_> =
 let ws p = p .>> spaces
 let btw beginchar endchar : Parser<_> = 
     between (pchar beginchar) (pchar endchar) (manySatisfy ((<>) endchar))
-let betweenBrackets = btw '[' ']'
+let betweenBrackets p = between (pchar '[') (pchar ']') p
 let betweenParen = btw '(' ')'
 let betweenQuotes = btw '"' '"'
 let betweenspaces p = between spaces spaces p
 let andspaces p = p >>. spaces
 
-let interfaceKey = INTERFACE >>. betweenBrackets
-let lstigKey = LSTIG >>. betweenBrackets
-let envKey = ENV >>. betweenBrackets
 
 /// Apply parser p1, then apply optional parser p2.
 /// If p2 succeeds, pass both results to if2.
