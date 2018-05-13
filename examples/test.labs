@@ -2,7 +2,7 @@
 Interface = [x, y, z]
 Stigmergy = [a, b, c]
 Environment = [i, j, k]
-
+System = [P2, P2, P3, P4]
 
 # Process section
 P1 = Skip
@@ -15,7 +15,7 @@ P5 = y <- j
 # Example of a (very) invalid Init
 # Init = i <= a | E[y] := 2; I[x] := 3
 
-Init = E[x] := 3 + 10; E[y] := 42
+Init = i <= 3 + 10; j <= 42
 
 # System is composed by 5 components running process P3
 # and 5 running P2
