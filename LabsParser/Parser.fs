@@ -2,8 +2,7 @@
 
 open FParsec
 open Types
-
-let private pProc = Processes.pproc
+open Processes
 
 type private Line =
     | Def of string * Process
@@ -11,11 +10,24 @@ type private Line =
 
 let private lineComment : Parser<_> = (ws COMMENT) >>. skipRestOfLine false
 
+let private definition str = 
+    (ws (skipString str)) >>.
+    (ws EQ) >>. (sepBy KEYNAME (ws <| skipChar ','))
+
+let private psys = 
+    (skipMany lineComment) >>.
+    (pipe4
+    (definition "interface") 
+    (definition "stigmergy") 
+    (definition "environment")
+    (definition "system")
+    (fun a b c d -> {iface = a; lstig = b; environment = c; components = d}))
+
 let private pdef = 
-    (ws IDENTIFIER) .>>. (ws (skipChar '=') >>. (ws pProc)) .>> optional lineComment
+    (ws IDENTIFIER) .>>. (ws (ws EQ) >>. (ws pproc)) .>> skipMany lineComment
 
 let private processes = 
     (spaces >>. many ((pdef |>> Def) <|> (lineComment |>> Comment)) |> ws)
     |>> List.choose (function Def(a,b) -> Some (a,b) | _ -> None)
 
-let parse = processes
+let parse = psys .>>. processes

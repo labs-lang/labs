@@ -15,6 +15,13 @@ let (.>>=) r f =
         f a >>= (fun x -> Result.Ok(x,b))
     | Result.Error(_) -> r  
 
+// Keeps the first element and binds the second
+let (>>=.) r f =
+    match r with
+    | Result.Ok(a,b) -> 
+        f b >>= (fun x -> Result.Ok(a,x))
+    | Result.Error(_) -> r
+
 // Like bind, but keep the input value in the result
 let (>>+) r f =
     match r with

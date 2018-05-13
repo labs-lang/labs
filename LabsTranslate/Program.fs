@@ -39,14 +39,14 @@ let main argv =
     >>= parse
     |> (fun x -> printf "%A" x; x)
     |> log "Parse successful"
-    .>>= uniqueDefs
+    >>=. uniqueDefs
     |> log "All definitions are unique"
-    .>>= checkNames
+    >>=. checkNames
     |> log "All names are defined"
-    .>>= checkInit
-    |> log "Init valid"
+    //>>=. checkInit
+    //|> log "Init valid"
     >>= checkComponents
-    |> Result.map (fun (procs, comps) -> (procs, comps, enumerateKeys (List.map snd procs)) )
+    |> Result.map (fun (sys, procs) -> (sys, procs, enumerateKeys (List.map snd procs)) )
     ///|> logErr // Log any error at the end
     |> ignore
 

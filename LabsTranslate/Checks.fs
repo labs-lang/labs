@@ -40,50 +40,20 @@ let checkNames processes =
     else Result.Error (sprintf "The following processes are undefined: %s" (withcommas undefinedNames))
 
 ///Checks that the Init oricess (if any) is a sequence of environment writes
-let checkInit (processes: (string * Process) list) = 
 
-    let rec checkExpr = function
-    | Const(_) -> Set.empty
-    | I(x) -> sprintf "I[%s]" x |> Set.singleton
-    | L(x) -> sprintf "L[%A]" x |> Set.singleton
-    | Sum(e1, e2) -> Set.union (checkExpr e1) (checkExpr e2)
 
-    let rec check = function
-    | Base(EnvWrite(k, e)) -> checkExpr e
-    | Base(a) -> a.ToString() |> Set.singleton
-    | Seq(p, q) -> Set.union (check p) (check q)
-    | Par(p, q) -> checkWith "|" p q
-    | Choice(p, q) -> checkWith "+" p q
-    | Await(_,p) -> (check p).Add "->"
-    | Name(a) -> Set.singleton a
-    | Nil 
-    | Tick -> Set.empty
-    and checkWith str p q =
-        check p
-        |> Set.union (check q)
-        |> Set.add str
 
-    let resultOf p =
-        let messages = check p
-        if messages.Count = 0 then Result.Ok processes
-        else Result.Error ("Invalid constructs in Init proces: " + withcommas messages)
 
-    processes
-    |> List.tryFind(fun x -> (fst x) = "Init")
-    |> Option.map snd
-    |> Option.map resultOf
-    |> Option.defaultValue (Result.Ok processes)
 
-let checkComponents (processes, (components: (int32 * string) list)) =
-    if components.IsEmpty then Result.Error ("No components defined")
+let checkComponents ((sys:SystemDef), processes) =
+    if sys.components.IsEmpty then Result.Error ("No components defined")
     else
         let names = fstSet processes
         let allDefined = 
-            components
-            |> List.map snd
+            sys.components
             |> List.forall names.Contains
         if allDefined then
-            Result.Ok (processes, components)
+            Result.Ok (sys, processes)
         else
             // Todo 
             Result.Error("Some components are invalid")
