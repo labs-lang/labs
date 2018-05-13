@@ -31,6 +31,10 @@ type Tpair = Key * Tval
 
 type Interface = Map<Key, Val>
 
+type SystemDef = {
+    iface: Key list; lstig: Key list; environment: Key list; components: string list}
+
+
 //type Label =
     //| Eps
     //| Tick
