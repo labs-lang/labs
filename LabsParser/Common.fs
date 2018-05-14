@@ -18,8 +18,6 @@ let CHOICE : Parser<_> =        (skipChar '+')
 let COMMENT : Parser<_> =       (skipChar '#')
 //-----------------------------------------
 
-
-
 let isAlphanum x = isAsciiLetter x || isDigit x
 let isAlphanumlower x = isAsciiLower x || isDigit x
 
