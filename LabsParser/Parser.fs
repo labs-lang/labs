@@ -2,6 +2,7 @@
 
 open FParsec
 open Types
+open Functions
 open Processes
 
 type private Line =
@@ -14,12 +15,22 @@ let private definition str =
     (ws (skipString str)) >>.
     (ws EQ) >>. (sepBy KEYNAME (ws <| skipChar ','))
 
+let private setDef str = (definition str) >>= (fun x -> fun _ -> 
+    let dup = duplicates x
+    if dup.Length > 0 then
+        dup
+        |> String.concat ", "
+        |> sprintf "%s: keys defined more than once: %s" str
+        |> (fun msg -> Reply(Error, ErrorMessageList(Message(msg))))
+    else Reply(x |> Set.ofList))
+    
+
 let private psys = 
     (skipMany lineComment) >>.
     (pipe4
-    (definition "interface") 
-    (definition "stigmergy") 
-    (definition "environment")
+    (setDef "interface") 
+    (setDef "stigmergy") 
+    (setDef "environment")
     (definition "system")
     (fun a b c d -> {iface = a; lstig = b; environment = c; components = d}))
 

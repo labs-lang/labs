@@ -36,7 +36,6 @@ let log msg result =
         result
     | Result.Error(s) -> result//printfn "Error: %s" (s.ToString())
 
-
 let logErr result = 
     match result with
     | Result.Ok(_) -> result
