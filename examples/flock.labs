@@ -1,0 +1,26 @@
+# "Global" processes
+Move = pos <- pos + dir
+
+
+comp Bird {
+    interface = [delta {20:22}, pos {1}]
+    stigmergy = [dir {(1,0)}] # TODO
+    behavior = Flock
+
+    # "Local" processes (can only be used by component Bird)
+    Move1 = pos <- pos
+    Flock = Move1; (Move1|(Move1 & Move1)); Move1
+
+    # Flock = (Move); Flock # Correct flock
+    Probe = Move; delta <- 30; Move; delta <- 10; Probe
+}
+
+system {
+    environment = []
+    # link = abs(pos of c1 - pos of c2) <= delta of c1
+    spawn = [Bird &bird]
+}
+
+#check {
+#    pr1 = Finally All Bird b1, All Bird b2, dir of b1 = dir of b2
+#}
