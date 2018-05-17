@@ -2,6 +2,7 @@
 open Types
 open Base
 open Templates
+open Expressions
 
 
 /// A Node is composed by a program counter identifier, an entry/exit point,
@@ -130,60 +131,32 @@ let translateHeader (sys,trees,maxPc,spawn) =
 
 let translateAll (sys,trees,maxPc,spawn,mapping:Map<(string * TypeofKey),int>) =
 
-    let rec translateExpr = function
-        | Const(Int(i)) -> sprintf "%i" i
-        //| Const(String(s)) -> "\"" + s + "\""
-        | Const(Val.P(p1,p2)) -> ""
-        | K(k) when mapping.ContainsKey (k, I)  -> 
-            sprintf "comp[tid].I[%i]" mapping.[k,I]
-        | K(k) when mapping.ContainsKey (k, L)  -> 
-            sprintf "comp[tid].Lvalue[%i]" mapping.[k,L]
-        | K(k) when mapping.ContainsKey (k, E)  -> 
-            // TODO
-            sprintf "E[%i]" mapping.[k,E]
-        | K(k) -> failwith "Unexpected key"
-        | Sum(e1, e2) -> sprintf "( (%s) + (%s) )" (translateExpr e1) (translateExpr e2)
 
-    let translateBOp = function
-    | Less -> "<"
-    | Equal -> "=="
-    | Greater -> ">"
-
-    let rec translateBExpr = function
-    | True -> "true"
-    | False -> "false"
-    | Neg(b) -> sprintf "!(%s)" (translateBExpr b)
-    | Conj(b1, b2) -> sprintf "((%s) && (%s))" (translateBExpr b1) (translateBExpr b2)
-    | Compare(e1, op, e2) ->
-        sprintf "((%s) %s (%s))" (translateExpr e1) (translateBOp op) (translateExpr e2)
-
-
-    let rec getLstigKeys = function
-    | K(k) when mapping.ContainsKey (k,L) -> (k,L) |> Set.singleton
-    | Sum(e1, e2) -> Set.union (getLstigKeys e1) (getLstigKeys e2)
-    | _ -> Set.empty
-
-    let lstigKeys expr =
-        expr |> getLstigKeys |> Set.map (fun x -> mapping.[x])
-
-    let rec translateNode additional name = function
+    let rec translateNode parentEntry parentExit name = function
     | Basic(pc, entry, AttrUpdate(key, e), exit, lbl) ->
         cvoid (signature name entry lbl) "int tid"
-            (additional +
-            (entrypoint pc entry) +
-            (attr (translateExpr e)(mapping.[key,I])) +
-            (updateKq <| lstigKeys e) +
-            (exitpoint pc exit))
-    | Guarded(b, node) -> translateNode (assume (translateBExpr b)) name node
+            (parentEntry + (entrypoint pc entry) +
+            (attr (translateExpr mapping e)(mapping.[key,I])) +
+            (updateKq <| lstigKeys mapping e) +
+            (exitpoint pc exit)+parentExit)
+    | Guarded(b, node) -> 
+        translateNode (parentEntry+(assume (translateBExpr mapping b))) parentExit name node
     | Parallel(pc, lpc, rpc, entry, nodes, exit) -> 
-        (join name lpc rpc pc entry exit) +
+        //(join name lpc rpc pc entry exit) +
         (nodes 
-        |> Set.map (translateNode (additional+(entrypoint pc entry)) name)
+        |> Set.map (fun node ->
+            let last = Set.union (lastNodes lpc nodes) (lastNodes rpc nodes)
+            let exit = if last.Contains node then (exitpoint pc exit) else ""
+            translateNode (parentEntry+(entrypoint pc entry)) (parentExit+exit) name node)
         |> String.concat "\n")
+    | Goto(pc, entry, exit, lbl) ->  
+        cvoid (signature name entry lbl) "int tid" 
+            (parentEntry + (entrypoint pc entry) +
+            (exitpoint pc exit)+parentExit)
     | _ -> ""
 
     trees
-    |> Map.map (fun x y -> y |> Set.map (translateNode "" x))
+    |> Map.map (fun x y -> y |> Set.map (translateNode "" "" x))
     |> Map.toSeq
     |> Seq.map snd
     |> Seq.map (String.concat "\n")

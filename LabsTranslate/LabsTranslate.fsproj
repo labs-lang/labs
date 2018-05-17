@@ -7,6 +7,7 @@
     <Compile Include="Base.fs" />
     <Compile Include="Checks.fs" />
     <Compile Include="Templates.fs" />
+    <Compile Include="Expressions.fs" />
     <Compile Include="Encode.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
