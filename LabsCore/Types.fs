@@ -9,13 +9,11 @@ type Point = int * int
 
 type Val =
     | Int of int
-    | String of string
     | P of Point
     static member (+) (left: Val, right: Val) =
         match (left, right) with
         | (Int(a), Int(b)) -> Some(Int(a+b)) // Sum
         | (P(p1), P(p2)) -> Some(P(fst p1 + fst p2, snd p1 + snd p2))
-        | (String(a), String(b)) -> Some(String(a + b)) // Concatenation
         | _ -> None
 
     static member (-) (left: Val, right: Val) =
