@@ -8,6 +8,7 @@ open Expressions
 /// Parses elementary processes ("actions")
 let paction : Parser<_> =
     let parseArrow : Parser<_> =
+        skipChar '<' >>.
         choice [
             charReturn '-' AttrUpdate;
             charReturn '~' LStigUpdate;
@@ -25,13 +26,12 @@ let pprocTerm, pprocTermRef = createParserForwardedToRef()
 do pprocTermRef :=
     let pNil = stringReturn "Nil" Nil
     let pSkip = stringReturn "Skip" Skip
-    let pParen = between (pchar '(') (pchar ')') pproc
     choice [
         attempt pNil; 
         attempt pSkip; 
         IDENTIFIER |>> Process.Name; 
         paction |>> Base; 
-        pParen
+        betweenParen pproc
     ]
 
 do pprocRef := 
@@ -45,3 +45,18 @@ do pprocRef :=
     // Either returns a single term, or creates a choice/par/seq
     // from two processes
     maybeTuple2 (ws pprocTerm) ((ws OP) .>>. (ws pproc)) (fun (a, (b, c)) -> b a c)
+
+let pdef = 
+    (ws IDENTIFIER) .>>. (ws (ws EQ) >>. (ws pproc))
+
+let processes = 
+    many (pdef .>> manyComments)
+    //|>> List.choose (function Def(a,b) -> Some (a,b) | _ -> None)
+    >>= (fun x -> fun _ -> 
+        let dup = x |> List.map fst |> List.duplicates 
+        if dup.Length > 0 then
+            dup
+            |> String.concat ", "
+            |> sprintf "These processes have multiple definitions: %s"
+            |> (fun msg -> Reply(Error, ErrorMessageList(Message(msg))))
+        else Reply(x |> Map.ofList))
