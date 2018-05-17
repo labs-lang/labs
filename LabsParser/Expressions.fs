@@ -2,24 +2,22 @@
 open Types
 open FParsec
 
+
 /// Parser for values
 let pval : Parser<_> = 
     let pintval = pint32 |>> Int
-    let pstringval = betweenQuotes |>> Val.String
-    let ppointval =
-        between (pchar '(') (pchar ')') 
-            (pint32 .>>. (betweenspaces (pchar ',') >>. pint32))
-            |>> P
-    choice [pintval; pstringval; ppointval]
+    let ppointval = ppoint |>> Val.P
+    choice [pintval; ppointval]
 
 // Example of a recursive parser
 // http://hestia.typepad.com/flatlander/2011/07/recursive-parsers-in-fparsec.html
 let pexpr, pexprRef = createParserForwardedToRef()
 
-let pexprTerm = 
+let rec pexprTerm = 
     choice [
+        pplaceholder |>> (resolvePlaceholder pexpr)
         KEYNAME |>> K;
-        pval |>> Const
+        pval |>> Const;
     ]
 
 let private pexprSum = 
@@ -29,7 +27,7 @@ let private pexprSum =
 do pexprRef := pexprSum
 
 /// Parser for comparison operators
-let pbcompareop : Parser<_> =
+let pcompareop : Parser<_> =
     choice [
         (charReturn '<' Less);
         (charReturn '=' Equal);
@@ -41,7 +39,7 @@ let pbexpr, private pbexprRef = createParserForwardedToRef()
 let pbexprTerm : Parser<_> = 
     let pbexprNeg = NEG >>. pbexpr |>> Neg
     let pbexprCompare =
-        tuple3 pexpr (ws pbcompareop) pexpr |>> Compare
+        tuple3 pexpr (ws pcompareop) pexpr |>> Compare
     choice [
         attempt pbexprNeg;
         attempt pbexprCompare;
