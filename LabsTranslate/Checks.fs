@@ -1,28 +1,12 @@
 ﻿module Checks
 open Types
-open Functions
 open Base
 
-let withcommas : seq<string> -> string = (String.concat ",")
-
-/// Verifies that no process is defined more than once.
-let uniqueDefs processes = 
-    let duplicateProcesses = processes |> List.map fst |> duplicates
-    if duplicateProcesses.Length = 0 then
-        Result.Ok processes
-    else
-        duplicateProcesses
-        |> sprintf "The following processes have multiple definitions: %A"
-        |> Result.Error
-
-//let uniqueKeys sysdef =
-//    let duplicateKeys = (List.concat [sysdef.iface; sysdef.lstig; sysdef.environment])
-//    //|> duplicates
-//    0
+let withcommas : seq<string> -> string = (String.concat ", ")
 
 /// Verifies that all process names in the program have been defined.
-let checkNames processes =
-    let definedNames = fstSet processes
+let checkNames sys =
+    let globalNames = Map.keys sys.processes
 
     let rec usedNames = function
     | Name(n) -> Set.singleton n
@@ -32,25 +16,53 @@ let checkNames processes =
     | Choice(p, q) -> Set.union (usedNames p) (usedNames q)
     | _ -> Set.empty
 
-    let undefinedNames = 
+    let undefinedNames processes defNames = 
         processes
-        |> List.map snd
-        |> List.map usedNames
+        |> Map.values
+        |> Seq.map usedNames
         |> Set.unionMany
-        |> (fun x -> Set.difference x definedNames)
+        |> (fun x -> Set.difference x defNames)
 
-    if undefinedNames.Count = 0 then Result.Ok processes
-    else Result.Error (sprintf "The following processes are undefined: %s" (withcommas undefinedNames))
+    let checkComps = 
+        sys.components
+        |> Map.map (fun _ x -> 
+            undefinedNames x.processes (Set.union globalNames (Map.keys x.processes)))
+        |> Map.filter (fun _ undef -> undef.Count > 0)
+    let globalUndef = undefinedNames sys.processes globalNames    
 
-let checkComponents ((sys:SystemDef), processes) =
+    let rec makeMsg globalCount localCount = 
+        match globalCount, localCount with
+        | (true,true) -> ""
+        | (_,true) -> sprintf "global: the following processes are undefined: %s" (withcommas globalUndef)
+        | (true,_) -> 
+            checkComps
+            |> Map.map (fun name undefs ->
+                sprintf "%s: the following processes are undefined: %s" name (withcommas undefs))
+            |> Map.values
+            |> String.concat "\n"
+        | (_,_) -> (makeMsg  true false) + "\n" + (makeMsg false true)
+
+    let msg = makeMsg globalUndef.IsEmpty checkComps.IsEmpty
+    if msg = "" then Result.Ok sys
+    else Result.Error (msg)
+
+let checkComponents sys =
+    let isDefined (def:ComponentDef) name  =
+        sys.processes.ContainsKey name || def.processes.ContainsKey name
+
+    let undefBehaviors = 
+        sys.components
+        |> Map.filter (fun _ def -> not <| isDefined def def.behavior)
+
     if sys.components.IsEmpty then Result.Error ("No components defined")
+    else if undefBehaviors.IsEmpty then
+        Result.Ok sys
     else
-        let names = fstSet processes
-        let allDefined = 
-            sys.components
-            |> List.forall names.Contains
-        if allDefined then
-            Result.Ok (sys, processes)
-        else
-            // Todo 
-            Result.Error("Some components are invalid")
+        let x = 
+            undefBehaviors
+            |> Map.map (fun _ def -> def.behavior)
+            |> Map.map (sprintf "%s: Behavior is undefined: %s")
+            |> Map.values
+            |> withcommas
+            |> (fun s -> Result.Error(s))
+        x

@@ -8,8 +8,8 @@ type args = {
     atomicLstig: bool; 
     filePath: string;
     verbose: bool
+    spawn: Map<string, int> 
 }
-let defaults = {help = false; atomicLstig = false; filePath = ""; verbose = false}
 
 let rec parseArgs partial args =
     match args with
@@ -22,16 +22,17 @@ let rec parseArgs partial args =
 
 [<EntryPoint>]
 let main argv =
-    printfn "Hello World from F#!"
-    // return an integer exit code
-
     //let args = argv |> List.ofSeq |> parseArgs defaults
     let args = Result.Ok {
         help=false; 
         atomicLstig=false;
-        filePath="../examples/test.labs";
-        verbose=false
+        filePath="../examples/flock.labs";
+        verbose=false;
+        spawn = Map.ofSeq [("Bird", 10)]
     }
+
+    setPlaceholders <| Map.ofSeq [("bird", "10")]
+
 
     args 
     |> Result.map (fun x -> x.filePath)
@@ -39,16 +40,17 @@ let main argv =
     >>= parse
     |> (fun x -> printf "%A" x; x)
     |> log "Parse successful"
-    >>=. uniqueDefs
-    |> log "All definitions are unique"
-    >>=. checkNames
+    //>>= uniqueDefs
+    //|> log "All definitions are unique"
+    >>= checkNames
     |> log "All names are defined"
-    //>>=. checkInit
+
     //|> log "Init valid"
     >>= checkComponents
-    |> Result.map (fun (sys, procs) -> (sys, procs, enumerateKeys (List.map snd procs)) )
-    ///|> logErr // Log any error at the end
-    |> ignore
-
-
-    0
+    |> log "All components are valid"
+    >+> (args |> Result.map (fun x -> x.spawn))
+    >>= encode
+    >>= translateHeader 
+    >>= translateAll 
+    |> logErr // Log any error at the end
+    |> setReturnCode

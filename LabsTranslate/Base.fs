@@ -2,11 +2,15 @@
 open FParsec
 open System.IO
 
-/// Returns a set of all the first values in a sequence of pairs.
-let fstSet s = Set.ofSeq << (Seq.map fst) <| s
+type TypeofKey = | I | L | E
 
 ///Bind operator
 let (>>=) r f = Result.bind f r
+
+let setReturnCode r =
+    match r with 
+    | Result.Ok(_) -> exit 0
+    | Result.Error(_) -> exit 1000
 
 // Binds the first element and keeps the second
 let (.>>=) r f =
@@ -22,25 +26,31 @@ let (>>=.) r f =
         f b >>= (fun x -> Result.Ok(a,x))
     | Result.Error(_) -> r
 
-// Like bind, but keep the input value in the result
-let (>>+) r f =
-    match r with
-    | Result.Ok(a) -> 
-        f a >>= (fun x -> Result.Ok(a, x))
-    | Result.Error(err) -> Result.Error(err)
+///// Puts the result of r2 and that of r1 in a new Result
+let (>+>) r2 r1 =
+    match r2, r1 with
+    | Result.Ok(a), Result.Ok(b) -> Result.Ok((a, b))
+    | Result.Error(err), _ -> Result.Error(err)
+    | _, Result.Error(err) -> Result.Error(err)
 
-let log msg result = 
-    match result with
+/// Binds r as the first argument of f.
+let (>>?) r f =
+    match r with
+    | Result.Ok(a) -> f a
+    | Result.Error(err) -> (fun _ -> Result.Error(err))
+
+let log msg r = 
+    match r with
     | Result.Ok(_) -> 
-        printfn "%s" msg
-        result
-    | Result.Error(s) -> result//printfn "Error: %s" (s.ToString())
+        printfn "\n%s" msg
+        r
+    | Result.Error(s) -> r
 
 let logErr result = 
     match result with
     | Result.Ok(_) -> result
     | Result.Error(s) -> 
-        printfn "Error: %s" (s.ToString())
+        printfn "\n%s" (s.ToString())
         result
 
 let readFile filepath =
@@ -50,8 +60,11 @@ let readFile filepath =
     | ex -> Result.Error(ex.Message)
 
 let parse text =
-     match CharParsers.run Parser.parse text with
-     | Success((procs, components), _, _) ->
-        Result.Ok(procs, components)
-     | Failure(errorMsg, _, _) -> 
-        Result.Error(sprintf "Parsing failed:\n %s" errorMsg)
+    try
+        match CharParsers.run Parser.parse text with
+        | Success(sys, _, _) ->
+        Result.Ok(sys)
+        | Failure(errorMsg, _, _) -> 
+            Result.Error(sprintf "Parsing failed:\n %s" errorMsg)
+    with
+        ex -> Result.Error(ex.Message)
