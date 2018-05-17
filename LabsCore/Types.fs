@@ -23,21 +23,9 @@ type Val =
         | _ -> None
 
 type Tval = Val * int
-
 type Key = string
 type Tpair = Key * Tval
-
 type Interface = Map<Key, Val>
-
-type SystemDef = {
-    iface: Set<Key>; lstig: Set<Key>; environment: Set<Key>; components: string list}
-
-
-//type Label =
-    //| Eps
-    //| Tick
-    //| Qry of Interface * Tpair
-    //| Put of Interface * Tpair
 
 type Expr =
     | Const of Val
@@ -54,6 +42,7 @@ type Op =
     | Equal
     | Less
     | Greater
+
 ///<summmary>Boolean expressions.</summary>
 type BExpr =
     | True
@@ -61,7 +50,6 @@ type BExpr =
     | Compare of Expr * Op * Expr
     | Neg of BExpr
     | Conj of BExpr * BExpr
-    | NilCheck of Expr 
 
 type Action =
 | AttrUpdate of Key * Expr
@@ -118,18 +106,6 @@ with
         | Par(p, q) -> sprintf "%s | %s" p.AsString q.AsString
         | Await(b, p) -> sprintf "%A -> %s" b p.AsString
         | Name(s) -> s
-
-
-
-
-let makeClock() =
-    let x = ref 0
-    let tick() =
-        x := !x + 1
-        !x
-    tick
-
-let globalClock = makeClock()
 
 type MaybeBuilder() =
     member this.Bind(m, f) = Option.bind f m
