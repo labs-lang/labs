@@ -6,15 +6,9 @@ type Parser<'t> = Parser<'t, unit>
 
 // Tokens
 //-----------------------------------------
-let INTERFACE : Parser<_> =     (skipChar 'I')
-let LSTIG : Parser<_> =         (skipChar 'L')
-let ENV : Parser<_> =           (skipChar 'E')
 let NEG : Parser<_> =           (skipChar '!')
 let CONJ : Parser<_> =          (skipChar '&')
 let EQ : Parser<_> =            (skipChar '=')
-let SEQ : Parser<_> =           (skipChar ';')
-let PAR : Parser<_> =           (skipChar '|')
-let CHOICE : Parser<_> =        (skipChar '+')
 let COMMENT : Parser<_> =       (skipChar '#')
 //-----------------------------------------
 
