@@ -12,16 +12,38 @@ type Node =
     | Basic of pc:int * entry:int * Action * exit:int * lbl:string
     | Guarded of BExpr * Node
     | Parallel of pc:int * lpc:int * rpc:int * entry:int * Set<Node> * exit:int
-    | Goto of int * int * int
+    | Goto of int * int * int * lbl:string
     | Stop of int * int
 
+let rec getEntryPoint pc = function
+    | Basic(pc=p; entry=e) when p=pc -> Some e
+    | Parallel(pc=p; entry=e) when p=pc -> Some e
+    | Goto(p,e,_,_) when p=pc -> Some e
+    | Guarded(_, n) -> getEntryPoint pc n
+    | _ -> None
 
-let private makeGenericCounter (init: int) =
-    let x = ref init
-    let incr(a) =
-        x := !x + a
-        !x
-    incr
+/// Returns the exit point of a node if is has program counter pc.
+let rec getExitPoint pc  = function
+| Basic(pc=p; exit=e) when p=pc -> Some e
+| Parallel(pc=p; exit=e) when p=pc -> Some e
+| Goto(p,_,e,_) when p=pc -> Some e
+| Guarded(_, n) -> getEntryPoint pc n
+| _ -> None
+
+/// Finds the "last" nodes in a set, i.e. those with the highest entry point.
+let lastNodes pc nodes =
+    let rec hasPc m = function
+    | Basic(pc=p; entry=e) when (p,e)=(pc,m) -> true
+    | Guarded(_, n) -> hasPc m n
+    | Basic(pc=p; entry=e) when (p,e)=(pc,m) -> true
+    | Parallel(pc=p; entry=e) when (p,e)=(pc,m) -> true
+    | Goto(p,e,_,_) when (p,e)=(pc,m) -> true
+    | _ -> false
+
+    let maxValue = nodes |> Seq.choose (getEntryPoint pc) |> Seq.max
+    nodes |> Set.filter (hasPc maxValue)
+    //let exitPoints = last |> Seq.choose (getExitPoint pc)
+    //last
 
 let private makeCounter (init: int) =
     let x = ref init
@@ -36,10 +58,10 @@ let enumerate s =
     |> Seq.mapi(fun i x -> x,i)
     |> Map.ofSeq
 
+let joins = ref Set.empty
 let encode (sys,(spawn: Map<string,int>)) = 
     let count = makeCounter(-1)
     let pccount = makeCounter(-1)
-
 
     let rec visit (processes:Map<string, Process>) procName procPc pc cnt entry exit p lbl =
 
@@ -53,7 +75,16 @@ let encode (sys,(spawn: Map<string,int>)) =
             visit processes procName procPc rightPc rCount (rCount()) (rCount()) p2 (lbl+"_R")
                 |> Set.ofSeq
                 |> Set.union left
-                |> (fun nodes -> Parallel(pc, leftPc, rightPc, i, nodes, j))
+                |> (fun nodes -> 
+                    let exitPoints = 
+                        (lastNodes leftPc nodes) 
+                        |> Set.map (fun x -> pc, exit, leftPc, (getExitPoint leftPc x))
+                        |> Set.union (
+                            (lastNodes rightPc nodes) 
+                            |> Set.map (fun x -> pc, exit, rightPc, (getExitPoint rightPc x)))
+                    joins := Set.union exitPoints (!joins)
+                    printf "%A" !joins
+                    Parallel(pc, leftPc, rightPc, i, nodes, j))
                 |> Set.singleton
 
         let vs = visit processes procName procPc
@@ -66,11 +97,11 @@ let encode (sys,(spawn: Map<string,int>)) =
              Set.union (vs pc cnt entry exit p lbl) (vs pc cnt exit k q lbl)
         | Await(b, p) -> (vs pc cnt entry exit p lbl) |> Set.map (fun n -> Guarded(b, n))
         | Choice(p, q) ->
-            Set.union (vs pc cnt entry exit p (lbl+"_L")) (vs pc cnt entry exit q (lbl+"_L"))
+            Set.union (vs pc cnt entry exit p (lbl+"_L")) (vs pc cnt entry exit q (lbl+"_R"))
         | Name(s) when s = procName ->
-            Set.singleton <| Goto(pc, entry, procPc)
+            Set.singleton <| Goto(pc, entry, procPc, lbl)
         | Name(s) -> visit processes s entry pc cnt entry exit (processes.[s]) lbl 
-        | Skip -> Set.singleton <| Goto(pc, entry, exit)
+        | Skip -> Set.singleton <| Goto(pc, entry, exit, lbl)
         | Nil -> Set.singleton <| Stop (pc, entry)
         | Par(p,q) -> (visitPar pc entry exit p q)
     let rootVisit (processes: Map<string, Process>) procName =
@@ -110,35 +141,52 @@ let translateHeader (sys,trees,maxPc,spawn) =
         |> Set.union <| Set.map (fun k -> (k, E)) sys.environment
         |> enumerate
 
-    let cnt = makeGenericCounter
-    let a = 
-        sys.spawn
-        |> Map.map (fun x num -> num, sys.components.[x].iface)
-        |> Map.map (fun _ (num, x) -> 
-            num, x
-            |> Map.map (fun k v -> 
-                init "comp[i].I" mapping.[k,I] v)
-            |> Map.values
-            |> String.concat "\n"
-        )
-        |> Map.map (fun _ (num, x) -> forLoop 0 1 x)
+
+    sys.spawn
+    |> Map.map (fun x num -> num, sys.components.[x].iface)
+    |> Map.map (fun _ (num, x) -> 
+        num, x
+        |> Map.map (fun k v -> 
+            init "comp[i].I" mapping.[k,I] v)
         |> Map.values
         |> String.concat "\n"
-    printfn "%s" a
+    )
+    //|> Map.map (fun _ (num, x) -> forLoop 0 1 x)
+    |> Map.fold (fun (count, str) _ (num, inits) -> 
+        let newCount = count + num
+        (newCount, str + (forLoop count newCount inits)))
+        (0, "")
+    |> snd
+    |> printfn "%s"
+        //|> String.concat "\n"
+    //printfn "%s" a
     
 
     Result.Ok(sys, trees, maxPc, spawn, mapping)
 
 let translateAll (sys,trees,maxPc,spawn,mapping:Map<(string * TypeofKey),int>) =
 
+    let lookupJoins pc entry = 
+        (!joins) 
+        |> Set.toSeq 
+        |> Seq.filter(fun (parentpc, exit, _,_) -> parentpc = pc && exit = entry)
+
+    let entryJoins pc entry = 
+        lookupJoins pc entry
+        |> Seq.choose (fun (_, _, childPc, v) -> (Option.map (entrypoint childPc) v))
+        |> String.concat ""
+    let exitJoins pc entry =
+        lookupJoins pc entry
+        |> Seq.choose (fun (_, _, childPc, v) -> (Option.map (fun _ -> exitpoint childPc 0) v))
+        |> String.concat ""
 
     let rec translateNode parentEntry parentExit name = function
     | Basic(pc, entry, AttrUpdate(key, e), exit, lbl) ->
         cvoid (signature name entry lbl) "int tid"
-            (parentEntry + (entrypoint pc entry) +
+            (parentEntry + (entrypoint pc entry) + (entryJoins pc entry) +
             (attr (translateExpr mapping e)(mapping.[key,I])) +
             (updateKq <| lstigKeys mapping e) +
-            (exitpoint pc exit)+parentExit)
+            (exitJoins pc entry) + (exitpoint pc exit) + parentExit)
     | Guarded(b, node) -> 
         translateNode (parentEntry+(assume (translateBExpr mapping b))) parentExit name node
     | Parallel(pc, lpc, rpc, entry, nodes, exit) -> 
