@@ -1,4 +1,4 @@
-﻿module Templates
+﻿module internal Templates
 open Types
 open Base
 
@@ -40,23 +40,6 @@ let join name leftpc rightpc parentpc parententry parentexit =
         (exitpoint rightpc 0) +
         (exitpoint parentpc parentexit)
         )
-
-
-/// Encodes the skip process.
-let skip pc next = 
-    sprintf """
-void stmt_nop%i (int tid) {
-    __VERIFIER_assume(comp[tid].pc == %i);
-    comp[tid].pc == %i;
-}""" pc pc next
-
-/// Encodes the stop process
-let stop pc = 
-    sprintf """
-void stmt_nop%i (int tid) {
-    __VERIFIER_assume(comp[tid].pc == %i);
-    __VERIFIER_assume(0);
-}""" pc pc
 
 let globals = sprintf """
 component comp[MAXPROCS];
