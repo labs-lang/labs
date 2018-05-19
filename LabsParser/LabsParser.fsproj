@@ -10,6 +10,7 @@
     <PackageReference Include="FParsec" Version="1.0.3" />
     <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
     <Compile Include="Component.fs" />
+    <Compile Include="Properties.fs" />
     <Compile Include="System.fs" />
     <Compile Include="Parser.fs" />
     <None Include="test.fsx" />
