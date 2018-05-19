@@ -27,16 +27,32 @@ type Key = string
 type Tpair = Key * Tval
 type Interface = Map<Key, Val>
 
+[<StructuredFormatDisplay("{AsString}")>]
+type ArithmOp =
+| Plus
+| Minus
+| Times
+| Mod
+    with 
+        member this.AsString = this.ToString()
+        override this.ToString() = 
+            match this with
+            | Plus -> "+" | Minus -> "-" | Times -> "*" | Mod -> "%"
+
+[<StructuredFormatDisplay("{AsString}")>]
 type Expr =
     | Const of Val
     | K of Key
-    | Sum of Expr * Expr
+    | Arithm of Expr * ArithmOp * Expr
     with 
+        member this.AsString = this.ToString()
         override this.ToString() = 
             match this with
             | Const(v) -> v.ToString()
             | K(k) -> k
-            | Sum(e1, e2) -> sprintf "%A %A" e1 e2
+            | Arithm(e1, op, e2) -> sprintf "%A %A %A" e1 op e2
+
+
 
 type Op = 
     | Equal
