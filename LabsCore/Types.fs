@@ -54,16 +54,17 @@ type Expr =
 
 
 
-type Op = 
+type CmpOp = 
     | Equal
     | Less
+    | Leq
     | Greater
 
 ///<summmary>Boolean expressions.</summary>
 type BExpr =
     | True
     | False
-    | Compare of Expr * Op * Expr
+    | Compare of Expr * CmpOp * Expr
     | Neg of BExpr
     | Conj of BExpr * BExpr
 
