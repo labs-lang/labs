@@ -35,11 +35,13 @@ do pexprRef :=
 
 /// Parser for comparison operators
 let pcompareop : Parser<_> =
+    let plessleq = (attempt (stringReturn "<=" Leq)) <|> (charReturn '<' Less);
     choice [
-        (charReturn '<' Less);
+        plessleq;
         (charReturn '=' Equal);
         (charReturn '>' Greater)
     ]
+
 
 let pbexpr, private pbexprRef = createParserForwardedToRef()
 
@@ -54,8 +56,8 @@ let pbexprTerm : Parser<_> =
         stringReturn "false" False;
     ]
 
-let private pbexprConj =
-    (ws pbexprTerm) .>>. ( (ws CONJ)  >>. pbexpr) |>> Conj
-
 do pbexprRef := 
+    let pbexprConj =
+        (ws pbexprTerm) .>>. ( (ws CONJ)  >>. pbexpr) |>> BExpr.Conj
+
     choice [attempt pbexprConj; pbexprTerm]
