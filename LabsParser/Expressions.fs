@@ -4,26 +4,34 @@ open FParsec
 
 
 /// Parser for values
-let pval : Parser<_> = 
-    let pintval = pint32 |>> Int
-    let ppointval = ppoint |>> Val.P
-    choice [pintval; ppointval]
+let pval = choice [pint32 |>> Int; ppoint |>> Val.P]
+
+
+let parithmop : Parser<_> =
+    choice [
+        (charReturn '+' Plus);
+        (charReturn '-' Minus);
+        (charReturn '*' Times);
+        (charReturn '%' Mod)
+    ]
 
 // Example of a recursive parser
 // http://hestia.typepad.com/flatlander/2011/07/recursive-parsers-in-fparsec.html
 let pexpr, pexprRef = createParserForwardedToRef()
 
-let rec pexprTerm = 
+let pexprTerm = 
     choice [
+        betweenParen pexpr;
         KEYNAME |>> K;
         pval |>> Const;
     ]
 
-let private pexprSum = 
-    maybeTuple2 (ws pexprTerm) ((ws (pchar '+')) >>. pexpr) Sum
 
 // assign to "pexprRef" the choice of the above parsers
-do pexprRef := pexprSum
+do pexprRef :=
+    maybeTuple2 (ws pexprTerm) 
+        (ws parithmop .>>. pexpr)
+        (fun (a,(b,c)) -> Arithm(a,b,c))
 
 /// Parser for comparison operators
 let pcompareop : Parser<_> =
