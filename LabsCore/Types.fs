@@ -124,9 +124,15 @@ with
         | Await(b, p) -> sprintf "%A -> %s" b p.AsString
         | Name(s) -> s
 
-type MaybeBuilder() =
-    member this.Bind(m, f) = Option.bind f m
-    member this.Return(x) = Some x
-    member this.ReturnFrom(x) = x
+type PropertyTerm =
+| ConstTerm of Val
+| KeyRef of k:string * c:string
 
-let maybe = new MaybeBuilder()
+type Property = 
+| Prop of PropertyTerm * PropertyTerm  
+| All of comp:string * name:string * Property
+| Exists of comp:string * name:string * Property
+
+type TemporalProperty =
+| Finally of Property
+| Always of Property
