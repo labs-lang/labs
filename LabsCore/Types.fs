@@ -68,17 +68,19 @@ type BExpr =
     | Neg of BExpr
     | Conj of BExpr * BExpr
 
+[<StructuredFormatDisplay("{AsString}")>]
 type Action =
 | AttrUpdate of Key * Expr
 | LStigUpdate of Key * Expr
 | EnvWrite of Key * Expr
 | EnvRead of Key * Key
 with
+    member this.AsString = this.ToString()
     override this.ToString() = 
         match this with
-        | AttrUpdate(a, e) -> sprintf "I[%s] := %s" a (e.ToString())
-        | LStigUpdate(k, v) -> sprintf "L[%s] := %A" k v
-        | EnvWrite(k, v) -> sprintf "E[%s] := %A" k v
+        | AttrUpdate(a, e) -> sprintf "%s <- %A" a e
+        | LStigUpdate(k, e) -> sprintf "%s <~ %A" k e
+        | EnvWrite(k, e) -> sprintf "%s <= %A" k e
         | EnvRead(j, k) -> sprintf "I[%s] := E[%s]" j k
         //| Await(b) -> sprintf "%A?" b
 
@@ -135,4 +137,4 @@ type Property =
 
 type TemporalProperty =
 | Finally of Property
-| Always of Property
+| Always of Property
