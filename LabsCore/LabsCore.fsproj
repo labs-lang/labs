@@ -6,5 +6,6 @@
     <Compile Include="List.fs" />
     <Compile Include="Map.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="Link.fs" />
   </ItemGroup>
 </Project>
