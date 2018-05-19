@@ -74,7 +74,7 @@ let pMap p =
         if dup.Length > 0 then
             withcommas dup
             |> sprintf "Multiple definitions of %s"
-            |> (fun msg -> Reply(Error, ErrorMessageList(Message(msg))))
+            |> (fun msg -> Reply(Error, ErrorMessageList(Message msg)))
         else Reply(x |> Map.ofList))
 
 
@@ -85,27 +85,19 @@ let ppoint : Parser<_> =
 
 /// Parses a single init definition.
 let pinit =
-    let chooseI = sepbycommas pint32 |>> ChooseI
-    let chooseP = followedBy (skipChar '(') >>. sepbycommas ppoint |>> ChooseP
-    let rangeI = 
-        followedBy ((ws pint32) .>> skipChar ':') >>.
-        (ws pint32) .>>. ((skipChar ':') >>. (ws pint32)) |>> RangeI
-    let rangeP = (ws ppoint) .>>. ((skipChar ':') >>. (ws ppoint)) |>> RangeP
-    (ws KEYNAME) 
-    .>>. betweenBraces (
-        choice [attempt rangeP; attempt chooseP; attempt rangeI; chooseI])
+    let pinitI =
+        followedBy (pint32 >>. (skipChar ':'))
+        >>. ((ws pint32)
+        .>>. ((skipChar ':') >>. (ws pint32)) 
+        |>> RangeI)
+        <|> (sepbycommas pint32 |>> ChooseI)
 
-/// Placeholders (can be assigned from command line)
-let pplaceholder = (skipChar '&') >>. KEYNAME
+    let pinitP =
+        followedBy (ppoint >>. (skipChar ':'))
+        >>. ((ws (ppoint))
+        .>>. ((skipChar ':') >>. (ws ppoint))
+        |>> RangeP)
+        <|> (sepbycommas ppoint |>> ChooseP)
 
-/// Tries to parse the value of placeholder s with parser p.
-let resolvePlaceholder p s =
-     if (not <| (!placeholders).ContainsKey s) then
-         s |> sprintf "Undefined placeholder %s" |> failwith 
-     else 
-        match (run p (!placeholders).[s]) with 
-        | Success(a,_,_) -> a 
-        | Failure(msg,_,_) -> 
-             msg
-            |> sprintf "Error: %s\n Caused by placeholder %s=%s " s (!placeholders).[s]
-            |> failwith
+    (ws KEYNAME) .>>. betweenBraces (choice [followedBy pint32 >>. pinitI; pinitP])
+

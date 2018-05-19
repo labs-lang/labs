@@ -15,7 +15,6 @@ let pexpr, pexprRef = createParserForwardedToRef()
 
 let rec pexprTerm = 
     choice [
-        pplaceholder |>> (resolvePlaceholder pexpr)
         KEYNAME |>> K;
         pval |>> Const;
     ]
