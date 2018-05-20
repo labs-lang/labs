@@ -8,8 +8,7 @@ comp Bird {
     behavior = Flock
 
     # "Local" processes (can only be used by component Bird)
-    Flock = (Movex & Movey); Flock 
-    
+    Flock = (Movex & Movey); Flock     
 }
 
 system {

@@ -1,27 +1,25 @@
 # "Global" processes
-Move = pos <- pos + dir
+Move = pos <- (pos + dir) % (&grid, &grid)
 
 
 comp Bird {
-    interface = [delta {20:22}, pos {1}]
-    stigmergy = [dir {(1,0)}] # TODO
+    interface = [pos {(0,0):(&grid, &grid)}]
+    stigmergy = [dir {(1,0),(0,1),(-1,0),(0,-1)}]
     behavior = Flock
 
     # "Local" processes (can only be used by component Bird)
-    Move1 = pos <- pos
-    Flock = Move1; (Move1|(Move1 & Move1)); Move1
-
-    # Flock = (Move); Flock # Correct flock
-    Probe = Move; delta <- 30; Move; delta <- 10; Probe
+    Flock = Move; Flock # Correct flock
+    
 }
 
 system {
     environment = []
     spawn = [Bird &bird]
-    link = abs(pos of c1 - pos of c2) <= delta of c1
+    # d2 is the squared Euclidean norm
+    # (we use it to avoid floating point computations)
+    link = d2(pos of c1 - pos of c2) <= &delta * &delta
 }
 
 check {
     Pr1 = Finally Some Bird b1, All Bird b2, dir of b1 = dir of b2
-    Pr2 = Always Some Bird b1, dir of b1 = 1
 }
