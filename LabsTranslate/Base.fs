@@ -35,6 +35,9 @@ let (>+>) r2 r1 =
     | Result.Error(err), _ -> Result.Error(err)
     | _, Result.Error(err) -> Result.Error(err)
 
+let (<&>) f g a =
+    (f a) >+> (g a)
+
 /// Binds r as the first argument of f.
 let (>>?) r f =
     match r with
