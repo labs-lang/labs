@@ -4,8 +4,10 @@ open System.IO
 
 type TypeofKey = | I | L | E
 
+type KeyMapping = Map<(string * TypeofKey),int>
+
 ///Bind operator
-let (>>=) r f = Result.bind f r
+let (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
 
 let setReturnCode r =
     match r with 
