@@ -5,7 +5,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/flock.labs --values bird="10" --bound 10</StartArguments>
+    <StartArguments>--file ../examples/flock.labs --values bird="10" delta=21 grid=16 --bound 10</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2' ">
