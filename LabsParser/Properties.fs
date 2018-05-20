@@ -39,7 +39,7 @@ let ptemp : Parser<_> =
 let pproperties = 
     (ws IDENTIFIER .>>. (ws EQ >>. ptemp))
     |> many
-    |> pMap
+    >>= toMap
     |> (>>.) (spaces >>. manyComments)
     |> ws
     |> betweenBraces

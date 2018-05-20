@@ -7,7 +7,7 @@ open Expressions
 open Properties
 
 let pspawn = 
-    ws ((ws IDENTIFIER) .>>. pint32) |> sepbycommas |> betweenBrackets
+    ws ((ws IDENTIFIER) .>>. pint32) |> sepbycommas >>= toMap |> betweenBrackets
 
 let mapToLinkTerm prop = fun _ -> 
     match prop with
@@ -55,5 +55,5 @@ let psys =
             spaces >>. manyComments
             >>. tuple3
                 (ws (setDef "environment" KEYNAME id) .>> manyComments)
-                (ws (skipString "spawn") >>. (ws EQ) >>. ws (pMap pspawn) .>> manyComments)
+                (ws (skipString "spawn") >>. (ws EQ) >>. ws pspawn .>> manyComments)
                 (ws (skipString "link") >>. (ws EQ) >>. ws plink .>> manyComments)))

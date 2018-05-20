@@ -31,12 +31,9 @@ let withcommas x = (String.concat ", " x)
 
 /// Parse p and skip whitespace after.
 let ws p = p .>> spaces
-let btw beginchar endchar : Parser<_> = 
-    between (skipChar beginchar) (skipChar endchar) (manySatisfy ((<>) endchar))
 let betweenBrackets p = between (skipChar '[') (skipChar ']') p
 let betweenBraces p = between (skipChar '{') (skipChar '}') p
 let betweenParen p = between (skipChar '(') (skipChar ')') p
-let betweenQuotes = btw '"' '"'
 let sepbycommas p = sepBy p (ws (skipChar ','))
 
 /// Apply parser p1, then apply optional parser p2.
@@ -67,15 +64,15 @@ let setDef str pelem mappingFn =
             |> (fun msg -> Reply(Error, ErrorMessageList(Message(msg))))
         else Reply(x |> Set.ofList))
 
-let pMap p =
-    p
-    >>= (fun x -> fun _ -> 
-        let dup = x |> List.map fst |> List.duplicates
+let unexpected msg = fun _ -> Reply(Error, ErrorMessageList(Unexpected(msg)))
+
+let toMap lst =
+    let dup = lst |> List.map fst |> List.duplicates
         if dup.Length > 0 then
             withcommas dup
             |> sprintf "Multiple definitions of %s"
-            |> (fun msg -> Reply(Error, ErrorMessageList(Message msg)))
-        else Reply(x |> Map.ofList))
+        |> unexpected
+    else preturn (lst |> Map.ofList)
 
 
 /// Parses a point (i.e. a pair of integers)

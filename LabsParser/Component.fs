@@ -6,7 +6,7 @@ open Common
 let pkeys str = 
     ws (skipString str) 
     >>. (ws EQ) 
-    >>. (ws (betweenBrackets (pMap (sepbycommas (ws pinit)))))
+    >>. (ws (betweenBrackets (sepbycommas (ws pinit)) >>= toMap))
     .>> manyComments
 
 let pcomp = 

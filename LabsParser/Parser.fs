@@ -17,7 +17,7 @@ let makeRanges (mp: Map<'a, int>) =
 
 let parse = 
     manyComments 
-    >>. tuple4 (processes) (ws (pMap (many (ws pcomp)))) psys pproperties
+    >>. tuple4 (processes) (ws ((pcomp |> ws |> many)>>= toMap)) psys pproperties
     .>> manyComments
     |>> (fun (procs, comps, (env, spawn, link), props) -> 
         {
