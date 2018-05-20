@@ -47,16 +47,16 @@ let (>>?) r f =
 let log msg r = 
     match r with
     | Result.Ok(_) -> 
-        printfn "\n%s" msg
+        eprintfn "\n%s" msg
         r
-    | Result.Error(s) -> r
+    | Result.Error(_) -> r
 
 let logErr result = 
     match result with
     | Result.Ok(_) -> result
     | Result.Error(s) -> 
-        printfn "\n%s" (s.ToString())
-        result
+        eprintfn "\n%s" (s)
+        Result.Error("")
 
 let readFile filepath =
     try
