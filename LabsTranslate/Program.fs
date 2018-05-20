@@ -2,55 +2,41 @@
 open Base
 open Checks
 open Encode
-
-type args = {
-    help: bool; 
-    atomicLstig: bool; 
-    filePath: string;
-    verbose: bool
-    spawn: Map<string, int> 
-}
-
-let rec parseArgs partial args =
-    match args with
-    | [] -> Result.Ok(partial)
-    | "--help" :: tail
-    | "-h" :: tail -> Result.Ok({partial with help = true})
-    | fpath :: tail when partial.filePath = "" -> 
-        parseArgs {partial with filePath = fpath} tail
-    | fpath :: tail -> Result.Error("Multiple files specified")
+open ArgParse
+open Argu
 
 [<EntryPoint>]
 let main argv =
-    //let args = argv |> List.ofSeq |> parseArgs defaults
-    let args = Result.Ok {
-        help=false; 
-        atomicLstig=false;
-        filePath="../examples/flock.labs";
-        verbose=false;
-        spawn = Map.ofSeq [("Bird", 10)]
-    }
 
-    setPlaceholders <| Map.ofSeq [("bird", "10")]
+    let parsedCli = argv |> parseCLI
 
+    let filename = 
+        parsedCli 
+        |> Result.map (fun (args, _) -> (args.GetResult <@ File @>)) 
 
-    args 
-    |> Result.map (fun x -> x.filePath)
+    let bound = 
+        parsedCli 
+        |> Result.map (fun (args, _) -> (args.GetResult <@ Bound @>))
+
+    parsedCli
+    |> Result.map (setPlaceholders << snd)
+    |> ignore
+
+    filename
     >>= readFile
+    >+> (parsedCli |> Result.map snd)
     >>= parse
-    |> (fun x -> printf "%A" x; x)
     |> log "Parse successful"
-    //>>= uniqueDefs
-    //|> log "All definitions are unique"
     >>= checkNames
     |> log "All names are defined"
 
     //|> log "Init valid"
     >>= checkComponents
     |> log "All components are valid"
-    >+> (args |> Result.map (fun x -> x.spawn))
-    >>= encode
-    >>= translateHeader 
+    >>= (encode <&> analyzeKeys)
+    >+> bound
+    >>= translateHeader
     >>= translateAll 
+    >>= translateMain
     |> logErr // Log any error at the end
     |> setReturnCode
