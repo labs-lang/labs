@@ -49,6 +49,6 @@ let rec translateLink types mapping expr =
 
 let encodeLink types mapping link =
     translateLink types mapping link
-    |> fun s -> s + ";"
+    |> sprintf "return %s;"
     |> (indent 4)
     |> cfunc "int" "link" "int comp1, int comp2"
