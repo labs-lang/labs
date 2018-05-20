@@ -25,7 +25,7 @@ type SystemDef = {
     environment: Set<Key>;
     components: Map<string, ComponentDef>;
     processes: Map<string, Process>;
-    spawn: Map<string, int>
+    spawn: Map<string, int*int>;
     properties: Map<string, TemporalProperty>
     link: Link
 }

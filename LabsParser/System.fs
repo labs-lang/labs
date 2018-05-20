@@ -40,11 +40,11 @@ do plinkRef :=
     let pneg = NEG >>. plink |>> Neg
     let pcompare =
         tuple3 plinkexpr (ws pcompareop) plinkexpr |>> Compare
-        choice [
+    choice [
         attempt pneg;
         attempt pcompare;
         stringReturn "true" True;
-        ]
+    ]
 
 
 let psys = 
