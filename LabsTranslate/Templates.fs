@@ -52,6 +52,7 @@ let globals = sprintf """
 component comp[MAXPROCS];
 int pc[MAXPROCS][%i];
 int currenttimestamp;
+int E[MAXKEY];
 """
 
 let forLoop i j s = 
@@ -121,7 +122,7 @@ let init arrayname key values =
         | ChooseP(ps) -> 
             ps 
             |> Seq.map (fun (x,y) ->(assumeP guess x guess y))
-            |> String.concat "|"
+            |> String.concat " | "
             |> assume
         | RangeI(minI, maxI) -> assumeIntRange key minI maxI
         | RangeP(minP, maxP) -> assumePRange key minP maxP
@@ -193,16 +194,27 @@ char getY(int tup) {
   return negative == 1 ? -result : result;
 }
 
-int sum(int t1, int t2) {
+int sumTuple(int t1, int t2) {
   int result = packTuple((char) getX(t1)+getX(t2), (char) getY(t1)+getY(t2));
   return result;
 }
 
-int sum2(int t1, int t2, char m) {
-  char sum1 = mod(getX(t1)+getX(t2), m);
-  char sum2 = mod(getY(t1)+getY(t2), m);
-  int result = packTuple(sum1, sum2);
+int minusTuple(int t1, int t2) {
+  int result = packTuple((char) getX(t1)-getX(t2), (char) getY(t1)-getY(t2));
   return result;
+}
+
+int modTuple(int t1, int tmod) {
+  char x = mod(getX(t1), getX(tmod));
+  char y = mod(getY(t1), getY(tmod));
+  int result = packTuple(x, y);
+  return result;
+}
+
+int d2tuple(int t1, int t2) {
+    char dx = getX(t1)-getX(t2);
+    char dy = getY(t1)-getY(t2);
+    return (unsigned char) dx*dx + dy*dy;
 }
 
 typedef struct _component {
