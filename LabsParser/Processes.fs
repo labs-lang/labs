@@ -8,12 +8,12 @@ open Expressions
 /// Parses elementary processes ("actions")
 let paction : Parser<_> =
     let parseArrow : Parser<_> =
-        skipChar '<' >>.
+        stringReturn ":=" EnvWrite
+        <|>
+        (skipChar '<' >>.
         choice [
             charReturn '-' AttrUpdate;
-            charReturn '~' LStigUpdate;
-            charReturn '=' EnvWrite
-        ]
+                charReturn '~' LStigUpdate;])
     (pipe3 
         (ws KEYNAME) 
         (ws parseArrow) 
@@ -51,7 +51,6 @@ let pdef =
 
 let processes = 
     many (pdef .>> manyComments)
-    //|>> List.choose (function Def(a,b) -> Some (a,b) | _ -> None)
     >>= (fun x -> fun _ -> 
         let dup = x |> List.map fst |> List.duplicates 
         if dup.Length > 0 then
