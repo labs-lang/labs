@@ -28,10 +28,14 @@ let rec translateLinkExpr types mapping expr =
         match (inferTypeLink types e) with
         | Int(_) -> sprintf "abs(%s)" (tlinkexp e)
         | _ -> sprintf "absTuple(%s)" (tlinkexp e) //TODO
+    | D2(e) ->
+        match (inferTypeLink types e) with
+        | Int(_) -> sprintf "d2int(%s)" (tlinkexp e) // TODO
+        | _ -> sprintf "d2Tuple(%s)" (tlinkexp e)
     | Arithm(e1, op, e2) ->
         match (inferTypeLink types expr) with
-        | Int(_) -> sprintf "(%s) %s (%s)" (tlinkexp e1) (translateAOp op) (tlinkexp e2)
-        | _ -> sprintf "sum(%s, %s)" (tlinkexp e1) (tlinkexp e2) // TODO 
+        | Int(_) -> sprintf "(%s) %s (%s)" (tlinkexp e1) (translateAOp op |> fst) (tlinkexp e2)
+        | P(_) -> sprintf "%s(%s, %s)" (translateAOp op |> snd) (tlinkexp e1) (tlinkexp e2)
 
 let rec translateLink types mapping expr = 
     let tlexpr = translateLinkExpr types mapping

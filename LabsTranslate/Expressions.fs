@@ -4,10 +4,10 @@ open Base
 open Templates
 
 let translateAOp = function
-| Plus -> "+"
-| Minus -> "-"
-| Times -> "*"
-| Mod -> "%"
+| Plus -> "+", "sumTuple"
+| Minus -> "-", "minusTuple"
+| Times -> "*", "timesTuple"
+| Mod -> "%", "modTuple"
 
 
 let rec inferType (types:Map<Key,Val>) expr =
@@ -26,12 +26,12 @@ let rec translateExpr types (mapping:KeyMapping) expr =
     match expr with
     | Const(Int(i)) -> sprintf "%i" i
     //| Const(String(s)) -> "\"" + s + "\""
-    | Const(Val.P(p1,p2)) -> ""
+    | Const(Val.P(x,y)) -> translatePoint x y 
     | K(k) -> translateKey mapping "tid" k
     | Arithm(e1, op, e2) -> 
         match (inferType types expr) with
-        | Int(_) -> sprintf "( (%s) %s (%s) )" (trexp e1) (translateAOp op) (trexp e2)
-        | P(_) -> sprintf "sum(%s, %s)" (trexp e1) (trexp e2) // TODO
+        | Int(_) -> sprintf "( (%s) %s (%s) )" (trexp e1) (translateAOp op |> fst) (trexp e2)
+        | P(_) -> sprintf "%s(%s, %s)" (translateAOp op |> snd) (trexp e1) (trexp e2) // TODO
 
 let translateBOp = function
 | Less -> "<"
