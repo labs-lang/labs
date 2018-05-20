@@ -17,10 +17,11 @@ comp Bird {
 
 system {
     environment = []
-    # link = abs(pos of c1 - pos of c2) <= delta of c1
     spawn = [Bird &bird]
+    link = abs(pos of c1 - pos of c2) <= delta of c1
 }
 
-#check {
-#    pr1 = Finally All Bird b1, All Bird b2, dir of b1 = dir of b2
-#}
+check {
+    Pr1 = Finally Some Bird b1, All Bird b2, dir of b1 = dir of b2
+    Pr2 = Always Some Bird b1, dir of b1 = 1
+}
