@@ -26,7 +26,8 @@ let plinkterm =
     let pterm = ppropTerm >>= mapToLinkTerm
     let pparen = betweenParen plinkexpr
     let pabs = (skipString "abs") >>. (betweenParen (ws plinkexpr)) |> ws |>> Abs
-    choice [pabs; pparen; attempt pterm]
+    let pd2 = (skipString "d2") >>. (betweenParen (ws plinkexpr)) |> ws |>> D2
+    choice [pabs; pd2; pparen; attempt pterm]
 
 
 do plinkexprRef := 

@@ -10,6 +10,7 @@ type LinkTerm =
 type LinkExpr =
 | T of LinkTerm
 | Abs of LinkExpr
+| D2 of LinkExpr
 | Arithm of LinkExpr * ArithmOp * LinkExpr
 
 type Link = 
