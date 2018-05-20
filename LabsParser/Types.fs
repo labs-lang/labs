@@ -1,6 +1,7 @@
 ﻿[<AutoOpen>]
 module Types
 open Types
+open Link
 
 /// Initialization values
 type Init =
@@ -25,6 +26,8 @@ type SystemDef = {
     components: Map<string, ComponentDef>;
     processes: Map<string, Process>;
     spawn: Map<string, int>
+    properties: Map<string, TemporalProperty>
+    link: Link
 }
 
 let (placeholders: Map<string,string> ref) = ref Map.empty
