@@ -21,9 +21,9 @@ let pexpr, pexprRef = createParserForwardedToRef()
 
 let pexprTerm = 
     choice [
+        followedBy pval >>. pval |>> Const;
         betweenParen pexpr;
         KEYNAME |>> K;
-        pval |>> Const;
     ]
 
 
