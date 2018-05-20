@@ -3,24 +3,36 @@ open Types
 open Base
 open Templates
 open Expressions
-
+open Properties
+open Link
 
 /// A Node is composed by a program counter identifier, an entry/exit point,
 /// and some contents: either an action or a pair of parallel nodes.
 /// Nodes can be augmented by guards.
 type Node = 
-    | Basic of pc:int * entry:int * Action * exit:int * lbl:string
-    | Guarded of BExpr * Node
-    | Parallel of pc:int * lpc:int * rpc:int * entry:int * Set<Node> * exit:int
-    | Goto of int * int * int * lbl:string
-    | Stop of int * int
+| Basic of pc:int * entry:int * Action * exit:int * lbl:string
+| Guarded of BExpr * Node
+| Parallel of pc:int * lpc:int * rpc:int * entry:int * nodes:Set<Node> * exit:int
+| Goto of pc:int * entry:int * int * lbl:string
+| Stop of int * int
 
 let rec getEntryPoint pc = function
-    | Basic(pc=p; entry=e) when p=pc -> Some e
-    | Parallel(pc=p; entry=e) when p=pc -> Some e
-    | Goto(p,e,_,_) when p=pc -> Some e
-    | Guarded(_, n) -> getEntryPoint pc n
-    | _ -> None
+| Basic(pc=p; entry=e) when p=pc -> Some e
+| Parallel(pc=p; entry=e) when p=pc -> Some e
+| Goto(p,e,_,_) when p=pc -> Some e
+| Guarded(_, n) -> getEntryPoint pc n
+| _ -> None
+
+let rec getAllEntryPoints (par:Set<int*int>) = function
+| Basic(pc=p; entry=e; lbl=l)
+| Goto(pc=p; entry=e; lbl=l) ->
+    (l, par.Add (p, e)) |> Set.singleton
+| Parallel(pc=p; entry=e; nodes=ns) -> 
+    ns
+    |> Set.map (fun n -> getAllEntryPoints (par.Add (p, e)) n)
+    |> Set.unionMany
+| Guarded(_, n) -> getAllEntryPoints par n
+| Stop(_) -> Set.empty
 
 /// Returns the exit point of a node if is has program counter pc.
 let rec getExitPoint pc  = function
@@ -30,7 +42,7 @@ let rec getExitPoint pc  = function
 | Guarded(_, n) -> getEntryPoint pc n
 | _ -> None
 
-/// Finds the "last" nodes in a set, i.e. those with the highest entry point.
+/// Finds the last nodes in a set, i.e. those with the highest entry point.
 let lastNodes pc nodes =
     let rec hasPc m = function
     | Basic(pc=p; entry=e) when (p,e)=(pc,m) -> true
@@ -52,21 +64,17 @@ let private makeCounter (init: int) =
         !x
     incr
 
+/// Set of execution point where a join happens
+let private joins = ref Set.empty
 
-let enumerate s = 
-    s
-    |> Seq.mapi(fun i x -> x,i)
-    |> Map.ofSeq
-
-let joins = ref Set.empty
-let encode (sys,(spawn: Map<string,int>)) = 
+let encode (sys) = 
     let count = makeCounter(-1)
     let pccount = makeCounter(-1)
 
     let rec visit (processes:Map<string, Process>) procName procPc pc cnt entry exit p lbl =
 
         let visitPar pc i j p1 p2 =
-            // Count 2 new program counters
+            // Make 2 new program counters
             let leftPc, rightPc = pccount(), pccount()
             let lCount, rCount = makeCounter(-1), makeCounter(-1)
             let left =
@@ -75,21 +83,23 @@ let encode (sys,(spawn: Map<string,int>)) =
             visit processes procName procPc rightPc rCount (rCount()) (rCount()) p2 (lbl+"_R")
                 |> Set.ofSeq
                 |> Set.union left
-                |> (fun nodes -> 
-                    let exitPoints = 
-                        (lastNodes leftPc nodes) 
-                        |> Set.map (fun x -> pc, exit, leftPc, (getExitPoint leftPc x))
-                        |> Set.union (
-                            (lastNodes rightPc nodes) 
-                            |> Set.map (fun x -> pc, exit, rightPc, (getExitPoint rightPc x)))
-                    joins := Set.union exitPoints (!joins)
-                    printf "%A" !joins
-                    Parallel(pc, leftPc, rightPc, i, nodes, j))
+                |> fun nodes -> 
+                    // Keep track of the exit points of the parallel process
+                    (lastNodes leftPc nodes) 
+                    |> Set.map (fun x -> pc, exit, leftPc, (getExitPoint leftPc x))
+                    |> Set.union (
+                        (lastNodes rightPc nodes) 
+                        |> Set.map (fun x -> pc, exit, rightPc, (getExitPoint rightPc x)))
+                    |> Set.union !joins
+                    |> (:=) joins
+                    nodes
+                    //joins := Set.union exitPoints (!joins)
+                |> fun nodes -> Parallel(pc, leftPc, rightPc, i, nodes, j)
                 |> Set.singleton
 
         let vs = visit processes procName procPc
         match p with
-        | Base(a) -> Set.singleton <| Basic(pc, entry, a, exit, lbl)
+        | Base(a) -> Set.singleton <| Basic(pc, entry, a, exit, (signature lbl entry ""))
         | Seq(p, Name(s)) when s = procName -> 
             vs pc cnt entry procPc p lbl
         | Seq(p,q) -> 
@@ -106,65 +116,65 @@ let encode (sys,(spawn: Map<string,int>)) =
         | Par(p,q) -> (visitPar pc entry exit p q)
     let rootVisit (processes: Map<string, Process>) procName =
         let i = count()
-        visit processes procName i (pccount()) count i (count()) processes.[procName] ""
+        visit processes procName i (pccount()) count i (count()) processes.[procName] procName
 
     let spawnedComps = 
         sys.components
-        |> Map.filter (fun n _ -> spawn.ContainsKey n)
+        |> Map.filter (fun n _ -> sys.spawn.ContainsKey n)
     let trees = 
         spawnedComps
         |> Map.map (fun _ def -> (def, Map.merge sys.processes def.processes))
         |> Map.map (fun _ (def, procs) -> rootVisit procs def.behavior)
-    printfn "%A" trees
-    Result.Ok(sys, trees, pccount(), spawn)
+    Result.Ok(sys, trees, pccount())
 
-let translateHeader (sys,trees,maxPc,spawn) =
-    printfn "%s" (globals maxPc);
-    let ranges = 0
+let translateHeader (((sys,trees,maxPc), (mapping:KeyMapping, types)), bound) =
+    let maxcomps = 
+        sys.spawn
+        |> Map.fold (fun state k (_, spawnmax) -> max state spawnmax) 0
 
-    let attrKeys = 
-        sys.components
+    printfn "#define BOUND %i" bound
+    printfn "#define MAXPROCS %i" maxcomps
+    printfn "#define MAXKEY %i" (Map.values mapping |> Seq.max |> (+) 1)
+    printfn "%s\n%s" (baseHeader) (globals maxPc)
+    printfn "%s" systemFunctions
+
+
+
+    let makeInits (keyType:TypeofKey) mp = 
+        let arrayname = 
+            match keyType with
+            | I -> "comp[i].I"
+            | L -> "comp[i].Lvalue"
+            | E -> "E"
+        mp
+        |> Map.map (fun k v -> 
+            init arrayname mapping.[k,keyType] v + 
+                match keyType with 
+                | L -> sprintf "\ncomp[i].Ltstamp[%i] = (i+1) * (%i +1);" mapping.[k,keyType] mapping.[k,keyType]
+                | _ -> "" 
+            )
         |> Map.values
-        |> Seq.map (fun c -> Map.keys c.iface)
-        |> Seq.map (Set.map (fun k -> (k, I))) 
-        |> Set.unionMany
-    let lstigKeys = 
-        sys.components
-        |> Map.values
-        |> Seq.map (fun c -> Map.keys c.lstig)
-        |> Seq.map (Set.map (fun k -> (k, L))) 
-        |> Set.unionMany
-    // Assign a unique id to each attribute/lstig/environment key
-    let mapping = 
-        attrKeys
-        |> Set.union lstigKeys
-        |> Set.union <| Set.map (fun k -> (k, E)) sys.environment
-        |> enumerate
+        |> String.concat "\n"
+
 
 
     sys.spawn
-    |> Map.map (fun x num -> num, sys.components.[x].iface)
-    |> Map.map (fun _ (num, x) -> 
-        num, x
-        |> Map.map (fun k v -> 
-            init "comp[i].I" mapping.[k,I] v)
-        |> Map.values
-        |> String.concat "\n"
-    )
-    //|> Map.map (fun _ (num, x) -> forLoop 0 1 x)
-    |> Map.fold (fun (count, str) _ (num, inits) -> 
-        let newCount = count + num
-        (newCount, str + (forLoop count newCount inits)))
-        (0, "")
-    |> snd
+    |> Map.map (fun x range -> range, (makeInits I sys.components.[x].iface))
+    |> Map.map (fun x (r, inits) -> (r, inits+"\n"+makeInits L sys.components.[x].lstig))
+    |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
+        (str + (forLoop rangeStart rangeEnd inits))) ""
+    |> fun s -> "int i,j;" + s + "\ncurrenttimestamp = MAXPROCS*MAXKEY + 2;"
+    |> (indent 4)
+    |> (cvoid "init" "")
     |> printfn "%s"
-        //|> String.concat "\n"
-    //printfn "%s" a
-    
 
-    Result.Ok(sys, trees, maxPc, spawn, mapping)
+    Result.Ok(sys, trees, maxPc, mapping, types)
 
-let translateAll (sys,trees,maxPc,spawn,mapping:Map<(string * TypeofKey),int>) =
+let translateAll (sys,trees,maxPc,mapping:KeyMapping, types) =
+
+    encodeLink types mapping sys.link
+    |> printfn "%s"
+
 
     let lookupJoins pc entry = 
         (!joins) 
@@ -180,35 +190,70 @@ let translateAll (sys,trees,maxPc,spawn,mapping:Map<(string * TypeofKey),int>) =
         |> Seq.choose (fun (_, _, childPc, v) -> (Option.map (fun _ -> exitpoint childPc 0) v))
         |> String.concat ""
 
-    let rec translateNode parentEntry parentExit name = function
+    let rec translateNode parentEntry parentExit = function
     | Basic(pc, entry, AttrUpdate(key, e), exit, lbl) ->
-        cvoid (signature name entry lbl) "int tid"
-            (parentEntry + (entrypoint pc entry) + (entryJoins pc entry) +
-            (attr (translateExpr mapping e)(mapping.[key,I])) +
-            (updateKq <| lstigKeys mapping e) +
-            (exitJoins pc entry) + (exitpoint pc exit) + parentExit)
+        cvoid lbl "int tid" (indent 4
+                (parentEntry + (entrypoint pc entry) + (entryJoins pc entry) +
+                    (attr (translateExpr types mapping e)(mapping.[key,I])) +
+                    (updateKq <| lstigKeys mapping e) +
+                    (exitJoins pc entry) + (exitpoint pc exit) + parentExit))
     | Guarded(b, node) -> 
-        translateNode (parentEntry+(assume (translateBExpr mapping b))) parentExit name node
+        translateNode (parentEntry+(assume (translateBExpr types mapping b))) parentExit node
     | Parallel(pc, lpc, rpc, entry, nodes, exit) -> 
-        //(join name lpc rpc pc entry exit) +
         (nodes 
         |> Set.map (fun node ->
             let last = Set.union (lastNodes lpc nodes) (lastNodes rpc nodes)
             let exit = if last.Contains node then (exitpoint pc exit) else ""
-            translateNode (parentEntry+(entrypoint pc entry)) (parentExit+exit) name node)
+            translateNode (parentEntry+(entrypoint pc entry)) (parentExit+exit) node)
         |> String.concat "\n")
     | Goto(pc, entry, exit, lbl) ->  
-        cvoid (signature name entry lbl) "int tid" 
+        cvoid (signature lbl entry "") "int tid" 
             (parentEntry + (entrypoint pc entry) +
             (exitpoint pc exit)+parentExit)
     | _ -> ""
 
     trees
-    |> Map.map (fun x y -> y |> Set.map (translateNode "" "" x))
+    |> Map.map (fun x y -> y |> Set.map (translateNode "" ""))
     |> Map.toSeq
     |> Seq.map snd
     |> Seq.map (String.concat "\n")
     |> String.concat "\n"
     |> printfn "%s"
 
-    Result.Ok(sys, trees)
+    Result.Ok(sys, trees, mapping)
+
+
+
+let translateMain (sys,trees:Map<'a, Set<Node>>, mapping) =
+
+    cvoid "monitor" "" (indent 4 (translateAlwaysProperties sys mapping))
+    |> printfn "%s"
+
+    let makeIf (info:string*Set<int*int>) = 
+        info
+        |> snd
+        |> Set.map (fun (pc, entry) -> sprintf "pc[choice[i]][%i]==%i" pc entry)
+        |> String.concat " && "
+        |> fun x -> sprintf "if (%s) %s(choice[i]);" x (fst info)
+
+    let nodeInfo =  
+        trees
+        |> Map.values 
+        |> Set.unionMany
+        |> Set.map (getAllEntryPoints Set.empty)
+        |> Set.unionMany
+    let first = Set.minElement nodeInfo
+
+   
+    let elseblock = 
+        nodeInfo
+        |> Set.remove first
+        |> Set.map (fun n -> "else " + (makeIf n))
+        |> String.concat "\n"
+    printfn "%s"
+        (tmain 
+            ((makeIf first) + "\n" + elseblock)
+            (translateFinallyProperties sys mapping))
+
+
+    Result.Ok(sys, trees, mapping)
