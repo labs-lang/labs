@@ -11,8 +11,8 @@ let paction : Parser<_> =
         stringReturn ":=" EnvWrite
         <|>
         (skipChar '<' >>.
-        choice [
-            charReturn '-' AttrUpdate;
+            choice [
+                charReturn '-' AttrUpdate;
                 charReturn '~' LStigUpdate;])
     (pipe3 
         (ws KEYNAME) 
@@ -30,7 +30,7 @@ do pprocTermRef :=
         attempt pNil; 
         attempt pSkip; 
         IDENTIFIER |>> Process.Name; 
-        paction |>> Base; 
+        paction |>> Base;
         betweenParen pproc
     ]
 
@@ -47,15 +47,7 @@ do pprocRef :=
     maybeTuple2 (ws pprocTerm) ((ws OP) .>>. (ws pproc)) (fun (a, (b, c)) -> b a c)
 
 let pdef = 
-    (ws IDENTIFIER) .>>. (ws (ws EQ) >>. (ws pproc))
+    (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc)) .>> ws manyComments
 
 let processes = 
-    many (pdef .>> manyComments)
-    >>= (fun x -> fun _ -> 
-        let dup = x |> List.map fst |> List.duplicates 
-        if dup.Length > 0 then
-            dup
-            |> String.concat ", "
-            |> sprintf "These processes have multiple definitions: %s"
-            |> (fun msg -> Reply(Error, ErrorMessageList(Message(msg))))
-        else Reply(x |> Map.ofList))
+    ws (many pdef) >>= toMap
