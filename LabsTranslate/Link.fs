@@ -10,7 +10,8 @@ let rec inferTypeLink (types:Map<Key,Val>) =
     | T(ConstTerm (v)) -> inferType types (Const v)
     | T(KeyRefC1(k))
     | T(KeyRefC2(k)) -> types.[k]
-    | Abs(e) -> inferTypeLink types e
+    | Abs(e)
+    | D2(e) -> inferTypeLink types e
     | Arithm(e1, op, e2) -> 
         match (inferTypeLink types e1),(inferTypeLink types e2) with
         | P(_), P(_) -> P(0,0)
