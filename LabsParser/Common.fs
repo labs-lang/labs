@@ -68,9 +68,9 @@ let unexpected msg = fun _ -> Reply(Error, ErrorMessageList(Unexpected(msg)))
 
 let toMap lst =
     let dup = lst |> List.map fst |> List.duplicates
-        if dup.Length > 0 then
-            withcommas dup
-            |> sprintf "Multiple definitions of %s"
+    if dup.Length > 0 then
+        withcommas dup
+        |> sprintf "Multiple definitions of %s"
         |> unexpected
     else preturn (lst |> Map.ofList)
 

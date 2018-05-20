@@ -15,8 +15,8 @@ let pcomp =
     .>>. betweenBraces (
         spaces >>. manyComments
         >>. tuple4
-            (pkeys "interface") 
-            (pkeys "stigmergy")
+            ((pkeys "interface") .>> manyComments)
+            ((pkeys "stigmergy") .>> manyComments)
             ((ws (skipString "behavior")) >>. (ws EQ) >>. (ws IDENTIFIER).>> manyComments)
             processes)
     |>> (fun (n, (i,l,p,procs)) -> //, //(i,l,p,procs)) -> 
