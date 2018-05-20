@@ -12,7 +12,7 @@ let (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
 let setReturnCode r =
     match r with 
     | Result.Ok(_) -> exit 0
-    | Result.Error(_) -> exit 1000
+    | Result.Error(_) -> exit 10
 
 // Binds the first element and keeps the second
 let (.>>=) r f =
