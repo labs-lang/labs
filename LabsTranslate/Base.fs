@@ -59,12 +59,40 @@ let readFile filepath =
     with
     | ex -> Result.Error(ex.Message)
 
-let parse text =
+let wrapParserRessult p text = 
     try
-        match CharParsers.run Parser.parse text with
-        | Success(sys, _, _) ->
-        Result.Ok(sys)
+        match CharParsers.run p text with
+        | Success(a, _, _) -> Result.Ok(a)
         | Failure(errorMsg, _, _) -> 
-            Result.Error(sprintf "Parsing failed:\n %s" errorMsg)
+            Result.Error (sprintf "Parsing failed:\n %s" errorMsg)
     with
-        ex -> Result.Error(ex.Message)
+        ex -> Result.Error ex.Message
+
+let withcommas x = (String.concat ", " x)
+
+
+let parse (text, (placeholders:Map<string, string>)) =
+
+    let checkPlaceholders s =
+        s
+        |> Set.difference (Map.keys placeholders)
+        |> fun z -> 
+            if (Set.isEmpty z) then Result.Ok(z) 
+            else Result.Error(sprintf "Undefined placeholders: %s" (withcommas z))
+
+
+    let foundPlaceholders = 
+        wrapParserRessult Parser.pre text
+        |> Result.map Set.ofList
+        |> Result.map (Set.filter ((<>) ""))
+
+
+
+    foundPlaceholders
+    |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("&"+ph,placeholders.[ph])) text))
+    >>= (wrapParserRessult Parser.parse)
+
+let enumerate s = 
+    s
+    |> Seq.mapi (fun i x -> x,i)
+    |> Map.ofSeq
