@@ -18,31 +18,26 @@ let setReturnCode r =
 let (.>>=) r f =
     match r with
     | Result.Ok(a,b) -> 
-        f a >>= (fun x -> Result.Ok(x,b))
+        f a >>= fun x -> Result.Ok (x,b)
     | Result.Error(_) -> r  
 
 // Keeps the first element and binds the second
 let (>>=.) r f =
     match r with
     | Result.Ok(a,b) -> 
-        f b >>= (fun x -> Result.Ok(a,x))
+        f b >>= fun x -> Result.Ok(a,x)
     | Result.Error(_) -> r
 
 ///// Puts the result of r2 and that of r1 in a new Result
 let (>+>) r2 r1 =
     match r2, r1 with
-    | Result.Ok(a), Result.Ok(b) -> Result.Ok((a, b))
-    | Result.Error(err), _ -> Result.Error(err)
-    | _, Result.Error(err) -> Result.Error(err)
+    | Result.Ok(a), Result.Ok(b) -> Result.Ok (a, b)
+    | Result.Error(err), _ -> Result.Error err
+    | _, Result.Error(err) -> Result.Error err
 
 let (<&>) f g a =
     (f a) >+> (g a)
 
-/// Binds r as the first argument of f.
-let (>>?) r f =
-    match r with
-    | Result.Ok(a) -> f a
-    | Result.Error(err) -> (fun _ -> Result.Error(err))
 
 let log msg r = 
     match r with
