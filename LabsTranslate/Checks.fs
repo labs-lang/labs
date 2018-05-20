@@ -2,7 +2,6 @@
 open Types
 open Base
 
-let withcommas : seq<string> -> string = (String.concat ", ")
 
 /// Verifies that all process names in the program have been defined.
 let checkNames sys =
@@ -44,7 +43,7 @@ let checkNames sys =
 
     let msg = makeMsg globalUndef.IsEmpty checkComps.IsEmpty
     if msg = "" then Result.Ok sys
-    else Result.Error (msg)
+    else Result.Error msg
 
 let checkComponents sys =
     let isDefined (def:ComponentDef) name  =
@@ -58,11 +57,71 @@ let checkComponents sys =
     else if undefBehaviors.IsEmpty then
         Result.Ok sys
     else
-        let x = 
-            undefBehaviors
-            |> Map.map (fun _ def -> def.behavior)
-            |> Map.map (sprintf "%s: Behavior is undefined: %s")
-            |> Map.values
-            |> withcommas
-            |> (fun s -> Result.Error(s))
-        x
+        undefBehaviors
+        |> Map.map (fun _ def -> def.behavior)
+        |> Map.map (sprintf "%s: Behavior is undefined: %s")
+        |> Map.values
+        |> withcommas
+        |> Result.Error
+
+let rec checkKeysExpr = function
+| K(k) -> k |> Set.singleton
+| Arithm(e1,_,e2) -> Set.union (checkKeysExpr e1) (checkKeysExpr e2)
+| Const(_) -> Set.empty
+
+let rec checkKeys (procs:Map<string,Process>) (names:Set<string>) = 
+    function
+    | Nil
+    | Skip -> Set.empty
+    | Base(a) -> 
+        match a with
+        | AttrUpdate(k,e)
+        | LStigUpdate(k,e)
+        | EnvWrite(k,e) -> (checkKeysExpr e).Add(k)
+        | EnvRead(k1,k2) -> Set [k1;k2]
+    | Await(_, a) -> checkKeys procs names a
+    | Seq(a,b) | Choice(a,b) | Par(a,b) -> Set.union (checkKeys procs names a) (checkKeys procs names b)
+    // Only visit a named process if it has not been visited yet
+    | Name(s) when (not <| names.Contains s) -> 
+        checkKeys procs (names.Add s) procs.[s]
+    | Name(s) -> Set.empty
+
+let analyzeKeys sys = 
+    let comps = Map.values sys.components
+    let attrKeys = 
+        comps
+        |> Seq.map (fun c -> Map.keys c.iface)
+        |> Seq.map (Set.map (fun k -> (k, I))) 
+        |> Set.unionMany
+    let lstigKeys = 
+        comps
+        |> Seq.map (fun c -> Map.keys c.lstig)
+        |> Seq.map (Set.map (fun k -> (k, L))) 
+        |> Set.unionMany
+    // Assign a unique id to each attribute/lstig/environment key
+    let mapping = 
+        attrKeys
+        |> Set.union lstigKeys
+        |> Set.union <| Set.map (fun k -> (k, E)) sys.environment
+        |> enumerate
+
+    let getTypes keysInit = 
+        let InitToType = function
+        | ChooseI(_) | RangeI(_) -> Int(0)
+        | ChooseP(_) | RangeP(_) -> P(0,0)
+        keysInit |> Map.map (fun k init -> InitToType init)
+
+    let typesIface = 
+        comps
+        |> Seq.map (fun c -> getTypes c.iface)
+        |> Seq.fold (fun st m -> Map.merge st m) Map.empty
+    let typesLstig = 
+        comps
+        |> Seq.map (fun c -> getTypes c.lstig)
+        |> Seq.fold (fun st m -> Map.merge st m) Map.empty
+    let types = (Map.merge typesIface typesLstig)
+    eprintfn "%A" types
+
+    // TODO add key check
+
+    Result.Ok (mapping, types)
