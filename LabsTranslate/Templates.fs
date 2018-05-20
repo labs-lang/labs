@@ -81,10 +81,10 @@ let init arrayname key values =
     let assumeInt = sprintf "(%s == %i)" guess
     let assumeP = sprintf "(%sx == %i && %sy == %i)" 
     let assumeIntRange key minI maxI =
-        sprintf "%s >= %i && %s <= %i" guess minI guess maxI
+        sprintf "%s >= %i && %s < %i" guess minI guess maxI
         |> assume
     let assumePRange key (xmin, ymin) (xmax, ymax)= 
-        (sprintf "(%sx >= %i && %sx <= %i) && (%sy >= %i && %sy <= %i)"
+        (sprintf "(%sx >= %i && %sx < %i) && (%sy >= %i && %sy < %i)"
         guess xmin guess xmax guess ymin guess ymax)
         |> assume
 
