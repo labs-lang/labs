@@ -120,12 +120,12 @@ let init keyInfo values =
         | ChooseI(l) -> 
             l
             |> Seq.map (assumeInt)
-            |> String.concat " | "
+            |> String.concat " || "
             |> assume
         | ChooseP(ps) -> 
             ps 
             |> Seq.map (fun (x,y) ->(assumeP guess x guess y))
-            |> String.concat " | "
+            |> String.concat " || "
             |> assume
         | RangeI(minI, maxI) -> assumeIntRange keyInfo.index minI maxI
         | RangeP(minP, maxP) -> assumePRange keyInfo.index minP maxP
@@ -245,7 +245,7 @@ int modTuple(int t1, int tmod) {
 int d2Tuple(int t) {
     char x = getX(t);
     char y = getY(t);
-    return (unsigned char) x*x + y*y;
+    return (unsigned int) x*x + y*y;
 }
 
 typedef struct _component {
@@ -400,7 +400,11 @@ currenttimestamp = MAXPROCS*MAXKEY + 2;
 """
 
 
-let toJson (spawn: Map<string, int*int>) mapping types =
+let toJson (spawn: Map<string, int*int>) (mapping:KeyMapping) =
+    let convertType = function
+    | Int(_) -> "\"int\""
+    | P(_) -> "\"point\""
+
     let ranges = 
         spawn
         |> Map.map (fun k (cmin, cmax) -> sprintf "\"%s\": [%i,%i]" k cmin cmax)
@@ -408,16 +412,19 @@ let toJson (spawn: Map<string, int*int>) mapping types =
     let keyNames =
         mapping
         |> Map.toSeq
-        |> Seq.sortBy snd
-        |> Seq.map (sprintf "\"%s\"" << fst << fst)
+        |> Seq.sortBy (fun (_,info) -> info.index)
+        |> Seq.map (fun (name, _) -> sprintf "\"%s\"" name)
         |> String.concat ","
     let keyTypes =
-        types
-        |> Seq.sortBy (fun (k, v) -> 0)
-        
+        mapping
+        |> Map.toSeq
+        |> Seq.sortBy (fun (_, info) -> info.index)    
+        |> Seq.map (fun (_, info) -> (convertType info.typ))
+        |> String.concat ","
+
     sprintf """{
     "ranges": {%s}
     "keyNames": [%s]
-    "keyTypes":
-}""" ranges keyNames
+    "keyTypes": [%s]
+}""" ranges keyNames keyTypes
     |> eprintf "%s"
