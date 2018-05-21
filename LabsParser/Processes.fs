@@ -26,9 +26,11 @@ let pprocTerm, pprocTermRef = createParserForwardedToRef()
 do pprocTermRef :=
     let pNil = stringReturn "Nil" Nil
     let pSkip = stringReturn "Skip" Skip
+    let pGuard = (ws pbexpr) .>>. (ws (skipString "->") >>. pproc)
     choice [
         attempt pNil; 
-        attempt pSkip; 
+        attempt pSkip;
+        followedBy pbexpr >>. pGuard |>> Await;
         IDENTIFIER |>> Process.Name; 
         paction |>> Base;
         betweenParen pproc
