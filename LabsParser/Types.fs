@@ -22,7 +22,7 @@ with
         [this.iface; this.lstig] |> Seq.map Map.keys |> Set.unionMany
 
 type SystemDef = {
-    environment: Set<Key>;
+    environment: Map<Key, Init>;
     components: Map<string, ComponentDef>;
     processes: Map<string, Process>;
     spawn: Map<string, int*int>;

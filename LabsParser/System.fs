@@ -54,6 +54,6 @@ let psys =
         betweenBraces (
             spaces
             >>. tuple3
-                (ws (setDef "environment" KEYNAME id))
+                (ws (pkeys "environment"))
                 (ws (skipString "spawn") >>. (ws EQ) >>. ws pspawn)
                 (ws (skipString "link") >>. (ws EQ) >>. ws plink)))
