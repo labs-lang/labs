@@ -50,6 +50,7 @@ let pbexprTerm : Parser<_> =
     let pbexprCompare =
         tuple3 pexpr (ws pcompareop) pexpr |>> Compare
     choice [
+        betweenParen pbexpr;
         attempt pbexprNeg;
         attempt pbexprCompare;
         stringReturn "true" True;
@@ -57,7 +58,4 @@ let pbexprTerm : Parser<_> =
     ]
 
 do pbexprRef := 
-    let pbexprConj =
-        (ws pbexprTerm) .>>. ( (ws CONJ)  >>. pbexpr) |>> BExpr.Conj
-
-    choice [attempt pbexprConj; pbexprTerm]
+    maybeTuple2 pbexprTerm ((ws CONJ)  >>. pbexpr) Conj
