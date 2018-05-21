@@ -29,7 +29,3 @@ type SystemDef = {
     properties: Map<string, TemporalProperty>
     link: Link
 }
-
-let (placeholders: Map<string,string> ref) = ref Map.empty
-let setPlaceholders init = 
-    placeholders := init

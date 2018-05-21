@@ -16,8 +16,8 @@
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="Base.fs" />
-    <Compile Include="Checks.fs" />
     <Compile Include="Templates.fs" />
+    <Compile Include="Checks.fs" />
     <Compile Include="Expressions.fs" />
     <Compile Include="Link.fs" />
     <Compile Include="Properties.fs" />

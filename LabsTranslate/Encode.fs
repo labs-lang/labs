@@ -57,8 +57,8 @@ let lastNodes pc nodes =
     //let exitPoints = last |> Seq.choose (getExitPoint pc)
     //last
 
-let private makeCounter (init: int) =
-    let x = ref init
+let private makeCounter (start: int) =
+    let x = ref start
     let incr() =
         x := !x + 1
         !x
