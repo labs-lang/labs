@@ -2,6 +2,7 @@
 open Base
 open Checks
 open Encode
+open Templates
 open ArgParse
 open Argu
 
@@ -10,21 +11,17 @@ let main argv =
 
     let parsedCli = argv |> parseCLI
 
-    let filename = 
-        parsedCli 
-        |> Result.map (fun (args, _) -> (args.GetResult <@ File @>)) 
+    let chosenTranslateMain = 
+        let isFair = 
+            parsedCli
+            |> Result.map (fun args -> args.Contains <@ Fair @>)
+            |> function Ok(true) -> true | _ -> false
+        if isFair then (translateMain fairInterleaving)
+        else (translateMain fullInterleaving)
 
-    let bound = 
-        parsedCli 
-        |> Result.map (fun (args, _) -> (args.GetResult <@ Bound @>))
-
-    parsedCli
-    |> Result.map (setPlaceholders << snd)
-    |> ignore
-
-    filename
+    (filename parsedCli)
     >>= readFile
-    >+> (parsedCli |> Result.map snd)
+    >+> (placeholders parsedCli)
     >>= parse
     |> log "Parse successful"
     >>= checkNames
@@ -34,9 +31,9 @@ let main argv =
     >>= checkComponents
     |> log "All components are valid"
     >>= (encode <&> analyzeKeys)
-    >+> bound
+    >+> (bound parsedCli)
     >>= translateHeader
     >>= translateAll 
-    >>= translateMain
+    >>= chosenTranslateMain
     |> logErr // Log any error at the end
     |> setReturnCode

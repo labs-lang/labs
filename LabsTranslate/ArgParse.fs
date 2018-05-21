@@ -4,13 +4,15 @@ open Argu
 type Arguments =
 | [<Mandatory>] [<Unique>] File of path:string
 | [<Mandatory>] [<Unique>] Bound of int
-| Values of string list
+| Fair
+| [<Unique>] Values of string list
  interface IArgParserTemplate with
         member s.Usage =
             match s with
             | File _ -> "specify a file."
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
+            | Fair -> "enforce fair interleaving of components."
 
 let argParser = ArgumentParser.Create<Arguments>(programName = "LabsTranslate")
 
@@ -24,9 +26,16 @@ let parseValues (vals:string list) =
 let parseCLI argv =
     try
         let parsed = argParser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
-        let vals = parsed.PostProcessResult (<@ Values @>, parseValues)
-        Result.Ok (parsed, vals)
+        Result.Ok parsed
     with e ->
         e.Message |> Result.Error
 
-    
+let bound result = 
+    Result.map (fun (args:ParseResults<_>) -> args.GetResult <@ Bound @>) result
+
+let placeholders args = 
+    args
+    |> Result.map (fun (args:ParseResults<_>) -> args.PostProcessResult (<@ Values @>, parseValues))
+
+let filename result = 
+    Result.map (fun (args:ParseResults<_>) -> args.GetResult <@ File @>) result

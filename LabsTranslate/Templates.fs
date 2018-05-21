@@ -12,7 +12,7 @@ let translateKey (mapping:Map<(string * TypeofKey), int>) index = function
 | k when mapping.ContainsKey (k, I) ->
     sprintf "comp[%s].I[%i]" index mapping.[k,I]
 | k when mapping.ContainsKey (k, L)  -> 
-    sprintf "comp[%s].I[%i]" index mapping.[k,L]
+    sprintf "comp[%s].Lvalue[%i]" index mapping.[k,L]
 | k when mapping.ContainsKey (k, E)  -> 
     sprintf "E[%i]" mapping.[k,E]
 | k -> printf "%s" k; failwith "Unexpected key " + k
@@ -43,17 +43,9 @@ attr(tid, %i, val, -1);
 """
 
 let cfunc retType fName args body =
-    (sprintf "%s %s (%s) {\n%s\n}\n") retType fName args body
+    (sprintf "%s %s(%s) {\n%s\n}\n") retType fName args body
 
 let cvoid = cfunc "void"
-
-
-let globals = sprintf """
-component comp[MAXPROCS];
-int pc[MAXPROCS][%i];
-int currenttimestamp;
-int E[MAXKEY];
-"""
 
 let forLoop i j s = 
     (indent 4 s) |>
@@ -76,8 +68,8 @@ let init arrayname key values =
         | (a,b) when a >=0                      -> "unsigned int "
         | _ -> "int "
 
-    let nameI = sprintf "guess%i;\n" key
-    let nameP = sprintf "guess%ix, guess%iy;\n" key key
+    let nameI = sprintf "guess%i;" key
+    let nameP = sprintf "guess%ix, guess%iy;" key key
 
     let assumeInt = sprintf "(%s == %i)" guess
     let assumeP = sprintf "(%sx == %i && %sy == %i)" 
@@ -108,9 +100,9 @@ let init arrayname key values =
             match values with
             | ChooseP(_)
             | RangeP(_) -> 
-                (sprintf " int %s = packTuple(%sx, %sy);" guess guess guess)
+                (sprintf "int %s = packTuple(%sx, %sy);" guess guess guess)
             | _ -> ""
-        "\n" + prefix + (sprintf "\n %s[%i] = %s;" arrayname key guess)
+        sprintf "%s\n%s[%i] = %s;" prefix arrayname key guess
 
     (def values) + "\n" + (values
     |> (function
@@ -130,35 +122,63 @@ let init arrayname key values =
     ) + (assign values) 
 
 
-let tmain body finallyProperties = 
-    (indent 12 body)
+let tmain typeofInterleaving body finallyProperties = 
+    body
+    |> typeofInterleaving
+    |> indent 4 
     |> sprintf """
 int main(void) {
     init();
     unsigned char choice[BOUND];
-
     int i;
-    for (i=0; i<BOUND; i++) {
-        __VERIFIER_assume(choice[i] < MAXPROCS + 3);
-
-        if (choice[i] < MAXPROCS) {
 %s
-        }
-        else if (choice[i] == MAXPROCS) 
-            propagate();
-        else if (choice[i] == MAXPROCS + 1)
-            confirm();
-        else if (choice[i] == MAXPROCS + 2)
-            monitor();
-    }
-
 %s
 }
 """ <| (indent 4 finallyProperties)
 
+let fullInterleaving body = 
+    body
+    |> indent 8
+    |> sprintf """
+for (i=0; i<BOUND; i++) {
+    __VERIFIER_assume(choice[i] < MAXPROCS + 2);
+
+    if (choice[i] < MAXPROCS) {%s
+    }
+    else if (choice[i] == MAXPROCS) 
+        propagate();
+    else if (choice[i] == MAXPROCS + 1)
+        confirm();
+    monitor();
+}
+"""
+
+let fairInterleaving body = 
+    body
+    |> indent 8
+    |> sprintf """
+unsigned char last;
+for (i=0; i<BOUND; i++) {
+
+    __VERIFIER_assume(choice[i] < MAXPROCS + 2);
+
+    if (choice[i] < MAXPROCS) {
+        __VERIFIER_assume(choice[i] == last+1 || (last == MAXPROCS - 1 && choice[i] == 0));
+%s
+    }
+    else if (choice[i] == MAXPROCS) 
+        propagate();
+    else if (choice[i] == MAXPROCS + 1)
+        confirm();
+    monitor();
+}
+"""
+
 
 let baseHeader = """
 #define MAX 256
+#define undef_value 0x7FFFFFFF // MaxInt
+
 
 int abs(int x) {
   int result = (x>0)?x:-x;
@@ -211,10 +231,10 @@ int modTuple(int t1, int tmod) {
   return result;
 }
 
-int d2tuple(int t1, int t2) {
-    char dx = getX(t1)-getX(t2);
-    char dy = getY(t1)-getY(t2);
-    return (unsigned char) dx*dx + dy*dy;
+int d2Tuple(int t) {
+    char x = getX(t);
+    char y = getY(t);
+    return (unsigned char) x*x + y*y;
 }
 
 typedef struct _component {
@@ -226,6 +246,11 @@ typedef struct _component {
     unsigned char HinCnt;
     unsigned char HoutCnt;
 } component;
+
+component comp[MAXPROCS];
+int pc[MAXPROCS][MAXPC];
+int currenttimestamp;
+int E[MAXKEY];
 """
 
 let systemFunctions = """unsigned char differentLstig(int comp1, int comp2, int key){
@@ -342,3 +367,47 @@ void propagate(void) {
     comp[guessedcomp].HoutCnt = comp[guessedcomp].HoutCnt - 1;
 }
 """
+
+let baseInit = sprintf """
+int i,j;
+for (i=0; i<MAXPROCS; i++) {
+    for (j=0; j<MAXKEY; j++) {
+        comp[i].I[j] = undef_value;
+        comp[i].Lvalue[j] = undef_value;
+        comp[i].Ltstamp[j] = 0;
+        comp[i].Hin[j] = 0;
+        comp[i].Hout[j] = 0;
+    }
+    for (j=0; j<MAXPC; j++) {
+        pc[i][j] = 0;
+    } 
+    comp[i].HinCnt = 0;
+    comp[i].HoutCnt = 0;
+}
+%s
+currenttimestamp = MAXPROCS*MAXKEY + 2;
+"""
+
+type KeyInfo = {index:int; location:TypeofKey; typ: Val}
+
+let toJson (spawn: Map<string, int*int>) mapping types =
+    let ranges = 
+        spawn
+        |> Map.map (fun k (cmin, cmax) -> sprintf "\"%s\": [%i,%i]" k cmin cmax)
+        |> Map.values |> String.concat ","
+    let keyNames =
+        mapping
+        |> Map.toSeq
+        |> Seq.sortBy snd
+        |> Seq.map (sprintf "\"%s\"" << fst << fst)
+        |> String.concat ","
+    let keyTypes =
+        types
+        |> Seq.sortBy (fun (k, v) -> 0)
+        
+    sprintf """{
+    "ranges": {%s}
+    "keyNames": [%s]
+    "keyTypes":
+}""" ranges keyNames
+    |> eprintf "%s"
