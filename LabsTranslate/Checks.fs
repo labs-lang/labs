@@ -96,24 +96,21 @@ let analyzeKeys sys =
     let attrKeys = 
         comps
         |> Seq.map (fun c -> c.iface)
-        |> Seq.map (Map.mapi (fun i k init -> {index=i; location=I; typ=(initToType init)}))
+        |> Seq.map (Map.map (fun k init -> {index=0; location=I; typ=(initToType init)}))
         |> Seq.fold (fun result m -> Map.merge result m) Map.empty
-    let maxindex = 
-        attrKeys
-        |> Map.values
-        |> Seq.maxBy (fun info -> info.index)
-        |> (fun x -> x.index + 1)
-    eprintfn "%A" attrKeys
     let lstigKeys = 
         comps
         |> Seq.map (fun c -> c.lstig)
-        |> Seq.map (Map.mapiFrom maxindex (fun i k init -> {index=i; location=L; typ=(initToType init)}))
+        |> Seq.map (Map.map (fun k init -> {index=0; location=L; typ=(initToType init)}))
         |> Seq.fold (fun result m -> Map.merge result m) Map.empty
-        
-    eprintfn "%A" lstigKeys
 
-    let mapping = Map.merge attrKeys lstigKeys
-    // TODO add environment
+    let envKeys = 
+        sys.environment
+        |> Map.map (fun k init -> {index=0; location=E; typ=(initToType init)})
+
+    let mapping = 
+        attrKeys |> Map.merge lstigKeys |> Map.merge envKeys
+        |> Map.mapi (fun i k init -> {init with index=i})
 
     //toJson sys.spawn mapping types
     // TODO add key check
