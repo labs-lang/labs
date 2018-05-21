@@ -3,10 +3,6 @@ open FParsec
 open Processes
 open Common
 
-let pkeys str = 
-    ws (skipString str) 
-    >>. (ws EQ) 
-    >>. (ws (betweenBrackets (sepbycommas (ws pinit)) >>= toMap))
 
 let pcomp = 
     (ws (skipString "comp"))

@@ -97,3 +97,7 @@ let pinit =
 
     (ws KEYNAME) .>>. betweenBraces (choice [followedBy pint32 >>. pinitI; pinitP])
 
+let pkeys str = 
+    ws (skipString str) 
+    >>. (ws EQ) 
+    >>. (ws (betweenBrackets (sepbycommas (ws pinit)) >>= toMap))
