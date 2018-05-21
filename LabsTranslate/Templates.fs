@@ -57,7 +57,6 @@ for (i=%i; i<%i; i++) {
 }
 """ i j)
 
-
 let init keyInfo values =
     let guess = sprintf "guess%i" keyInfo.index
 
