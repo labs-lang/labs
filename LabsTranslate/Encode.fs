@@ -136,7 +136,7 @@ let translateHeader (((sys,trees,maxPc), mapping:KeyMapping), bound) =
     printfn "#define BOUND %i" bound
     printfn "#define MAXPROCS %i" maxcomps
     printfn "#define MAXPC %i" maxPc
-    printfn "#define MAXKEY %i" maxkey
+    printfn "#define MAXKEY %i" (maxkey + 1)
     printfn "%s" baseHeader
     printfn "%s" (encodeLink mapping sys.link)
     printfn "%s" systemFunctions
