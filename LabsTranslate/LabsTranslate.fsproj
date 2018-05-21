@@ -13,6 +13,11 @@
     <StartArguments>--file ../examples/flock2.labs --values bird=3 delta=21 grid=16 --bound 16</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Voter' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/voter.labs --bound 10</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="Base.fs" />
