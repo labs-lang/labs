@@ -185,7 +185,7 @@ let translateAll (sys,trees,maxPc,mapping:KeyMapping) =
                     (attr (translateExpr mapping e)(info.index)) +
                     (updateKq <| getLstigKeys mapping e) +
                     (exitJoins pc entry) + (exitpoint pc exit) + parentExit))
-    | Guarded(b, node) -> 
+    | Guarded(b, node) ->  
         translateNode (parentEntry+(assume (translateBExpr mapping b))) parentExit node
     | Parallel(pc, lpc, rpc, entry, nodes, exit) -> 
         (nodes 

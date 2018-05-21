@@ -40,14 +40,13 @@ let translateBOp = function
 | Leq -> "<="
 
 let rec translateBExpr (mapping:KeyMapping) =
-    let trbexp = translateBExpr mapping
     function
-    | True -> "true"
-    | False -> "false"
-    | Neg(b) -> sprintf "!(%s)" (trbexp b)
+    | True -> "1"
+    | False -> "0"
+    | Neg(b) -> sprintf "!(%s)" (translateBExpr mapping b)
     | Conj(b1, b2) -> 
         sprintf "((%s) && (%s))" 
-            (trbexp b1) (trbexp b2)
+            (translateBExpr mapping b1) (translateBExpr mapping b2)
     | Compare(e1, op, e2) ->
         sprintf "((%s) %s (%s))"
             (translateExpr mapping e1)

@@ -42,7 +42,7 @@ let rec translateLink mapping expr =
     let tlexpr = translateLinkExpr mapping
     let tl = translateLink mapping
     match expr with
-    | True -> "true"
+    | True -> "1"
     | Compare(a, op, b) -> sprintf "(%s)\n%s\n(%s)" (tlexpr a) (translateBOp op) (tlexpr b) //TODO
     | Neg(a) -> sprintf "!(%s)" (tl a)
     | Conj(a, b) -> sprintf "(%s) && (%s)" (tl a) (tl b)
