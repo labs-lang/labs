@@ -34,8 +34,11 @@ let bound result =
     Result.map (fun (args:ParseResults<_>) -> args.GetResult <@ Bound @>) result
 
 let placeholders args = 
-    args
-    |> Result.map (fun (args:ParseResults<_>) -> args.PostProcessResult (<@ Values @>, parseValues))
+    try
+        args
+        |> Result.map (fun (args:ParseResults<_>) -> args.PostProcessResult (<@ Values @>, parseValues))
+    with 
+        e -> Result.Ok Map.empty
 
 let filename result = 
     Result.map (fun (args:ParseResults<_>) -> args.GetResult <@ File @>) result
