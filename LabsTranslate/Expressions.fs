@@ -10,26 +10,26 @@ let translateAOp = function
 | Mod -> "%", "modTuple"
 
 
-let rec inferType (types:Map<Key,Val>) expr =
+let rec inferType (mapping:KeyMapping) expr =
     match expr with
     | Const(Int(_)) -> Int(0)
     | Const(P(_)) -> P(0,0)
-    | K(k) -> types.[k]
+    | K(k) -> getTypeOrFail mapping k
     | Arithm(e1, op, e2) -> 
-        match (inferType types e1),(inferType types e2) with
+        match (inferType mapping e1),(inferType mapping e2) with
         | P(_), P(_) -> P(0,0)
         | Int(_), Int(_) -> Int(0)
         | _ -> failwith (sprintf "Incorrect operation: %s" (expr.ToString()))
 
-let rec translateExpr types (mapping:KeyMapping) expr =
-    let trexp = translateExpr types mapping
+let rec translateExpr (mapping:KeyMapping) expr =
+    let trexp = translateExpr mapping
     match expr with
     | Const(Int(i)) -> sprintf "%i" i
     //| Const(String(s)) -> "\"" + s + "\""
     | Const(Val.P(x,y)) -> translatePoint x y 
     | K(k) -> translateKey mapping "tid" k
     | Arithm(e1, op, e2) -> 
-        match (inferType types expr) with
+        match (inferType mapping expr) with
         | Int(_) -> sprintf "( (%s) %s (%s) )" (trexp e1) (translateAOp op |> fst) (trexp e2)
         | P(_) -> sprintf "%s(%s, %s)" (translateAOp op |> snd) (trexp e1) (trexp e2) // TODO
 
@@ -39,8 +39,8 @@ let translateBOp = function
 | Greater -> ">"
 | Leq -> "<="
 
-let rec translateBExpr types (mapping:Map<(string * TypeofKey), int>) =
-    let trbexp = translateBExpr types mapping
+let rec translateBExpr (mapping:KeyMapping) =
+    let trbexp = translateBExpr mapping
     function
     | True -> "true"
     | False -> "false"
@@ -50,17 +50,17 @@ let rec translateBExpr types (mapping:Map<(string * TypeofKey), int>) =
             (trbexp b1) (trbexp b2)
     | Compare(e1, op, e2) ->
         sprintf "((%s) %s (%s))"
-            (translateExpr types mapping e1)
+            (translateExpr mapping e1)
             (translateBOp op)
-            (translateExpr types mapping e2)
+            (translateExpr mapping e2)
 
 
-let rec getLstigKeys (mapping:Map<(string * TypeofKey), int>) = function
-| K(k) when mapping.ContainsKey (k,L) -> (k,L) |> Set.singleton
-| Arithm(e1, _, e2) -> Set.union (getLstigKeys mapping e1) (getLstigKeys mapping e2)
-| _ -> Set.empty
-
-let lstigKeys (mapping:Map<(string * TypeofKey), int>) expr =
-    expr |> getLstigKeys mapping |> Set.map (fun x -> mapping.[x])
+let rec getLstigKeys (mapping:KeyMapping) = 
+    function
+    | K(k) -> 
+        let info = getInfoOrFail mapping k
+        if info.location = L then Set.singleton info.index else Set.empty
+    | Arithm(e1, _, e2) -> Set.union (getLstigKeys mapping e1) (getLstigKeys mapping e2)
+    | Const(_) -> Set.empty
 
 

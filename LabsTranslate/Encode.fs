@@ -127,39 +127,31 @@ let encode (sys) =
         |> Map.map (fun _ (def, procs) -> rootVisit procs def.behavior)
     Result.Ok(sys, trees, pccount())
 
-let translateHeader (((sys,trees,maxPc), (mapping:KeyMapping, types)), bound) =
+let translateHeader (((sys,trees,maxPc), mapping:KeyMapping), bound) =
     let maxcomps = 
-        sys.spawn
-        |> Map.fold (fun state k (_, spawnmax) -> max state spawnmax) 0
+        Map.fold (fun state k (_, cmax) -> max state cmax) 0 sys.spawn
+    let maxkey = 
+        Map.fold (fun state k (info) -> max state info.index) 0 mapping
 
     printfn "#define BOUND %i" bound
     printfn "#define MAXPROCS %i" maxcomps
     printfn "#define MAXPC %i" maxPc
-    printfn "#define MAXKEY %i" (Map.values mapping |> Seq.max |> (+) 1)
+    printfn "#define MAXKEY %i" maxkey
     printfn "%s" baseHeader
-    printfn "%s" (encodeLink types mapping sys.link)
+    printfn "%s" (encodeLink mapping sys.link)
     printfn "%s" systemFunctions
 
 
-    let makeInits (keyType:TypeofKey) mp = 
-        let arrayname = 
-            match keyType with
-            | I -> "comp[i].I"
-            | L -> "comp[i].Lvalue"
-            | E -> "E"
-        mp
-        |> Map.map (fun k v -> 
-            init arrayname mapping.[k,keyType] v + 
-                match keyType with 
-                | L -> sprintf "\ncomp[i].Ltstamp[%i] = (i+1) * (%i + 1);" mapping.[k,keyType] mapping.[k,keyType]
-                | _ -> "" 
-            )
+    let makeInits initMap = 
+
+        initMap
+        |> Map.map (fun k v -> init mapping.[k] v)
         |> Map.values
         |> String.concat "\n"
 
     sys.spawn
-    |> Map.map (fun x range -> range, (makeInits I sys.components.[x].iface))
-    |> Map.map (fun x (r, inits) -> (r, inits+"\n"+makeInits L sys.components.[x].lstig))
+    |> Map.map (fun x range -> range, (makeInits sys.components.[x].iface))
+    |> Map.map (fun x (r, inits) -> (r, inits+"\n"+makeInits sys.components.[x].lstig))
     |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
         (str + (forLoop rangeStart rangeEnd inits))) ""
     |> baseInit
@@ -167,9 +159,9 @@ let translateHeader (((sys,trees,maxPc), (mapping:KeyMapping, types)), bound) =
     |> (cvoid "init" "")
     |> printfn "%s"
 
-    Result.Ok(sys, trees, maxPc, mapping, types)
+    Result.Ok(sys, trees, maxPc, mapping)
 
-let translateAll (sys,trees,maxPc,mapping:KeyMapping, types) =
+let translateAll (sys,trees,maxPc,mapping:KeyMapping) =
 
     let lookupJoins pc entry = 
         (!joins) 
@@ -187,13 +179,14 @@ let translateAll (sys,trees,maxPc,mapping:KeyMapping, types) =
 
     let rec translateNode parentEntry parentExit = function
     | Basic(pc, entry, AttrUpdate(key, e), exit, lbl) -> // TODO Lstig, Env
+        let info = getInfoOrFail mapping key
         cvoid lbl "int tid" (indent 4
                 (parentEntry + (entrypoint pc entry) + (entryJoins pc entry) +
-                    (attr (translateExpr types mapping e)(mapping.[key,I])) +
-                    (updateKq <| lstigKeys mapping e) +
+                    (attr (translateExpr mapping e)(info.index)) +
+                    (updateKq <| getLstigKeys mapping e) +
                     (exitJoins pc entry) + (exitpoint pc exit) + parentExit))
     | Guarded(b, node) -> 
-        translateNode (parentEntry+(assume (translateBExpr types mapping b))) parentExit node
+        translateNode (parentEntry+(assume (translateBExpr mapping b))) parentExit node
     | Parallel(pc, lpc, rpc, entry, nodes, exit) -> 
         (nodes 
         |> Set.map (fun node ->

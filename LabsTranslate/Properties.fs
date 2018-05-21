@@ -3,7 +3,7 @@ open Types
 open Base
 open Templates
 
-let rec encodeProp sys (mapping:Map<string*TypeofKey,int>)  (sub:Map<string, string>) = 
+let rec encodeProp sys (mapping:KeyMapping)  (sub:Map<string, string>) = 
     let makeAssumptions c (cmin, cmax) = 
         sprintf "%s >= %i && %s < %i" c cmin c cmax
         |> assume |> (sprintf "int %s;\n%s" c)

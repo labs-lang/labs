@@ -1,6 +1,7 @@
 ﻿module Checks
 open Types
 open Base
+open Templates
 
 
 /// Verifies that all process names in the program have been defined.
@@ -87,41 +88,34 @@ let rec checkKeys (procs:Map<string,Process>) (names:Set<string>) =
     | Name(s) -> Set.empty
 
 let analyzeKeys sys = 
+    let initToType = function
+    | ChooseI(_) | RangeI(_) -> Int(0)
+    | ChooseP(_) | RangeP(_) -> P(0,0)
+
     let comps = Map.values sys.components
     let attrKeys = 
         comps
-        |> Seq.map (fun c -> Map.keys c.iface)
-        |> Seq.map (Set.map (fun k -> (k, I))) 
-        |> Set.unionMany
+        |> Seq.map (fun c -> c.iface)
+        |> Seq.map (Map.mapi (fun i k init -> {index=i; location=I; typ=(initToType init)}))
+        |> Seq.fold (fun result m -> Map.merge result m) Map.empty
+    let maxindex = 
+        attrKeys
+        |> Map.values
+        |> Seq.maxBy (fun info -> info.index)
+        |> (fun x -> x.index + 1)
+    eprintfn "%A" attrKeys
     let lstigKeys = 
         comps
-        |> Seq.map (fun c -> Map.keys c.lstig)
-        |> Seq.map (Set.map (fun k -> (k, L))) 
-        |> Set.unionMany
-    // Assign a unique id to each attribute/lstig/environment key
-    let mapping = 
-        attrKeys
-        |> Set.union lstigKeys
-        |> Set.union <| Set.map (fun k -> (k, E)) sys.environment
-        |> enumerate
+        |> Seq.map (fun c -> c.lstig)
+        |> Seq.map (Map.mapiFrom maxindex (fun i k init -> {index=i; location=L; typ=(initToType init)}))
+        |> Seq.fold (fun result m -> Map.merge result m) Map.empty
+        
+    eprintfn "%A" lstigKeys
 
-    let getTypes keysInit = 
-        let InitToType = function
-        | ChooseI(_) | RangeI(_) -> Int(0)
-        | ChooseP(_) | RangeP(_) -> P(0,0)
-        keysInit |> Map.map (fun k init -> InitToType init)
+    let mapping = Map.merge attrKeys lstigKeys
+    // TODO add environment
 
-    let typesIface = 
-        comps
-        |> Seq.map (fun c -> getTypes c.iface)
-        |> Seq.fold (fun st m -> Map.merge st m) Map.empty
-    let typesLstig = 
-        comps
-        |> Seq.map (fun c -> getTypes c.lstig)
-        |> Seq.fold (fun st m -> Map.merge st m) Map.empty
-    let types = (Map.merge typesIface typesLstig)
-    eprintfn "%A" types
-
+    //toJson sys.spawn mapping types
     // TODO add key check
 
-    Result.Ok (mapping, types)
+    Result.Ok (mapping)

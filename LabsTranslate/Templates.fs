@@ -8,14 +8,16 @@ let indent num (s:string) =
     |> Seq.map (sprintf "%s%s" (String.replicate num " "))
     |> String.concat "\n"
 
-let translateKey (mapping:Map<(string * TypeofKey), int>) index = function
-| k when mapping.ContainsKey (k, I) ->
-    sprintf "comp[%s].I[%i]" index mapping.[k,I]
-| k when mapping.ContainsKey (k, L)  -> 
-    sprintf "comp[%s].Lvalue[%i]" index mapping.[k,L]
-| k when mapping.ContainsKey (k, E)  -> 
-    sprintf "E[%i]" mapping.[k,E]
-| k -> printf "%s" k; failwith "Unexpected key " + k
+let translateKey (mapping:KeyMapping) index k = 
+    let getTranslation index = function
+    | I -> sprintf "comp[%s].I[%i]" index mapping.[k].index
+    | L -> sprintf "comp[%s].Lvalue[%i]" index mapping.[k].index
+    | E -> sprintf "E[%i]" mapping.[k].index
+
+    let tryKeyInfo = mapping.TryFind k
+    match tryKeyInfo with
+    | Some(info) -> getTranslation index info.location
+    | None -> failwith "Unexpected key " + k
 
 let updateKq keys = 
     (keys
@@ -56,8 +58,19 @@ for (i=%i; i<%i; i++) {
 """ i j)
 
 
-let init arrayname key values =
-    let guess = sprintf "guess%i" key
+let init keyInfo values =
+    let guess = sprintf "guess%i" keyInfo.index
+
+    let arrayname = 
+        match keyInfo.location with
+        | I -> "comp[i].I"
+        | L -> "comp[i].Lvalue"
+        | E -> "E"
+    let initLtstamp = 
+        match keyInfo.location with 
+        | L -> sprintf "comp[i].Ltstamp[%i] = (i+1) * (%i + 1);" keyInfo.index keyInfo.index
+        | _ -> "" 
+
 
     let typeofVar =
         function
@@ -68,8 +81,7 @@ let init arrayname key values =
         | (a,b) when a >=0                      -> "unsigned int "
         | _ -> "int "
 
-    let nameI = sprintf "guess%i;" key
-    let nameP = sprintf "guess%ix, guess%iy;" key key
+    let nameP = sprintf "%sx, %sy;" guess guess
 
     let assumeInt = sprintf "(%s == %i)" guess
     let assumeP = sprintf "(%sx == %i && %sy == %i)" 
@@ -83,14 +95,14 @@ let init arrayname key values =
 
     let def = 
         function
-        | ChooseI(l) -> (typeofVar (Seq.min l, List.max l) ) + nameI
+        | ChooseI(l) -> (typeofVar (Seq.min l, List.max l) ) + guess + ";"
         | ChooseP(l) ->
             let xs = l |> Seq.map fst
             let ys = l |> Seq.map snd
             let minval = min (Seq.min xs) (Seq.min ys)
             let maxval = max (Seq.max xs) (Seq.max ys)
             (typeofVar (minval, maxval) + nameP)
-        | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + nameI)
+        | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + guess)
         | RangeP((xmin, ymin), (xmax,ymax)) -> 
             let minval = min xmin ymin
             let maxval = max xmax ymax
@@ -102,7 +114,7 @@ let init arrayname key values =
             | RangeP(_) -> 
                 (sprintf "int %s = packTuple(%sx, %sy);" guess guess guess)
             | _ -> ""
-        sprintf "%s\n%s[%i] = %s;" prefix arrayname key guess
+        sprintf "%s\n%s[%i] = %s;\n%s" prefix arrayname keyInfo.index guess initLtstamp
 
     (def values) + "\n" + (values
     |> (function
@@ -116,8 +128,8 @@ let init arrayname key values =
             |> Seq.map (fun (x,y) ->(assumeP guess x guess y))
             |> String.concat " | "
             |> assume
-        | RangeI(minI, maxI) -> assumeIntRange key minI maxI
-        | RangeP(minP, maxP) -> assumePRange key minP maxP
+        | RangeI(minI, maxI) -> assumeIntRange keyInfo.index minI maxI
+        | RangeP(minP, maxP) -> assumePRange keyInfo.index minP maxP
        )
     ) + (assign values) 
 
@@ -388,7 +400,6 @@ for (i=0; i<MAXPROCS; i++) {
 currenttimestamp = MAXPROCS*MAXKEY + 2;
 """
 
-type KeyInfo = {index:int; location:TypeofKey; typ: Val}
 
 let toJson (spawn: Map<string, int*int>) mapping types =
     let ranges = 

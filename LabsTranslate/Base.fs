@@ -1,10 +1,22 @@
 ﻿module Base 
 open FParsec
+open Types
 open System.IO
 
 type TypeofKey = | I | L | E
+type KeyInfo = {index:int; location:TypeofKey; typ: Val}
+type KeyMapping = Map<string, KeyInfo>
 
-type KeyMapping = Map<(string * TypeofKey),int>
+let getTypeOrFail (m:KeyMapping) k = 
+    match m.TryFind k with
+    | Some(info) -> info.typ
+    | None -> failwith (sprintf "Unexpected key: %s" k)
+
+let getInfoOrFail (m:KeyMapping) k = 
+    match m.TryFind k with
+    | Some(info) -> info
+    | None -> failwith (sprintf "Unexpected key: %s" k)
+
 
 ///Bind operator
 let (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
