@@ -40,7 +40,7 @@ let pproperties =
     (ws IDENTIFIER .>>. (ws EQ >>. ptemp))
     |> many
     >>= toMap
-    |> (>>.) (spaces >>. manyComments)
+    |> (>>.) spaces
     |> ws
     |> betweenBraces
     |> (>>.) (ws (skipString "check"))

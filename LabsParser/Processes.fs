@@ -47,7 +47,7 @@ do pprocRef :=
     maybeTuple2 (ws pprocTerm) ((ws OP) .>>. (ws pproc)) (fun (a, (b, c)) -> b a c)
 
 let pdef = 
-    (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc)) .>> ws manyComments
+    (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc))
 
 let processes = 
     ws (many pdef) >>= toMap

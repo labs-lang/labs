@@ -45,7 +45,6 @@ let maybeTuple2 p1 p2 if2 =
     | a, None -> a
 
 let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
-let manyComments = (skipMany (ws lineComment))
 
 /// Parses a list of comma-separated elements (each element is parsed by pelem).
 let listDef str pelem = 

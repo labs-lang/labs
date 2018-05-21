@@ -2,6 +2,7 @@
 open FParsec
 open Types
 open System.IO
+open Parser
 
 type TypeofKey = | I | L | E
 type KeyInfo = {index:int; location:TypeofKey; typ: Val}
@@ -84,7 +85,6 @@ let withcommas x = (String.concat ", " x)
 
 
 let parse (text, (placeholders:Map<string, string>)) =
-
     let checkPlaceholders s =
         (Map.keys placeholders)
         |> Set.difference s
@@ -92,18 +92,17 @@ let parse (text, (placeholders:Map<string, string>)) =
             if (Set.isEmpty z) then Result.Ok(s) 
             else Result.Error(sprintf "Undefined placeholders: %s" (withcommas z))
 
-
     let foundPlaceholders = 
-        wrapParserResult Parser.pre text
+        wrapParserResult pre text
         |> Result.map Set.ofList
         |> Result.map (Set.filter ((<>) ""))
         >>= checkPlaceholders
 
-
-
     foundPlaceholders
     |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("&"+ph,placeholders.[ph])) text))
-    >>= (wrapParserResult Parser.parse)
+    |> Result.bind (wrapParserResult stripComments)
+    |> Result.map (fun x -> eprintfn "%A" x; x)
+    >>= (wrapParserResult parse)
 
 let enumerate s = 
     s

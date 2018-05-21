@@ -16,9 +16,9 @@ let makeRanges (mp: Map<'a, int>) =
     |> snd
 
 let parse = 
-    manyComments 
+    //manyComments 
+    spaces
     >>. tuple4 (processes) (ws ((pcomp |> ws |> many)>>= toMap)) psys pproperties
-    .>> manyComments
     |>> (fun (procs, comps, (env, spawn, link), props) -> 
         {
         processes = procs;
@@ -29,6 +29,8 @@ let parse =
         link = link;
         })
 
+let stripComments = 
+    stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>. preturn "")
 
 let pre =
     let pplaceholder = (skipChar '&') >>. KEYNAME

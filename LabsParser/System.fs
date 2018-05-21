@@ -52,8 +52,8 @@ let psys =
     ws (skipString "system")
     >>. ws (
         betweenBraces (
-            spaces >>. manyComments
+            spaces
             >>. tuple3
-                (ws (setDef "environment" KEYNAME id) .>> manyComments)
-                (ws (skipString "spawn") >>. (ws EQ) >>. ws pspawn .>> manyComments)
-                (ws (skipString "link") >>. (ws EQ) >>. ws plink .>> manyComments)))
+                (ws (setDef "environment" KEYNAME id))
+                (ws (skipString "spawn") >>. (ws EQ) >>. ws pspawn)
+                (ws (skipString "link") >>. (ws EQ) >>. ws plink)))
