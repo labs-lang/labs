@@ -10,8 +10,8 @@ let indent num (s:string) =
 
 let translateKey (mapping:KeyMapping) index k = 
     let getTranslation index = function
-    | I -> sprintf "comp[%s].I[%i]" index mapping.[k].index
-    | L -> sprintf "comp[%s].Lvalue[%i]" index mapping.[k].index
+    | I -> sprintf "I[%s][%i]" index mapping.[k].index
+    | L -> sprintf "Lvalue[%s][%i]" index mapping.[k].index
     | E -> sprintf "E[%i]" mapping.[k].index
 
     let tryKeyInfo = mapping.TryFind k
@@ -62,12 +62,12 @@ let init keyInfo values =
 
     let arrayname = 
         match keyInfo.location with
-        | I -> "comp[i].I"
-        | L -> "comp[i].Lvalue"
+        | I -> "I[i]"
+        | L -> "Lvalue[i]"
         | E -> "E"
     let initLtstamp = 
         match keyInfo.location with 
-        | L -> sprintf "comp[i].Ltstamp[%i] = (i+1) * (%i + 1);" keyInfo.index keyInfo.index
+        | L -> sprintf "Ltstamp[i][%i] = (i+1) * (%i + 1);" keyInfo.index keyInfo.index
         | _ -> "" 
 
 
@@ -101,7 +101,7 @@ let init keyInfo values =
             let minval = min (Seq.min xs) (Seq.min ys)
             let maxval = max (Seq.max xs) (Seq.max ys)
             (typeofVar (minval, maxval) + nameP)
-        | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + guess)
+        | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + guess + ";")
         | RangeP((xmin, ymin), (xmax,ymax)) -> 
             let minval = min xmin ymin
             let maxval = max xmax ymax
@@ -154,7 +154,8 @@ let fullInterleaving body =
 for (i=0; i<BOUND; i++) {
     __VERIFIER_assume(choice[i] < MAXPROCS + 2);
 
-    if (choice[i] < MAXPROCS) {%s
+    if (choice[i] < MAXPROCS) {
+%s
     }
     else if (choice[i] == MAXPROCS) 
         propagate();
@@ -176,6 +177,7 @@ for (i=0; i<BOUND; i++) {
     if (choice[i] < MAXPROCS) {
         __VERIFIER_assume(choice[i] == last+1 || (last == MAXPROCS - 1 && choice[i] == 0));
 %s
+        last = choice[i];
     }
     else if (choice[i] == MAXPROCS) 
         propagate();
@@ -248,25 +250,21 @@ int d2Tuple(int t) {
     return (unsigned int) x*x + y*y;
 }
 
-typedef struct _component {
-    int I[MAXKEY];          // we assume integer values for all keys
-    int Lvalue[MAXKEY];  
-    int Ltstamp[MAXKEY];
-    unsigned int Hin[MAXKEY];        // Hin[j] = 1 --> key j is in Hin
-    unsigned int Hout[MAXKEY];       // Hout ...
-    unsigned char HinCnt;
-    unsigned char HoutCnt;
-} component;
-
-component comp[MAXPROCS];
+int I[MAXPROCS][MAXKEY];
+int Lvalue[MAXPROCS][MAXKEY];
+int Ltstamp[MAXPROCS][MAXKEY];
+unsigned int Hin[MAXPROCS][MAXKEY];
+unsigned int Hout[MAXPROCS][MAXKEY]; 
+unsigned char HinCnt[MAXPROCS];
+unsigned char HoutCnt[MAXPROCS];
 int pc[MAXPROCS][MAXPC];
-int currenttimestamp;
 int E[MAXKEY];
+int currenttimestamp;
 """
 
 let systemFunctions = """unsigned char differentLstig(int comp1, int comp2, int key){
     unsigned char result;
-    result = (comp[comp1].Lvalue[key] != comp[comp2].Lvalue[key]) || (comp[comp1].Ltstamp[key] != comp[comp2].Ltstamp[key]);
+    result = (Lvalue[comp1][key] != Lvalue[comp2][key]) || (Ltstamp[comp1][key] != Ltstamp[comp1][key]);
     return result; 
 }
 
@@ -276,18 +274,16 @@ int now(void) {
 }
 
 void setHin(int id, int key) {
-    if (comp[id].Hin[key] == 0) {
-        comp[id].Hin[key] = 1;
-        comp[id].HinCnt = comp[id].HinCnt + 1;
+    if (Hin[id][key] == 0) {
+        Hin[id][key] = 1;
+        HinCnt[id] = HinCnt[id] + 1;
     }
 }
 
-#define _setHin(id, key) ((comp[id].Hin[key] == 0)?(comp[id].HinCnt+=comp[id].Hin[key]=1):0)
-
 void setHout(int id, int key) {
-    if (comp[id].Hout[key] == 0) {
-        comp[id].Hout[key] = 1;
-        comp[id].HoutCnt = comp[id].HoutCnt + 1;
+    if (Hout[id][key] == 0) {
+        Hout[id][key] = 1;
+        HoutCnt[id] = HoutCnt[id] + 1;
     }
 }
 
@@ -296,9 +292,9 @@ void setHout(int id, int key) {
 //  Component component_id  assigns to key the evaluated expression
 //
 void attr(int component_id, int key, int value, int keyinexpression) {
-    __VERIFIER_assume(comp[component_id].HoutCnt == 0);
-    __VERIFIER_assume(comp[component_id].HinCnt == 0);
-    comp[component_id].I[key] = value;
+    __VERIFIER_assume(HoutCnt[component_id] == 0);
+    __VERIFIER_assume(HinCnt[component_id] == 0);
+    I[component_id][key] = value;
     now(); // local step
     if (keyinexpression!=-1) {
         setHin(component_id, keyinexpression);
@@ -309,10 +305,10 @@ void attr(int component_id, int key, int value, int keyinexpression) {
 //  Rule LSTIG
 //
 void lstig(int component_id, int key, int value, int keyinexpression) {
-    __VERIFIER_assume(comp[component_id].HoutCnt == 0);
-    __VERIFIER_assume(comp[component_id].HinCnt == 0);
-    comp[component_id].Lvalue[key] = value;
-    comp[component_id].Ltstamp[key] = now();
+    __VERIFIER_assume(HoutCnt[component_id] == 0);
+    __VERIFIER_assume(HinCnt[component_id] == 0);
+    Lvalue[component_id][key] = value;
+    Ltstamp[component_id][key] = now();
 
     if ((keyinexpression!=-1)) {
         setHin(component_id, keyinexpression);
@@ -324,58 +320,58 @@ void lstig(int component_id, int key, int value, int keyinexpression) {
 void confirm(void) {
     unsigned char guessedcomp;
     __VERIFIER_assume(guessedcomp < MAXPROCS);
-    __VERIFIER_assume(comp[guessedcomp].HinCnt > 0);
-    // __VERIFIER_assume(comp[guessedcomp].HoutCnt == 0); // Priority to propagate()
+    __VERIFIER_assume(HinCnt[guessedcomp] > 0);
+    // __VERIFIER_assume(HoutCnt[guessedcomp] == 0); // Priority to propagate()
 
     unsigned char guessedkey;
     __VERIFIER_assume(guessedkey < MAXKEY);
-    __VERIFIER_assume(comp[guessedcomp].Hin[guessedkey] == 1);
+    __VERIFIER_assume(Hin[guessedcomp][guessedkey] == 1);
 
     int i;
-    int t = comp[guessedcomp].Ltstamp[guessedkey];
+    int t = Ltstamp[guessedcomp][guessedkey];
     ////printf(">>>[%d] start Hin (%d)\n", guessedcomp, guessedkey);    
     
     for (i=0; i<MAXPROCS; i++) {
         if ( (guessedcomp!=i) && link(guessedcomp,i) && (differentLstig(guessedcomp, i, guessedkey)) ) {
-            if (comp[i].Ltstamp[guessedkey]<=t) {
-                comp[i].Lvalue[guessedkey] = comp[guessedcomp].Lvalue[guessedkey];
-                comp[i].Ltstamp[guessedkey] = t;
+            if (Ltstamp[i][guessedkey]<=t) {
+                Lvalue[i][guessedkey] = Lvalue[guessedcomp][guessedkey];
+                Ltstamp[i][guessedkey] = t;
                 setHout(i, guessedkey);
             }
-            else { //(comp[i].Ltstamp[guessedkey]>t)
+            else { //(Ltstamp[i][guessedkey]>t)
                 setHout(i, guessedkey);
             }
         }
     }
 
-    comp[guessedcomp].Hin[guessedkey] = 0;
-    comp[guessedcomp].HinCnt--;
+    Hin[guessedcomp][guessedkey] = 0;
+    HinCnt[guessedcomp]--;
 }
 
 void propagate(void) {
     unsigned char guessedcomp;
      __VERIFIER_assume(guessedcomp < MAXPROCS);
-     __VERIFIER_assume(comp[guessedcomp].HoutCnt > 0);
-     // __VERIFIER_assume(comp[guessedcomp].HinCnt == 0); // Priority to Confirm()
+     __VERIFIER_assume(HoutCnt[guessedcomp] > 0);
+     // __VERIFIER_assume(HinCnt[guessedcomp] == 0); // Priority to Confirm()
 
     unsigned char guessedkey;
     __VERIFIER_assume(guessedkey < MAXKEY);
-    __VERIFIER_assume(comp[guessedcomp].Hout[guessedkey] == 1);
+    __VERIFIER_assume(Hout[guessedcomp][guessedkey] == 1);
 
     int i;
-    int t = comp[guessedcomp].Ltstamp[guessedkey];
+    int t = Ltstamp[guessedcomp][guessedkey];
 
     for (i=0; i<MAXPROCS; i++) {
 
-        if ((guessedcomp!=i) && (link(guessedcomp,i)) && (comp[i].Ltstamp[guessedkey]<t)) {
-            comp[i].Lvalue[guessedkey] = comp[guessedcomp].Lvalue[guessedkey];
-            comp[i].Ltstamp[guessedkey] = t;
+        if ((guessedcomp!=i) && (link(guessedcomp,i)) && (Ltstamp[i][guessedkey]<t)) {
+            Lvalue[i][guessedkey] = Lvalue[guessedcomp][guessedkey];
+            Ltstamp[i][guessedkey] = t;
             setHout(i, guessedkey);
         }
     }
 
-    comp[guessedcomp].Hout[guessedkey] = 0;
-    comp[guessedcomp].HoutCnt = comp[guessedcomp].HoutCnt - 1;
+    Hout[guessedcomp][guessedkey] = 0;
+    HoutCnt[guessedcomp] = HoutCnt[guessedcomp] - 1;
 }
 """
 
@@ -383,17 +379,17 @@ let baseInit = sprintf """
 int i,j;
 for (i=0; i<MAXPROCS; i++) {
     for (j=0; j<MAXKEY; j++) {
-        comp[i].I[j] = undef_value;
-        comp[i].Lvalue[j] = undef_value;
-        comp[i].Ltstamp[j] = 0;
-        comp[i].Hin[j] = 0;
-        comp[i].Hout[j] = 0;
+        I[i][j] = undef_value;
+        Lvalue[i][j] = undef_value;
+        Ltstamp[i][j] = 0;
+        Hin[i][j] = 0;
+        Hout[i][j] = 0;
     }
     for (j=0; j<MAXPC; j++) {
         pc[i][j] = 0;
     } 
-    comp[i].HinCnt = 0;
-    comp[i].HoutCnt = 0;
+    HinCnt[i] = 0;
+    HoutCnt[i] = 0;
 }
 %s
 currenttimestamp = MAXPROCS*MAXKEY + 2;
