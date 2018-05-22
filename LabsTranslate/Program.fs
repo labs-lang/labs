@@ -23,13 +23,13 @@ let main argv =
     >>= readFile
     >+> (placeholders parsedCli)
     >>= parse
-    |> log "Parse successful"
+    //|> log "Parse successful"
     >>= checkNames
-    |> log "All names are defined"
+    //|> log "All names are defined"
 
     //|> log "Init valid"
     >>= checkComponents
-    |> log "All components are valid"
+    //|> log "All components are valid"
     >>= (encode <&> analyzeKeys)
     >+> (bound parsedCli)
     >>= translateHeader

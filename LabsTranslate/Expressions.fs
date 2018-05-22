@@ -53,7 +53,6 @@ let rec translateBExpr (mapping:KeyMapping) =
             (translateBOp op)
             (translateExpr mapping e2)
 
-
 let rec getLstigKeys (mapping:KeyMapping) = 
     function
     | K(k) -> 

@@ -3,8 +3,8 @@
 all: cplinux
 
 publishlinux:
-	dotnet publish -r linux-x64 -c Release --self-contained
+	dotnet publish -r linux-x64 -c Release --self-contained -o ../build/linux_x64
 
 cplinux: publishlinux
-	cp -r linux/ LabsTranslate/bin/Release/netcoreapp2.0/linux-x64/publish/
+	cp -r linux/ build/linux_x64/
 
