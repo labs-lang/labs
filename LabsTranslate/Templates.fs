@@ -17,7 +17,7 @@ let translateKey (mapping:KeyMapping) index k =
     let tryKeyInfo = mapping.TryFind k
     match tryKeyInfo with
     | Some(info) -> getTranslation index info.location
-    | None -> failwith "Unexpected key " + k
+    | None -> failwith ("Unexpected key " + k)
 
 let updateKq keys = 
     (keys
@@ -41,7 +41,19 @@ let signature = sprintf "%s_%i%s"
 let attr = 
     sprintf """
 int val = %s;
-attr(tid, %i, val, -1);
+attr(tid, %i, val);
+"""
+
+let lstig = 
+    sprintf """
+int val = %s;
+lstig(tid, %i, val);
+"""
+
+let env =
+    sprintf """
+int val = %s;
+E[%i] = val;
 """
 
 let cfunc retType fName args body =
@@ -58,7 +70,7 @@ for (i=%i; i<%i; i++) {
 """ i j)
 
 let init keyInfo values =
-    let guess = sprintf "guess%i" keyInfo.index
+    let guess = sprintf "guess%i%A" keyInfo.index keyInfo.location
 
     let arrayname = 
         match keyInfo.location with
@@ -67,8 +79,8 @@ let init keyInfo values =
         | E -> "E"
     let initLtstamp = 
         match keyInfo.location with 
-        | L -> sprintf "Ltstamp[i][%i] = (i+1) * (%i + 1);" keyInfo.index keyInfo.index
-        | _ -> "" 
+        | L -> sprintf "Ltstamp[i][%i] = j++;" keyInfo.index
+        | _ -> ""
 
 
     let typeofVar =
@@ -80,58 +92,37 @@ let init keyInfo values =
         | (a,b) when a >=0                      -> "unsigned int "
         | _ -> "int "
 
-    let nameP = sprintf "%sx, %sy;" guess guess
+    //let nameP = sprintf "%sx, %sy;" guess guess
 
     let assumeInt = sprintf "(%s == %i)" guess
-    let assumeP = sprintf "(%sx == %i && %sy == %i)" 
+    //let assumeP = sprintf "(%sx == %i && %sy == %i)" 
     let assumeIntRange key minI maxI =
         sprintf "%s >= %i && %s < %i" guess minI guess maxI
         |> assume
-    let assumePRange key (xmin, ymin) (xmax, ymax)= 
-        (sprintf "(%sx >= %i && %sx < %i) && (%sy >= %i && %sy < %i)"
-        guess xmin guess xmax guess ymin guess ymax)
-        |> assume
+    //let assumePRange key (xmin, ymin) (xmax, ymax)= 
+        //(sprintf "(%sx >= %i && %sx < %i) && (%sy >= %i && %sy < %i)"
+        //guess xmin guess xmax guess ymin guess ymax)
+        //|> assume
 
     let def = 
         function
         | ChooseI(l) -> (typeofVar (Seq.min l, List.max l) ) + guess + ";"
-        | ChooseP(l) ->
-            let xs = l |> Seq.map fst
-            let ys = l |> Seq.map snd
-            let minval = min (Seq.min xs) (Seq.min ys)
-            let maxval = max (Seq.max xs) (Seq.max ys)
-            (typeofVar (minval, maxval) + nameP)
         | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + guess + ";")
-        | RangeP((xmin, ymin), (xmax,ymax)) -> 
-            let minval = min xmin ymin
-            let maxval = max xmax ymax
-            (typeofVar (minval, maxval) + nameP)
+
     let assign values =
-        let prefix = 
-            match values with
-            | ChooseP(_)
-            | RangeP(_) -> 
-                (sprintf "int %s = packTuple(%sx, %sy);" guess guess guess)
-            | _ -> ""
-        sprintf "%s\n%s[%i] = %s;\n%s" prefix arrayname keyInfo.index guess initLtstamp
+        sprintf "%s[%i] = %s;\n%s" arrayname keyInfo.index guess initLtstamp
 
     (def values) + "\n" + (values
     |> (function
+        | ChooseI(l) when l.Length = 1 -> 
+            sprintf "%s = %i;\n" guess l.Head
         | ChooseI(l) -> 
             l
             |> Seq.map (assumeInt)
             |> String.concat " || "
             |> assume
-        | ChooseP(ps) -> 
-            ps 
-            |> Seq.map (fun (x,y) ->(assumeP guess x guess y))
-            |> String.concat " || "
-            |> assume
-        | RangeI(minI, maxI) -> assumeIntRange keyInfo.index minI maxI
-        | RangeP(minP, maxP) -> assumePRange keyInfo.index minP maxP
-       )
+        | RangeI(minI, maxI) -> assumeIntRange keyInfo.index minI maxI)
     ) + (assign values) 
-
 
 let tmain typeofInterleaving body finallyProperties = 
     body
@@ -208,69 +199,27 @@ int mod(int n, int m) {
   return n;
 }
 
-int packTuple(char x, char y) {
-  int tup = (abs(y) % MAX) + ((abs(x) % MAX) * MAX);
-  int signX = isNegative(x) * 131072; // << 17
-  int signY = isNegative(y) * 65536; // << 16
-  return tup + signX + signY;
-}
+int I[MAXPROCS][MAXKEYI];
+int Lvalue[MAXPROCS][MAXKEYL];
+int Ltstamp[MAXPROCS][MAXKEYL];
 
-char getX(int tup) {
-  char result = (char) ((tup % 65536) / MAX);
-  char negative = (char) (tup / 131072) % 2;
-  return negative == 1 ? -result : result;
-}
+unsigned char isTuple[MAXKEYL];
+unsigned char tupleStart[MAXKEYL];
+unsigned char tupleEnd[MAXKEYL];
 
-char getY(int tup) {
-  char result = (char) (tup % MAX);
-  char negative = (char) (tup / 65536) % 2;
-  return negative == 1 ? -result : result;
-}
-
-int sumTuple(int t1, int t2) {
-  int result = packTuple((char) getX(t1)+getX(t2), (char) getY(t1)+getY(t2));
-  return result;
-}
-
-int minusTuple(int t1, int t2) {
-  int result = packTuple((char) getX(t1)-getX(t2), (char) getY(t1)-getY(t2));
-  return result;
-}
-
-int modTuple(int t1, int tmod) {
-  char x = mod(getX(t1), getX(tmod));
-  char y = mod(getY(t1), getY(tmod));
-  int result = packTuple(x, y);
-  return result;
-}
-
-int d2Tuple(int t) {
-    char x = getX(t);
-    char y = getY(t);
-    return (unsigned int) x*x + y*y;
-}
-
-int I[MAXPROCS][MAXKEY];
-int Lvalue[MAXPROCS][MAXKEY];
-int Ltstamp[MAXPROCS][MAXKEY];
-unsigned int Hin[MAXPROCS][MAXKEY];
-unsigned int Hout[MAXPROCS][MAXKEY]; 
+unsigned int Hin[MAXPROCS][MAXKEYL];
+unsigned int Hout[MAXPROCS][MAXKEYL]; 
 unsigned char HinCnt[MAXPROCS];
 unsigned char HoutCnt[MAXPROCS];
 int pc[MAXPROCS][MAXPC];
-int E[MAXKEY];
-int currenttimestamp;
+int E[MAXKEYE];
+int __LABS_t;
 """
 
-let systemFunctions = """unsigned char differentLstig(int comp1, int comp2, int key){
-    unsigned char result;
-    result = (Lvalue[comp1][key] != Lvalue[comp2][key]) || (Ltstamp[comp1][key] != Ltstamp[comp1][key]);
-    return result; 
-}
-
+let systemFunctions = """
 int now(void) {
-    currenttimestamp = currenttimestamp+1;
-    return currenttimestamp;
+    __LABS_t = __LABS_t+1;
+    return __LABS_t;
 }
 
 void setHin(int id, int key) {
@@ -291,27 +240,24 @@ void setHout(int id, int key) {
 //  Rule ATTR
 //  Component component_id  assigns to key the evaluated expression
 //
-void attr(int component_id, int key, int value, int keyinexpression) {
+void attr(int component_id, int key, int value) {
     __VERIFIER_assume(HoutCnt[component_id] == 0);
     __VERIFIER_assume(HinCnt[component_id] == 0);
     I[component_id][key] = value;
     now(); // local step
-    if (keyinexpression!=-1) {
-        setHin(component_id, keyinexpression);
-    }
 }
 
 //
 //  Rule LSTIG
 //
-void lstig(int component_id, int key, int value, int keyinexpression) {
+void lstig(int component_id, int key, int value) {
     __VERIFIER_assume(HoutCnt[component_id] == 0);
     __VERIFIER_assume(HinCnt[component_id] == 0);
-    Lvalue[component_id][key] = value;
-    Ltstamp[component_id][key] = now();
 
-    if ((keyinexpression!=-1)) {
-        setHin(component_id, keyinexpression);
+    Lvalue[component_id][key] = value;
+    int k;
+    for (k = tupleStart[key]; k <= tupleEnd[key]; k++) {
+        Ltstamp[component_id][k] = now();
     }
 
     setHout(component_id, key);
@@ -324,22 +270,21 @@ void confirm(void) {
     // __VERIFIER_assume(HoutCnt[guessedcomp] == 0); // Priority to propagate()
 
     unsigned char guessedkey;
-    __VERIFIER_assume(guessedkey < MAXKEY);
+    __VERIFIER_assume(guessedkey < MAXKEYL);
     __VERIFIER_assume(Hin[guessedcomp][guessedkey] == 1);
 
-    int i;
+    int i, k;
     int t = Ltstamp[guessedcomp][guessedkey];
     ////printf(">>>[%d] start Hin (%d)\n", guessedcomp, guessedkey);    
     
     for (i=0; i<MAXPROCS; i++) {
-        if ( (guessedcomp!=i) && link(guessedcomp,i) && (differentLstig(guessedcomp, i, guessedkey)) ) {
-            if (Ltstamp[i][guessedkey]<=t) {
-                Lvalue[i][guessedkey] = Lvalue[guessedcomp][guessedkey];
-                Ltstamp[i][guessedkey] = t;
-                setHout(i, guessedkey);
-            }
-            else { //(Ltstamp[i][guessedkey]>t)
-                setHout(i, guessedkey);
+        if ( (guessedcomp!=i) && link(guessedcomp,i) ) {
+            setHout(i, guessedkey);
+            for (k = tupleStart[guessedkey]; k <= tupleEnd[guessedkey]; k++) {
+                if (Ltstamp[i][k]<=t) {
+                    Lvalue[i][k] = Lvalue[guessedcomp][k];
+                    Ltstamp[i][k] = t;
+                }
             }
         }
     }
@@ -355,17 +300,19 @@ void propagate(void) {
      // __VERIFIER_assume(HinCnt[guessedcomp] == 0); // Priority to Confirm()
 
     unsigned char guessedkey;
-    __VERIFIER_assume(guessedkey < MAXKEY);
+    __VERIFIER_assume(guessedkey < MAXKEYL);
     __VERIFIER_assume(Hout[guessedcomp][guessedkey] == 1);
 
-    int i;
+    int i, k;
     int t = Ltstamp[guessedcomp][guessedkey];
 
     for (i=0; i<MAXPROCS; i++) {
 
         if ((guessedcomp!=i) && (link(guessedcomp,i)) && (Ltstamp[i][guessedkey]<t)) {
-            Lvalue[i][guessedkey] = Lvalue[guessedcomp][guessedkey];
-            Ltstamp[i][guessedkey] = t;
+            for (k = tupleStart[guessedkey]; k <= tupleEnd[guessedkey]; k++) {
+                Lvalue[i][k] = Lvalue[guessedcomp][k];
+                Ltstamp[i][k] = t;
+            }
             setHout(i, guessedkey);
         }
     }
@@ -377,9 +324,17 @@ void propagate(void) {
 
 let baseInit = sprintf """
 int i,j;
+for (i=0; i<MAXKEYE; i++) {
+        E[i] = undef_value;
+    }
 for (i=0; i<MAXPROCS; i++) {
-    for (j=0; j<MAXKEY; j++) {
+    for (j=0; j<MAXKEYI; j++) {
         I[i][j] = undef_value;
+    }
+    for (j=0; j<MAXKEYI; j++) {
+        I[i][j] = undef_value;
+    }
+    for (j=0; j<MAXKEYL; j++) {
         Lvalue[i][j] = undef_value;
         Ltstamp[i][j] = 0;
         Hin[i][j] = 0;
@@ -391,15 +346,23 @@ for (i=0; i<MAXPROCS; i++) {
     HinCnt[i] = 0;
     HoutCnt[i] = 0;
 }
+j=0;
 %s
-currenttimestamp = MAXPROCS*MAXKEY + 2;
+__LABS_t = j;
+
+for (i=0; i<3; i++) {
+    for (j=0; j<MAXKEYL; j++) {
+        Ltstamp[i][j] = Ltstamp[i][tupleEnd[j]];
+    }
+}
+
 """
 
 
 let toJson (spawn: Map<string, int*int>) (mapping:KeyMapping) =
-    let convertType = function
-    | Int(_) -> "\"int\""
-    | P(_) -> "\"point\""
+    //let convertType = function
+    //| Int(_) -> "\"int\""
+    //| P(_) -> "\"point\""
 
     let ranges = 
         spawn
@@ -411,16 +374,9 @@ let toJson (spawn: Map<string, int*int>) (mapping:KeyMapping) =
         |> Seq.sortBy (fun (_,info) -> info.index)
         |> Seq.map (fun (name, _) -> sprintf "\"%s\"" name)
         |> String.concat ","
-    let keyTypes =
-        mapping
-        |> Map.toSeq
-        |> Seq.sortBy (fun (_, info) -> info.index)    
-        |> Seq.map (fun (_, info) -> (convertType info.typ))
-        |> String.concat ","
 
     sprintf """{
     "ranges": {%s}
     "keyNames": [%s]
-    "keyTypes": [%s]
-}""" ranges keyNames keyTypes
-    |> eprintf "%s"
+}""" ranges keyNames
+    |> eprintfn "%s"

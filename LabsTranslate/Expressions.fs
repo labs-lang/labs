@@ -4,34 +4,18 @@ open Base
 open Templates
 
 let translateAOp = function
-| Plus -> "+", "sumTuple"
-| Minus -> "-", "minusTuple"
-| Times -> "*", "timesTuple"
-| Mod -> "%", "modTuple"
-
-
-let rec inferType (mapping:KeyMapping) expr =
-    match expr with
-    | Const(Int(_)) -> Int(0)
-    | Const(P(_)) -> P(0,0)
-    | K(k) -> getTypeOrFail mapping k
-    | Arithm(e1, op, e2) -> 
-        match (inferType mapping e1),(inferType mapping e2) with
-        | P(_), P(_) -> P(0,0)
-        | Int(_), Int(_) -> Int(0)
-        | _ -> failwith (sprintf "Incorrect operation: %s" (expr.ToString()))
+| Plus -> sprintf "( (%s) + (%s) )"
+| Minus -> sprintf "( (%s) - (%s) )"
+| Times -> sprintf "( (%s) * (%s) )"
+| Mod -> sprintf "mod(%s, %s)"
 
 let rec translateExpr (mapping:KeyMapping) expr =
     let trexp = translateExpr mapping
     match expr with
-    | Const(Int(i)) -> sprintf "%i" i
-    //| Const(String(s)) -> "\"" + s + "\""
-    | Const(Val.P(x,y)) -> translatePoint x y 
+    | Const(i) -> sprintf "%i" i
     | K(k) -> translateKey mapping "tid" k
     | Arithm(e1, op, e2) -> 
-        match (inferType mapping expr) with
-        | Int(_) -> sprintf "( (%s) %s (%s) )" (trexp e1) (translateAOp op |> fst) (trexp e2)
-        | P(_) -> sprintf "%s(%s, %s)" (translateAOp op |> snd) (trexp e1) (trexp e2) // TODO
+        ((translateAOp op) (trexp e1) (trexp e2))
 
 let translateBOp = function
 | Less -> "<"

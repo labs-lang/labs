@@ -9,8 +9,7 @@ let rec encodeProp sys (mapping:KeyMapping)  (sub:Map<string, string>) =
         |> assume |> (sprintf "int %s;\n%s" c)
 
     let encodeTerm = function
-    | ConstTerm(Int(i)) -> sprintf "%i" i
-    | ConstTerm(P(x,y)) -> translatePoint x y
+    | ConstTerm(i) -> sprintf "%i" i
     | KeyRef(k,c) ->
         let csub = sub.TryFind c |> Option.defaultValue c
         (translateKey mapping csub k)

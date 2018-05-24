@@ -57,12 +57,6 @@ let lastNodes pc nodes =
     //let exitPoints = last |> Seq.choose (getExitPoint pc)
     //last
 
-let private makeCounter (start: int) =
-    let x = ref start
-    let incr() =
-        x := !x + 1
-        !x
-    incr
 
 /// Set of execution point where a join happens
 let private joins = ref Set.empty
@@ -93,7 +87,6 @@ let encode (sys) =
                     |> Set.union !joins
                     |> (:=) joins
                     nodes
-                    //joins := Set.union exitPoints (!joins)
                 |> fun nodes -> Parallel(pc, leftPc, rightPc, i, nodes, j)
                 |> Set.singleton
 
@@ -127,23 +120,52 @@ let encode (sys) =
         |> Map.map (fun _ (def, procs) -> rootVisit procs def.behavior)
     Result.Ok(sys, trees, pccount())
 
+let makeTuples comps mapping =
+    let lstigKeys = Map.filter (fun k info -> info.location = L) mapping
+
+    let tupleExtrema key =
+        let filtered (m:Map<Key, 'a>) =
+            lstigKeys
+            |> Map.filter (fun k _ -> m.ContainsKey k)
+
+        comps
+        |> Seq.map (fun c -> 
+            c.lstig
+            |> Seq.filter (fun m -> m.ContainsKey key)
+            |> Seq.map (fun m -> 
+                if m.Count > 1
+                then (findMinIndex L (filtered m), findMaxIndex L (filtered m))
+                else (mapping.[key].index, mapping.[key].index)))
+        |> Seq.concat
+        |> Seq.head
+
+    lstigKeys
+    |> Map.map (fun k info ->
+        let extrema = tupleExtrema k
+        (sprintf """
+tupleStart[%i] = %i;
+tupleEnd[%i] = %i;
+""" info.index (fst extrema) info.index (snd extrema)))
+    |> Map.values
+    |> String.concat ""
+
 let translateHeader (((sys,trees,maxPc), mapping:KeyMapping), bound) =
     let maxcomps = 
         Map.fold (fun state k (_, cmax) -> max state cmax) 0 sys.spawn
-    let maxkey = 
-        Map.fold (fun state k (info) -> max state info.index) 0 mapping
+
 
     printfn "#define BOUND %i" bound
     printfn "#define MAXPROCS %i" maxcomps
     printfn "#define MAXPC %i" maxPc
-    printfn "#define MAXKEY %i" (maxkey + 1)
+    printfn "#define MAXKEYI %i" ((findMaxIndex I mapping) + 1)
+    printfn "#define MAXKEYL %i" ((findMaxIndex L mapping) + 1)
+    printfn "#define MAXKEYE %i" ((findMaxIndex E mapping) + 1)
     printfn "%s" baseHeader
     printfn "%s" (encodeLink mapping sys.link)
     printfn "%s" systemFunctions
 
 
     let makeInits initMap = 
-
         initMap
         |> Map.map (fun k v -> init mapping.[k] v)
         |> Map.values
@@ -151,10 +173,16 @@ let translateHeader (((sys,trees,maxPc), mapping:KeyMapping), bound) =
 
     sys.spawn
     |> Map.map (fun x range -> range, (makeInits sys.components.[x].iface))
-    |> Map.map (fun x (r, inits) -> (r, inits+"\n"+makeInits sys.components.[x].lstig))
+    |> Map.map (fun x (r, inits) -> 
+        let lstigsinit = 
+            sys.components.[x].lstig
+            |> Seq.map makeInits
+            |> String.concat "\n"
+        (r, inits+"\n" + lstigsinit))
     |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
         (str + (forLoop rangeStart rangeEnd inits))) ""
     |> baseInit
+    |> (+) (makeTuples (Map.values sys.components) mapping)
     |> (indent 4)
     |> (cvoid "init" "")
     |> printfn "%s"
@@ -177,14 +205,23 @@ let translateAll (sys,trees,maxPc,mapping:KeyMapping) =
         |> Seq.choose (fun (_, _, childPc, v) -> (Option.map (fun _ -> exitpoint childPc 0) v))
         |> String.concat ""
 
+    let encodeAction (a:Action) = 
+        let template, k, e = 
+            match a with
+            | AttrUpdate(k,e) -> attr,k,e
+            | LStigUpdate(k,e) -> lstig,k,e
+            | EnvWrite(k,e) -> env,k,e
+        let info = getInfoOrFail mapping k
+        (template (translateExpr mapping e)(info.index)) +
+        (updateKq <| getLstigKeys mapping e)
+
     let rec translateNode parentEntry parentExit = function
-    | Basic(pc, entry, AttrUpdate(key, e), exit, lbl) -> // TODO Lstig, Env
-        let info = getInfoOrFail mapping key
+    | Basic(pc, entry, a, exit, lbl) -> // TODO Lstig, Env
         cvoid lbl "int tid" (indent 4
                 (parentEntry + (entrypoint pc entry) + (entryJoins pc entry) +
-                    (attr (translateExpr mapping e)(info.index)) +
-                    (updateKq <| getLstigKeys mapping e) +
-                    (exitJoins pc entry) + (exitpoint pc exit) + parentExit))
+                    (encodeAction a) +
+                    (exitJoins pc entry) +
+                    (exitpoint pc exit) + parentExit))
     | Guarded(b, node) ->  
         translateNode (parentEntry+(assume (translateBExpr mapping b))) parentExit node
     | Parallel(pc, lpc, rpc, entry, nodes, exit) -> 

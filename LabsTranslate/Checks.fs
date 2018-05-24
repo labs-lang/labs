@@ -79,7 +79,6 @@ let rec checkKeys (procs:Map<string,Process>) (names:Set<string>) =
         | AttrUpdate(k,e)
         | LStigUpdate(k,e)
         | EnvWrite(k,e) -> (checkKeysExpr e).Add(k)
-        | EnvRead(k1,k2) -> Set [k1;k2]
     | Await(_, a) -> checkKeys procs names a
     | Seq(a,b) | Choice(a,b) | Par(a,b) -> Set.union (checkKeys procs names a) (checkKeys procs names b)
     // Only visit a named process if it has not been visited yet
@@ -88,31 +87,31 @@ let rec checkKeys (procs:Map<string,Process>) (names:Set<string>) =
     | Name(s) -> Set.empty
 
 let analyzeKeys sys = 
-    let initToType = function
-    | ChooseI(_) | RangeI(_) -> Int(0)
-    | ChooseP(_) | RangeP(_) -> P(0,0)
 
     let comps = Map.values sys.components
     let attrKeys = 
         comps
         |> Seq.map (fun c -> c.iface)
-        |> Seq.map (Map.map (fun k init -> {index=0; location=I; typ=(initToType init)}))
+        |> Seq.map (Map.mapi (fun i _ _ -> {index=i; location=I}))
         |> Seq.fold (fun result m -> Map.merge result m) Map.empty
     let lstigKeys = 
+        let cnt = makeCounter(-1)
         comps
         |> Seq.map (fun c -> c.lstig)
-        |> Seq.map (Map.map (fun k init -> {index=0; location=L; typ=(initToType init)}))
+        |> Seq.concat
+        |> Seq.map (Map.map (fun _ _ -> {index=cnt(); location=L}))
         |> Seq.fold (fun result m -> Map.merge result m) Map.empty
+
+    eprintfn "%A" lstigKeys
 
     let envKeys = 
         sys.environment
-        |> Map.map (fun k init -> {index=0; location=E; typ=(initToType init)})
+        |> Map.mapi (fun i _ _ -> {index=i; location=E})
 
     let mapping = 
         attrKeys |> Map.merge lstigKeys |> Map.merge envKeys
-        |> Map.mapi (fun i k init -> {init with index=i})
 
-    //toJson sys.spawn mapping types
+    //toJson sys.spawn mapping
     // TODO add key check
 
     Result.Ok (mapping)

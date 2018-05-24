@@ -5,13 +5,8 @@ open System.IO
 open Parser
 
 type TypeofKey = | I | L | E
-type KeyInfo = {index:int; location:TypeofKey; typ: Val}
+type KeyInfo = {index:int; location:TypeofKey}
 type KeyMapping = Map<string, KeyInfo>
-
-let getTypeOrFail (m:KeyMapping) k = 
-    match m.TryFind k with
-    | Some(info) -> info.typ
-    | None -> failwith (sprintf "Unexpected key: %s" k)
 
 let getInfoOrFail (m:KeyMapping) k = 
     match m.TryFind k with
@@ -101,9 +96,26 @@ let parse (text, (placeholders:Map<string, string>)) =
     foundPlaceholders
     |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("&"+ph,placeholders.[ph])) text))
     |> Result.bind (wrapParserResult stripComments)
+    |> Result.map (fun s -> eprintfn "%s" s; s)
     >>= (wrapParserResult parse)
 
 let enumerate s = 
     s
     |> Seq.mapi (fun i x -> x,i)
     |> Map.ofSeq
+
+
+let makeCounter (start: int) =
+    let x = ref start
+    let incr() =
+        x := !x + 1
+        !x
+    incr
+
+let findIndex comparison typeofkey mapping =
+    mapping
+    |> Map.filter (fun _ info -> info.location = typeofkey)
+    |> Map.fold (fun state k (info) -> comparison state info.index) 0
+
+let findMaxIndex mapping = findIndex max mapping
+let findMinIndex mapping = findIndex min mapping
