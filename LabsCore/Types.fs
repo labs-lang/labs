@@ -41,7 +41,7 @@ type ArithmOp =
 
 [<StructuredFormatDisplay("{AsString}")>]
 type Expr =
-    | Const of Val
+    | Const of int
     | K of Key
     | Arithm of Expr * ArithmOp * Expr
     with 
@@ -73,7 +73,6 @@ type Action =
 | AttrUpdate of Key * Expr
 | LStigUpdate of Key * Expr
 | EnvWrite of Key * Expr
-| EnvRead of Key * Key
 with
     member this.AsString = this.ToString()
     override this.ToString() = 
@@ -81,9 +80,6 @@ with
         | AttrUpdate(a, e) -> sprintf "%s <- %A" a e
         | LStigUpdate(k, e) -> sprintf "%s <~ %A" k e
         | EnvWrite(k, e) -> sprintf "%s <= %A" k e
-        | EnvRead(j, k) -> sprintf "I[%s] := E[%s]" j k
-        //| Await(b) -> sprintf "%A?" b
-
 
 [<StructuredFormatDisplay("{AsString}")>]
 type Process = 
@@ -127,7 +123,7 @@ with
         | Name(s) -> s
 
 type PropertyTerm =
-| ConstTerm of Val
+| ConstTerm of int
 | KeyRef of k:string * c:string
 
 type Property = 

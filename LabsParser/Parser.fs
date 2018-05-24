@@ -23,7 +23,7 @@ let parse =
         {
         processes = procs;
         components = comps;
-        environment = env;
+        environment = (env |> Option.defaultValue Map.empty);
         spawn = (makeRanges spawn);
         properties = props;
         link = link;

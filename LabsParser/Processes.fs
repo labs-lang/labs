@@ -8,12 +8,11 @@ open Expressions
 /// Parses elementary processes ("actions")
 let paction : Parser<_> =
     let parseArrow : Parser<_> =
-        stringReturn ":=" EnvWrite
-        <|>
-        (skipChar '<' >>.
+        skipChar '<' >>.
             choice [
+                followedBy (pstring "--") >>. stringReturn "--" EnvWrite; 
                 charReturn '-' AttrUpdate;
-                charReturn '~' LStigUpdate;])
+                charReturn '~' LStigUpdate;]
     (pipe3 
         (ws KEYNAME) 
         (ws parseArrow) 

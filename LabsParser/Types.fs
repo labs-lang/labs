@@ -6,20 +6,16 @@ open Link
 /// Initialization values
 type Init =
     | ChooseI of int list
-    | ChooseP of Point list
     | RangeI of int * int
-    | RangeP of Point * Point
+
 
 type ComponentDef = {
     name: string
     iface: Map<Key, Init>; 
-    lstig: Map<Key, Init>; 
+    lstig: Map<Key, Init> list;
     behavior: string;
     processes: Map<string, Process>    
 }
-with
-    member this.allKeys = 
-        [this.iface; this.lstig] |> Seq.map Map.keys |> Set.unionMany
 
 type SystemDef = {
     environment: Map<Key, Init>;

@@ -7,7 +7,7 @@ open Expressions
 open Properties
 
 let pspawn = 
-    ws ((ws IDENTIFIER) .>>. pint32) |> sepbycommas >>= toMap |> betweenBrackets
+    ws ((ws IDENTIFIER) .>>. (ws COLON >>. pint32)) |> sepbycommas >>= toMap
 
 let mapToLinkTerm prop = fun _ -> 
     match prop with
@@ -26,8 +26,7 @@ let plinkterm =
     let pterm = ppropTerm >>= mapToLinkTerm
     let pparen = betweenParen plinkexpr
     let pabs = (skipString "abs") >>. (betweenParen (ws plinkexpr)) |> ws |>> Abs
-    let pd2 = (skipString "d2") >>. (betweenParen (ws plinkexpr)) |> ws |>> D2
-    choice [pabs; pd2; pparen; attempt pterm]
+    choice [pabs; pparen; attempt pterm]
 
 
 do plinkexprRef := 
@@ -50,10 +49,10 @@ do plinkRef :=
 
 let psys = 
     ws (skipString "system")
-    >>. ws (
-        betweenBraces (
-            spaces
-            >>. tuple3
-                (ws (pkeys "environment"))
-                (ws (skipString "spawn") >>. (ws EQ) >>. ws pspawn)
-                (ws (skipString "link") >>. (ws EQ) >>. ws plink)))
+    >>. (spaces
+        >>. tuple3
+            (opt (pstringEq "environment" pkeys))
+            (pstringEq "spawn" pspawn)
+            (pstringEq "link" plink)
+        |> betweenBraces
+        |> ws)

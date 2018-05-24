@@ -11,7 +11,7 @@ let ppropTerm =
         (ws KEYNAME) .>> ws (skipString "of") .>>. (ws KEYNAME) |>> KeyRef
     choice [
         pkeyref;
-        pval |>> ConstTerm
+        pint32 |>> ConstTerm
     ]
 
 let pbaseprop = 
@@ -24,16 +24,16 @@ let pQuantifier str pType =
         pprop
     |>> pType
 do ppropRef :=
-    let pAll = pQuantifier "All" All
-    let pSome = pQuantifier "Some" Exists
+    let pAll = pQuantifier "forall" All
+    let pSome = pQuantifier "exists" Exists
     ws (choice [pAll; pSome; pbaseprop])
 
 
 let ptemp : Parser<_> = 
     let ptemptype = 
         choice [
-            ws (stringReturn "Finally" Finally);
-            ws (stringReturn "Always" Always)]
+            ws (stringReturn "finally" Finally);
+            ws (stringReturn "always" Always)]
     ptemptype .>>. (ws pprop) |>> (fun (x,y) -> x y)
 
 let pproperties = 

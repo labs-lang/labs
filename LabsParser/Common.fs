@@ -10,6 +10,7 @@ let NEG : Parser<_> =           (skipChar '!')
 let CONJ : Parser<_> =          (skipChar '&')
 let EQ : Parser<_> =            (skipChar '=')
 let COMMENT : Parser<_> =       (skipChar '#')
+let COLON : Parser<_> =         (skipChar ':')
 //-----------------------------------------
 
 let isAlphanum x = isAsciiLetter x || isDigit x
@@ -34,6 +35,7 @@ let ws p = p .>> spaces
 let betweenBrackets p = between (skipChar '[') (skipChar ']') p
 let betweenBraces p = between (skipChar '{') (skipChar '}') p
 let betweenParen p = between (skipChar '(') (skipChar ')') p
+let betweenAng p = between (skipChar '<') (skipChar '>') p
 let sepbycommas p = sepBy p (ws (skipChar ','))
 
 /// Apply parser p1, then apply optional parser p2.
@@ -81,23 +83,18 @@ let ppoint : Parser<_> =
 
 /// Parses a single init definition.
 let pinit =
-    let pinitI =
-        followedBy (pint32 >>. (skipChar ':'))
-        >>. ((ws pint32)
-        .>>. ((skipChar ':') >>. (ws pint32)) 
+    let pChoose = 
+        (sepbycommas pint32) |> betweenBrackets |>> ChooseI
+    let pRange = 
+        followedBy (pint32 >>. (skipString ".."))
+        >>. ((ws pint32) .>>. ((skipString "..") >>. (ws pint32)) 
         |>> RangeI)
-        <|> (sepbycommas pint32 |>> ChooseI)
+    let pSingle = (ws pint32) |>> (ChooseI << List.singleton)
 
-    let pinitP =
-        followedBy (ppoint >>. (skipChar ':'))
-        >>. ((ws (ppoint))
-        .>>. ((skipChar ':') >>. (ws ppoint))
-        |>> RangeP)
-        <|> (sepbycommas ppoint |>> ChooseP)
+    (ws KEYNAME) .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle]))
 
-    (ws KEYNAME) .>>. betweenBraces (choice [followedBy pint32 >>. pinitI; pinitP])
+let pkeys = 
+    (ws (sepbycommas (ws pinit)) >>= toMap)
 
-let pkeys str = 
-    ws (skipString str) 
-    >>. (ws EQ) 
-    >>. (ws (betweenBrackets (sepbycommas (ws pinit)) >>= toMap))
+let pstringEq str p = 
+    (ws (skipString str) >>. (ws EQ) >>. p)

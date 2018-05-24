@@ -4,7 +4,6 @@ open FParsec
 
 
 /// Parser for values
-let pval = choice [pint32 |>> Int; ppoint |>> Val.P]
 
 
 let parithmop : Parser<_> =
@@ -21,7 +20,7 @@ let pexpr, pexprRef = createParserForwardedToRef()
 
 let pexprTerm = 
     choice [
-        followedBy pval >>. pval |>> Const;
+        followedBy pint32 >>. pint32 |>> Const;
         betweenParen pexpr;
         KEYNAME |>> K;
     ]

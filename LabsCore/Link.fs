@@ -3,14 +3,13 @@ open Types
 
 
 type LinkTerm =
-| ConstTerm of Val
+| ConstTerm of int
 | KeyRefC1 of k:string
 | KeyRefC2 of k:string
 
 type LinkExpr =
 | T of LinkTerm
 | Abs of LinkExpr
-| D2 of LinkExpr
 | Arithm of LinkExpr * ArithmOp * LinkExpr
 
 type Link = 
