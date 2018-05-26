@@ -13,7 +13,7 @@ let rec translateLinkExpr mapping expr =
     | T(KeyRefC2(k)) -> (translateKey mapping "__LABS_link2" k)
     | Abs(e) -> sprintf "abs(%s)" (tlinkexp e)
     | Arithm(e1, op, e2) ->
-        sprintf "(%s) %s (%s)" (tlinkexp e1) (translateAOp op) (tlinkexp e2)
+        (translateAOp op) (tlinkexp e1) (tlinkexp e2)
 
 let rec translateLink mapping expr = 
     let tlexpr = translateLinkExpr mapping
