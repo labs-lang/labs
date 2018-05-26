@@ -102,7 +102,6 @@ let analyzeKeys sys =
         |> Seq.map (Map.map (fun _ _ -> {index=cnt(); location=L}))
         |> Seq.fold (fun result m -> Map.merge result m) Map.empty
 
-    eprintfn "%A" lstigKeys
 
     let envKeys = 
         sys.environment

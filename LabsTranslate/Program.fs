@@ -1,10 +1,8 @@
-﻿// Learn more about F# at http://fsharp.org
-open Base
+﻿open Base
 open Checks
 open Encode
 open Templates
 open ArgParse
-open Argu
 
 [<EntryPoint>]
 let main argv =

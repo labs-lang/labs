@@ -96,7 +96,6 @@ let parse (text, (placeholders:Map<string, string>)) =
     foundPlaceholders
     |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("&"+ph,placeholders.[ph])) text))
     |> Result.bind (wrapParserResult stripComments)
-    |> Result.map (fun s -> eprintfn "%s" s; s)
     >>= (wrapParserResult parse)
 
 let enumerate s = 

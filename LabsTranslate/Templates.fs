@@ -189,11 +189,6 @@ int abs(int x) {
   return result;
 }
 
-int isNegative(int x) {
-  int result = (x>=0)?0:1;
-  return result;
-}
-
 int mod(int n, int m) {
   n = n >= 0 ? n % m : m + (n % m);
   return n;

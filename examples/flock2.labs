@@ -4,7 +4,7 @@ Movey = y <- (y + diry) % &grid
 
 comp Bird {
     interface = x: 0..&grid, y: 0..&grid
-    stigmergy = <dirx: [-1, 1], diry: [-1,1], dir2: 1>
+    stigmergy = <dirx: [-1, 1], diry: [-1,1]>
     behavior = Flock
 
     # "Local" processes (can only be used by component Bird)
@@ -18,5 +18,5 @@ system {
 }
 
 check {
-    P1 = finally exists Bird b1, forall Bird b2, diry of b1 = diry of b2 # <-----
+    P1 = finally exists Bird b1, forall Bird b2, diry of b1 = diry of b2
 }
