@@ -3,7 +3,7 @@ open Types
 open Base
 open Templates
 
-let rec encodeProp sys (mapping:KeyMapping)  (sub:Map<string, string>) = 
+let rec encodeProp name sys (mapping:KeyMapping)  (sub:Map<string, string>) = 
     let makeAssumptions c (cmin, cmax) = 
         sprintf "%s >= %i && %s < %i" c cmin c cmax
         |> assume |> (sprintf "int %s;\n%s" c)
@@ -16,21 +16,21 @@ let rec encodeProp sys (mapping:KeyMapping)  (sub:Map<string, string>) =
 
     function
     | Prop(t1, t2) ->
-        sprintf "%s == %s" (encodeTerm t1) (encodeTerm t2) |> assertion
+        sprintf "%s == %s" (encodeTerm t1) (encodeTerm t2)
+        |> fun s -> sprintf "%s //%s\n" (inlineassertion s) name
     | All(compType, comp, prop) -> 
         sys.spawn.[compType]
-        |> (fun (x, y) -> [x..y-1])
-        |> List.map (fun i -> encodeProp sys mapping (sub.Add (comp, i.ToString())) prop)
+        |> fun (x, y) -> [x..y-1]
+        |> List.map (fun i -> encodeProp name sys mapping (sub.Add (comp, i.ToString())) prop)
         |> String.concat ""
     | Exists(compType, comp, prop) -> 
         makeAssumptions comp sys.spawn.[compType] +
-        encodeProp sys mapping sub prop
+        encodeProp name sys mapping sub prop
 
 let translateProperties sys mapping properties =
     properties
     |> Map.map (fun _ -> function Finally(p)| Always(p) -> p)
-    |> Map.map (fun _ -> encodeProp sys mapping Map.empty)
-    |> Map.map (fun name -> sprintf "//Property %s\n%s" name)
+    |> Map.map (fun name -> encodeProp name sys mapping Map.empty)
     |> Map.values
     |> String.concat "\n"
 

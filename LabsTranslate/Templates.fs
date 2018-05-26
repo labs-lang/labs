@@ -26,6 +26,7 @@ let updateKq keys =
 
 let assume = sprintf "__VERIFIER_assume(%s);\n"
 let assertion = sprintf "assert(%s);\n"
+let inlineassertion = sprintf "assert(%s);"
 
 let entrypoint pc entry =
     assume <| (sprintf "pc[tid][%i] == %i" pc entry)
