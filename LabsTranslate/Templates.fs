@@ -258,6 +258,16 @@ void lstig(int component_id, int key, int value) {
     setHout(component_id, key);
 }
 
+unsigned char differentLstig(int comp1, int comp2, int key) {
+    unsigned char result, k;
+    result = 0;
+    for (k = tupleStart[key]; k <= tupleEnd[key]; k++) {
+        result = result || (Lvalue[comp1][k] != Lvalue[comp1][k]);
+        result = result || (Ltstamp[comp1][k] !=  Ltstamp[comp2][k]);
+    }
+    return result; 
+}
+
 void confirm(void) {
     unsigned char guessedcomp;
     __VERIFIER_assume(guessedcomp < MAXPROCS);
@@ -273,7 +283,7 @@ void confirm(void) {
     ////printf(">>>[%d] start Hin (%d)\n", guessedcomp, guessedkey);    
     
     for (i=0; i<MAXPROCS; i++) {
-        if ( (guessedcomp!=i) && link(guessedcomp,i) ) {
+        if ( (guessedcomp!=i) && link(guessedcomp,i) && differentLstig(guessedcomp, i, guessedkey) ) {
             setHout(i, guessedkey);
             for (k = tupleStart[guessedkey]; k <= tupleEnd[guessedkey]; k++) {
                 if (Ltstamp[i][k]<=t) {
