@@ -36,10 +36,10 @@ let translateProperties sys mapping properties =
 
 let translateFinallyProperties sys mapping =
     sys.properties
-    |> Map.filter (fun _ -> function Finally(p) -> true | _ -> false)
+    |> Map.filter (fun _ -> function Finally(_) -> true | _ -> false)
     |> translateProperties sys mapping
 
 let translateAlwaysProperties sys mapping =
     sys.properties
-    |> Map.filter (fun _ -> function Always(p) -> true | _ -> false)
+    |> Map.filter (fun _ -> function Always(_) -> true | _ -> false)
     |> translateProperties sys mapping
