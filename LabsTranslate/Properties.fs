@@ -5,13 +5,13 @@ open Templates
 
 let rec encodeProp name sys (mapping:KeyMapping)  (sub:Map<string, string>) = 
     let makeAssumptions c (cmin, cmax) = 
-        sprintf "%s >= %i && %s < %i" c cmin c cmax
-        |> assume |> (sprintf "int %s;\n%s" c)
+        sprintf "%s%s >= %i && %s%s < %i" c name cmin c name cmax
+        |> assume |> (sprintf "int %s%s;\n%s" c name)
 
     let encodeTerm = function
     | ConstTerm(i) -> sprintf "%i" i
     | KeyRef(k,c) ->
-        let csub = sub.TryFind c |> Option.defaultValue c
+        let csub = sub.TryFind c |> Option.defaultValue (c+name)
         (translateKey mapping csub k)
 
     function
