@@ -6,7 +6,7 @@ open Parser
 
 type TypeofKey = | I | L | E
 type KeyInfo = {index:int; location:TypeofKey}
-type KeyMapping = Map<string, KeyInfo>
+type KeyMapping = Map<Key, KeyInfo>
 
 let getInfoOrFail (m:KeyMapping) k = 
     match m.TryFind k with
@@ -19,8 +19,8 @@ let (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
 
 let setReturnCode r =
     match r with 
-    | Result.Ok(_) -> exit 0
-    | Result.Error(_) -> exit 10
+    | Result.Ok(_) -> 0
+    | Result.Error(_) -> 10
 
 // Binds the first element and keeps the second
 let (.>>=) r f =

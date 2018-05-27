@@ -102,15 +102,11 @@ let analyzeKeys sys =
         |> Seq.map (Map.map (fun _ _ -> {index=cnt(); location=L}))
         |> Seq.fold (fun result m -> Map.merge result m) Map.empty
 
-
     let envKeys = 
         sys.environment
         |> Map.mapi (fun i _ _ -> {index=i; location=E})
 
     let mapping = 
         attrKeys |> Map.merge lstigKeys |> Map.merge envKeys
-
-    //toJson sys.spawn mapping
-    // TODO add key check
 
     Result.Ok (mapping)

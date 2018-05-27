@@ -5,11 +5,13 @@ type Arguments =
 | [<Mandatory>] [<Unique>] File of path:string
 | [<Mandatory>] [<Unique>] Bound of int
 | Fair
+| Info
 | [<Unique>] Values of string list
  interface IArgParserTemplate with
         member s.Usage =
             match s with
             | File _ -> "specify a file."
+            | Info _ -> "do not translate, only gather information on the system"
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
             | Fair -> "enforce fair interleaving of components."
@@ -40,5 +42,5 @@ let placeholders args =
     with 
         e -> Result.Ok Map.empty
 
-let filename result = 
+let filenameOf result = 
     Result.map (fun (args:ParseResults<_>) -> args.GetResult <@ File @>) result

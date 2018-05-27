@@ -9,29 +9,44 @@ let main argv =
 
     let parsedCli = argv |> parseCLI
 
-    let chosenTranslateMain = 
-        let isFair = 
-            parsedCli
-            |> Result.map (fun args -> args.Contains <@ Fair @>)
-            |> function Ok(true) -> true | _ -> false
-        if isFair then (translateMain fairInterleaving)
-        else (translateMain fullInterleaving)
+    let doTranslate cli =
+        let chosenTranslateMain = 
+            let isFair = 
+                parsedCli
+                |> Result.map (fun args -> args.Contains <@ Fair @>)
+                |> function Ok(true) -> true | _ -> false
+            if isFair then (translateMain fairInterleaving)
+            else (translateMain fullInterleaving)
 
-    (filename parsedCli)
-    >>= readFile
-    >+> (placeholders parsedCli)
-    >>= parse
-    //|> log "Parse successful"
-    >>= checkNames
-    //|> log "All names are defined"
+        (filenameOf cli)
+        >>= readFile
+        >+> (placeholders cli)
+        >>= parse
+        >>= checkNames
+        >>= checkComponents
+        >>= (encode <&> analyzeKeys)
+        >+> (bound cli)
+        >>= translateHeader
+        >>= translateAll 
+        >>= chosenTranslateMain
+        |> logErr // Log any error at the end
+        |> setReturnCode
 
-    //|> log "Init valid"
-    >>= checkComponents
-    //|> log "All components are valid"
-    >>= (encode <&> analyzeKeys)
-    >+> (bound parsedCli)
-    >>= translateHeader
-    >>= translateAll 
-    >>= chosenTranslateMain
-    |> logErr // Log any error at the end
-    |> setReturnCode
+    let doInfo cli = 
+        (filenameOf cli)
+        >>= readFile
+        >+> (placeholders cli)
+        >>= parse
+        >>= checkNames
+        >>= (checkComponents <&> analyzeKeys)
+        >>= serializeInfo
+        |> setReturnCode
+
+    parsedCli
+    |> logErr
+    |> Result.map (fun args -> args.Contains <@ Info @>)
+    |> Result.map (
+        function 
+        | true -> doInfo parsedCli
+        | _ -> doTranslate parsedCli )
+    |> function Ok(i) -> i | Error(_) -> 10
