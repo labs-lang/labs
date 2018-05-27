@@ -373,6 +373,12 @@ let serializeInfo (sys, mapping:KeyMapping) =
         |> Seq.map (fun (name, _) -> name)
         |> String.concat ","
 
+    let maxTupleLength =
+        sys.components
+        |> Map.map (fun _ cdef -> cdef.lstig |> List.map (fun m -> m.Count))
+        |> Map.values
+        |> Seq.concat
+        |> Seq.max 
 
     let ranges = 
         sys.spawn
@@ -384,7 +390,7 @@ let serializeInfo (sys, mapping:KeyMapping) =
         Map.filter (fun _ info -> info.location = t) mapping
         |> serializeKeys)
     |> String.concat "\n"
-    |> fun s -> printfn "%s\n%s" s ranges
+    |> fun s -> printfn "%s\n%s\nunwind %i" s ranges (maxTupleLength + 1)
 
     //printfn "%s\n%s" attrNames ranges
 //    sprintf """{
