@@ -365,24 +365,32 @@ for (i=0; i<3; i++) {
 """
 
 
-let toJson (spawn: Map<string, int*int>) (mapping:KeyMapping) =
-    //let convertType = function
-    //| Int(_) -> "\"int\""
-    //| P(_) -> "\"point\""
-
-    let ranges = 
-        spawn
-        |> Map.map (fun k (cmin, cmax) -> sprintf "\"%s\": [%i,%i]" k cmin cmax)
-        |> Map.values |> String.concat ","
-    let keyNames =
-        mapping
+let serializeInfo (sys, mapping:KeyMapping) =
+    let serializeKeys m =
+        m
         |> Map.toSeq
         |> Seq.sortBy (fun (_,info) -> info.index)
-        |> Seq.map (fun (name, _) -> sprintf "\"%s\"" name)
+        |> Seq.map (fun (name, _) -> name)
         |> String.concat ","
 
-    sprintf """{
-    "ranges": {%s}
-    "keyNames": [%s]
-}""" ranges keyNames
-    |> eprintfn "%s"
+
+    let ranges = 
+        sys.spawn
+        |> Map.map (fun k (cmin, cmax) -> sprintf "%s %i,%i" k cmin cmax)
+        |> Map.values |> String.concat ";"
+
+    [I;L;E]
+    |> Seq.map (fun t -> 
+        Map.filter (fun _ info -> info.location = t) mapping
+        |> serializeKeys)
+    |> String.concat "\n"
+    |> fun s -> printfn "%s\n%s" s ranges
+
+    //printfn "%s\n%s" attrNames ranges
+//    sprintf """{
+//    "ranges": {%s}
+//    "keyNames": [%s]
+//}""" ranges keyNames
+    //|> printfn "%s"
+
+    Result.Ok(0)
