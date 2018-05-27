@@ -218,7 +218,8 @@ let translateAll (sys,trees,maxPc,mapping:KeyMapping) =
     let rec translateNode parentEntry parentExit = function
     | Basic(pc, entry, a, exit, lbl) -> // TODO Lstig, Env
         cvoid lbl "int tid" (indent 4
-                (parentEntry + (entrypoint pc entry) + (entryJoins pc entry) +
+                (sprintf "// %s\n   " (a.ToString()) +
+                    parentEntry + (entrypoint pc entry) + (entryJoins pc entry) +
                     (encodeAction a) +
                     (exitJoins pc entry) +
                     (exitpoint pc exit) + parentExit))
