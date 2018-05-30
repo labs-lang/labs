@@ -33,7 +33,7 @@ let stripComments =
     stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>. preturn "")
 
 let pre =
-    let pplaceholder = (skipChar '&') >>. KEYNAME
+    let pplaceholder = (skipChar '_') >>. KEYNAME
     manyTill
         (skipMany1Till skipAnyChar (eof <|> followedBy pplaceholder) >>. 
         ((followedBy eof >>. preturn "") <|> pplaceholder))

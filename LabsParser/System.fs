@@ -41,10 +41,10 @@ do plinkRef :=
     let pcompare =
         tuple3 plinkexpr (ws pcompareop) plinkexpr |>> Compare
     choice [
+        followedBy (pstring "true") >>. stringReturn "true" True;
         attempt pneg;
-        attempt pcompare;
-        stringReturn "true" True;
-    ]
+        attempt pcompare
+    ] |> ws
 
 
 let psys = 
