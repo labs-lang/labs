@@ -6,6 +6,7 @@ type Arguments =
 | [<Mandatory>] [<Unique>] Bound of int
 | Fair
 | Info
+| Simulation
 | [<Unique>] Values of string list
  interface IArgParserTemplate with
         member s.Usage =
@@ -14,6 +15,7 @@ type Arguments =
             | Info _ -> "do not translate, only gather information on the system"
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
+            | Simulation _ -> "encode in simulation mode (default: verification mode)."
             | Fair -> "enforce fair interleaving of components."
 
 let argParser = ArgumentParser.Create<Arguments>(programName = "LabsTranslate")

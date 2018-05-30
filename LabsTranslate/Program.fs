@@ -18,6 +18,12 @@ let main argv =
             if isFair then (translateMain fairInterleaving)
             else (translateMain fullInterleaving)
 
+        let chosenInit =
+            parsedCli
+            |> Result.map (fun args -> args.Contains <@ Simulation @>)
+            |> function Ok(true) -> true | _ -> false
+            |> fun x -> if x then translateInitSim else translateInit
+
         (filenameOf cli)
         >>= readFile
         >+> (placeholders cli)
@@ -27,6 +33,7 @@ let main argv =
         >>= (encode <&> analyzeKeys)
         >+> (bound cli)
         >>= translateHeader
+        >>= chosenInit
         >>= translateAll 
         >>= chosenTranslateMain
         |> logErr // Log any error at the end
@@ -40,6 +47,7 @@ let main argv =
         >>= checkNames
         >>= (checkComponents <&> analyzeKeys)
         >>= serializeInfo
+        |> logErr // Log any error at the end
         |> setReturnCode
 
     parsedCli

@@ -153,7 +153,6 @@ let translateHeader (((sys,trees,maxPc), mapping:KeyMapping), bound) =
     let maxcomps = 
         Map.fold (fun state k (_, cmax) -> max state cmax) 0 sys.spawn
 
-
     printfn "#define BOUND %i" bound
     printfn "#define MAXPROCS %i" maxcomps
     printfn "#define MAXPC %i" maxPc
@@ -163,8 +162,38 @@ let translateHeader (((sys,trees,maxPc), mapping:KeyMapping), bound) =
     printfn "%s" baseHeader
     printfn "%s" (encodeLink mapping sys.link)
     printfn "%s" systemFunctions
+    Result.Ok(sys, trees, mapping)
 
+let translateInitSim (sys,trees, mapping:KeyMapping) =
+    let makeInits i initMap = 
+        initMap
+        |> Map.map (fun k v -> initSimulate i mapping.[k] v)
+        |> Map.values
+        |> String.concat "\n"
+    sys.spawn
+    |> Map.map (fun x (minI, maxI) -> 
+        seq [minI..maxI-1]
+        |> Seq.map (fun i -> 
+            (makeInits i sys.components.[x].iface) + "\n" +
+            (sys.components.[x].lstig
+             |> Seq.map (makeInits i)
+             |> String.concat "\n"))
+        |> String.concat "\n")
+    |> Map.values
+    |> String.concat "\n"
+    |> 
+        if not sys.environment.IsEmpty then 
+            (+) (makeInits 0 sys.environment)
+        else id
+    |> baseInit
+    |> (+) (makeTuples (Map.values sys.components) mapping)
+    |> (indent 4)
+    |> (cvoid "init" "")
+    |> printfn "%s"
 
+    Result.Ok(sys, trees, mapping)
+
+let translateInit (sys,trees, mapping:KeyMapping) =
     let makeInits initMap = 
         initMap
         |> Map.map (fun k v -> init mapping.[k] v)
@@ -178,18 +207,22 @@ let translateHeader (((sys,trees,maxPc), mapping:KeyMapping), bound) =
             sys.components.[x].lstig
             |> Seq.map makeInits
             |> String.concat "\n"
-        (r, inits+"\n" + lstigsinit))
+        (r, inits+ "\n" + lstigsinit))
     |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
         (str + (forLoop rangeStart rangeEnd inits))) ""
+    |> 
+        if not sys.environment.IsEmpty then
+            (+) (makeInits sys.environment)
+        else id
     |> baseInit
     |> (+) (makeTuples (Map.values sys.components) mapping)
     |> (indent 4)
     |> (cvoid "init" "")
     |> printfn "%s"
 
-    Result.Ok(sys, trees, maxPc, mapping)
+    Result.Ok(sys, trees, mapping)
 
-let translateAll (sys,trees,maxPc,mapping:KeyMapping) =
+let translateAll (sys, trees, mapping:KeyMapping) =
 
     let lookupJoins pc entry = 
         (!joins) 
@@ -253,12 +286,28 @@ let translateMain typeofInterleaving (sys,trees:Map<'a, Set<Node>>, mapping) =
     cvoid "monitor" "" (indent 4 (translateAlwaysProperties sys mapping))
     |> printfn "%s"
 
-    let makeIf (info:string*Set<int*int>) = 
-        info
-        |> snd
+    let encodeEntry (entrypoints) = 
+        entrypoints
         |> Set.map (fun (pc, entry) -> sprintf "pc[choice[i]][%i]==%i" pc entry)
         |> String.concat " && "
-        |> fun x -> sprintf "if (%s) %s(choice[i]);" x (fst info)
+
+
+    let makeIf (name, entrypoints) = 
+        encodeEntry entrypoints
+        |> fun x -> sprintf "if (%s) %s(choice[i]);" x name
+
+    let makeNondetIf (names, entrypoints) = 
+        names
+        |> Seq.mapi (fun i n ->
+            if i = 0 then 
+                sprintf "if (nondet_bool()) %s(choice[i]);" n
+            else if i = (Seq.length names) - 1 then
+                sprintf "    else %s(choice[i]);" n
+            else
+                sprintf "    else if (nondet_bool()) %s(choice[i]);" n
+            )
+        |> String.concat "\n"
+        |> sprintf "if (%s) {\n    %s\n}" (encodeEntry entrypoints)
 
     let nodeInfo =  
         trees
@@ -268,7 +317,22 @@ let translateMain typeofInterleaving (sys,trees:Map<'a, Set<Node>>, mapping) =
         |> Set.unionMany
     let first = Set.minElement nodeInfo
 
-   
+    let prova =
+        nodeInfo
+        |> Set.toSeq
+        |> Seq.groupBy (fun (name, entry) -> entry)
+
+    let schedule = 
+        prova
+        |> Seq.map (fun (entry, names) ->
+            let ns = names |> Seq.map fst
+            if (Seq.length names) = 1 then
+                makeIf (Seq.head ns, entry)
+            else 
+                makeNondetIf(ns, entry)
+            )
+        |> String.concat "\n"
+
     let elseblock = 
         nodeInfo
         |> Set.remove first
@@ -277,7 +341,7 @@ let translateMain typeofInterleaving (sys,trees:Map<'a, Set<Node>>, mapping) =
     printfn "%s"
         (tmain 
             typeofInterleaving
-            ((makeIf first) + "\n" + elseblock)
+            schedule
             (translateFinallyProperties sys mapping))
 
 

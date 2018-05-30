@@ -92,8 +92,9 @@ let analyzeKeys sys =
     let attrKeys = 
         comps
         |> Seq.map (fun c -> c.iface)
-        |> Seq.map (Map.mapi (fun i _ _ -> {index=i; location=I}))
-        |> Seq.fold (fun result m -> Map.merge result m) Map.empty
+        |> fun x -> if Seq.isEmpty x then Map.empty else (x
+            |> Seq.map (Map.mapi (fun i _ _ -> {index=i; location=I}))
+            |> Seq.fold (fun result m -> Map.merge result m) Map.empty)
     let lstigKeys = 
         let cnt = makeCounter(-1)
         comps
