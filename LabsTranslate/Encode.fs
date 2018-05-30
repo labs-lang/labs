@@ -97,7 +97,7 @@ let encode (sys) =
             vs pc cnt entry procPc p lbl
         | Seq(p,q) -> 
              let k = cnt()
-             Set.union (vs pc cnt entry exit p lbl) (vs pc cnt exit k q lbl)
+             Set.union (vs pc cnt entry k p lbl) (vs pc cnt k exit q lbl)
         | Await(b, p) -> (vs pc cnt entry exit p lbl) |> Set.map (fun n -> Guarded(b, n))
         | Choice(p, q) ->
             Set.union (vs pc cnt entry exit p (lbl+"_L")) (vs pc cnt entry exit q (lbl+"_R"))
