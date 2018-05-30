@@ -70,51 +70,65 @@ for (i=%i; i<%i; i++) {
 }
 """ i j)
 
-let init keyInfo values =
-    let guess = sprintf "guess%i%A" keyInfo.index keyInfo.location
-
-    let arrayname = 
+let arrayname keyInfo = 
         match keyInfo.location with
         | I -> "I[i]"
         | L -> "Lvalue[i]"
         | E -> "E"
-    let initLtstamp = 
+let initLtstamp keyInfo = 
+    match keyInfo.location with 
+    | L -> sprintf "Ltstamp[i][%i] = j++;" keyInfo.index
+    | _ -> ""
+
+let typeofVar =
+    function
+    | (a,b) when a >= 0     && b < 256      -> "unsigned char "
+    | (a,b) when a > -128   && b < 128      -> "char "
+    | (a,b) when a >= 0     && b < 65536    -> "unsigned short "
+    | (a,b) when a > -32768 && b < 32768    -> "short "
+    | (a,b) when a >=0                      -> "unsigned int "
+    | _ -> "int "
+
+let def name = 
+    function
+    | ChooseI(l) -> (typeofVar (Seq.min l, List.max l) ) + name + ";"
+    | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + name + ";")
+
+let initSimulate i keyInfo values =
+    let initLtstamp i keyInfo = 
         match keyInfo.location with 
-        | L -> sprintf "Ltstamp[i][%i] = j++;" keyInfo.index
+        | L -> sprintf "Ltstamp[%i][%i] = j++;" i keyInfo.index
         | _ -> ""
 
+    let arrayname i keyInfo = 
+            match keyInfo.location with
+            | I -> sprintf "I[%i]" i
+            | L -> sprintf "Lvalue[%i]" i
+            | E -> "E"
 
-    let typeofVar =
-        function
-        | (a,b) when a >= 0     && b < 256      -> "unsigned char "
-        | (a,b) when a > -128   && b < 128      -> "char "
-        | (a,b) when a >= 0     && b < 65536    -> "unsigned short "
-        | (a,b) when a > -32768 && b < 32768    -> "short "
-        | (a,b) when a >=0                      -> "unsigned int "
-        | _ -> "int "
 
-    //let nameP = sprintf "%sx, %sy;" guess guess
+    let guess = sprintf "guess%i%A" keyInfo.index keyInfo.location
+    let rng = System.Random()
+    sprintf "%s[%i] = %i;\n%s" (arrayname i keyInfo) keyInfo.index
+    //(def guess values) + " = " + (
+        (match values with
+        | ChooseI(l) -> l.Item (rng.Next l.Length)
+        | RangeI(minI, maxI) -> rng.Next(minI, maxI))
+        (initLtstamp i keyInfo)
+
+let init keyInfo values =
+    let guess = sprintf "guess%i%A" keyInfo.index keyInfo.location
 
     let assumeInt = sprintf "(%s == %i)" guess
-    //let assumeP = sprintf "(%sx == %i && %sy == %i)" 
     let assumeIntRange key minI maxI =
         sprintf "%s >= %i && %s < %i" guess minI guess maxI
         |> assume
-    //let assumePRange key (xmin, ymin) (xmax, ymax)= 
-        //(sprintf "(%sx >= %i && %sx < %i) && (%sy >= %i && %sy < %i)"
-        //guess xmin guess xmax guess ymin guess ymax)
-        //|> assume
-
-    let def = 
-        function
-        | ChooseI(l) -> (typeofVar (Seq.min l, List.max l) ) + guess + ";"
-        | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + guess + ";")
 
     let assign values =
-        sprintf "%s[%i] = %s;\n%s" arrayname keyInfo.index guess initLtstamp
+        sprintf "%s[%i] = %s;\n%s" (arrayname keyInfo) keyInfo.index guess (initLtstamp keyInfo)
 
-    (def values) + "\n" + (values
-    |> (function
+    (def guess values) + "\n" + (
+        match values with
         | ChooseI(l) when l.Length = 1 -> 
             sprintf "%s = %i;\n" guess l.Head
         | ChooseI(l) -> 
@@ -123,7 +137,7 @@ let init keyInfo values =
             |> String.concat " || "
             |> assume
         | RangeI(minI, maxI) -> assumeIntRange keyInfo.index minI maxI)
-    ) + (assign values) 
+        + (assign values) 
 
 let tmain typeofInterleaving body finallyProperties = 
     body
@@ -356,7 +370,7 @@ j=0;
 %s
 __LABS_t = j;
 
-for (i=0; i<3; i++) {
+for (i=0; i<MAXPROCS; i++) {
     for (j=0; j<MAXKEYL; j++) {
         Ltstamp[i][j] = Ltstamp[i][tupleEnd[j]];
     }
@@ -366,7 +380,9 @@ for (i=0; i<3; i++) {
 
 
 let serializeInfo (sys, mapping:KeyMapping) =
-    let serializeKeys m =
+    let serializeKeys (m:KeyMapping) =
+        if m.Count = 0 then ""
+        else
         m
         |> Map.toSeq
         |> Seq.sortBy (fun (_,info) -> info.index)
@@ -377,19 +393,20 @@ let serializeInfo (sys, mapping:KeyMapping) =
         sys.components
         |> Map.map (fun _ cdef -> cdef.lstig |> List.map (fun m -> m.Count))
         |> Map.values
-        |> Seq.concat
-        |> Seq.max 
+        |> fun x -> if Seq.isEmpty x then Seq.empty else (Seq.concat x)
+        |> fun x -> if Seq.isEmpty x then 0 else Seq.max x
 
     let ranges = 
         sys.spawn
         |> Map.map (fun k (cmin, cmax) -> sprintf "%s %i,%i" k cmin cmax)
-        |> Map.values |> String.concat ";"
+        |> Map.values
+        |> fun x -> if Seq.isEmpty x then "" else String.concat ";" x
 
-    [I;L;E]
+    [|I;L;E|]
     |> Seq.map (fun t -> 
         Map.filter (fun _ info -> info.location = t) mapping
         |> serializeKeys)
-    |> String.concat "\n"
+    |> fun x -> if Seq.isEmpty x then "" else String.concat "\n" x
     |> fun s -> printfn "%s\n%s\nunwind %i" s ranges (maxTupleLength + 1)
 
     //printfn "%s\n%s" attrNames ranges
