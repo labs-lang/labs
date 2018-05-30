@@ -127,7 +127,7 @@ type PropertyTerm =
 | KeyRef of k:string * c:string
 
 type Property = 
-| Prop of PropertyTerm * PropertyTerm  
+| Prop of PropertyTerm * PropertyTerm
 | All of comp:string * name:string * Property
 | Exists of comp:string * name:string * Property
 

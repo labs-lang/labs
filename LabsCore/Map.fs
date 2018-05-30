@@ -1,10 +1,12 @@
 ﻿module Map
 /// Returns the set of keys in m.
 let keys table =
-    table |> Map.toSeq |> Seq.map fst |> Set.ofSeq
+    if Map.count table = 0 then Set.empty
+    else table |> Map.toSeq |> Seq.map fst |> Set.ofSeq
 /// Returns a sequence of all the values in m.
 let values table =
-    table |> Map.toSeq |> Seq.map snd
+    if Map.count table = 0 then Seq.empty
+    else table |> Map.toSeq |> Seq.map snd
 
 /// Builds a new map made by adding all the elements of other into table.
 /// Values with the same key will be overwritten.
