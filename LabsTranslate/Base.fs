@@ -85,7 +85,7 @@ let parse (text, (placeholders:Map<string, string>)) =
         |> Set.difference s
         |> fun z -> 
             if (Set.isEmpty z) then Result.Ok(s) 
-            else Result.Error(sprintf "Undefined placeholders: %s" (withcommas z))
+            else Result.Error(sprintf "Undefined external variable: %s" (withcommas z))
 
     let foundPlaceholders = 
         wrapParserResult pre text
@@ -94,7 +94,7 @@ let parse (text, (placeholders:Map<string, string>)) =
         >>= checkPlaceholders
 
     foundPlaceholders
-    |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("&"+ph,placeholders.[ph])) text))
+    |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("_"+ph,placeholders.[ph])) text))
     |> Result.bind (wrapParserResult stripComments)
     >>= (wrapParserResult parse)
 
