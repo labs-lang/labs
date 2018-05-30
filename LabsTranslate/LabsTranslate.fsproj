@@ -10,7 +10,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/flock2.labs --values bird=3 delta=21 grid=16 --bound 16</StartArguments>
+    <StartArguments>--file ../examples/flock2.labs --values birds=3 delta=21 grid=16 --bound 16</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Voter' ">
@@ -18,9 +18,19 @@
     <StartArguments>--file ../examples/voter.labs --bound 10</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2info' ">
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'VoterINFO' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/flock2.labs --values bird=3 delta=21 grid=16 --bound 16 --info</StartArguments>
+    <StartArguments>--file ../examples/voter.labs --bound 10 --info</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2sim' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/flock2.labs --values birds=3 delta=21 grid=16 --bound 16 --simulation</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Example2info' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/example.labs --bound 12 --fair --info</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
