@@ -35,11 +35,11 @@ def translateCPROVER(cex, c_program, info):
             Y = keys_of(lines[k + 1])
             _, prop = c_program.split("\n")[int(Y["line"]) - 1].split("//")
 
-            translatedcex += """Violated property: {}
-VERIFICATION FAILED""".format(prop)
+            translatedcex += """Violated property: {}\n""".format(prop)
+            break  # Stop converting after the 1st property has been violated
 
     if len(translatedcex) > 0:
-        translatedcex = "Counterexample:\n\n{}\n\n".format(translatedcex)
+        translatedcex = "Counterexample:\n\n{}\n".format(translatedcex)
 
     return translatedcex
 
