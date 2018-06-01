@@ -56,9 +56,11 @@ type Expr =
 
 type CmpOp = 
     | Equal
+    | Greater
     | Less
     | Leq
-    | Greater
+    | Geq
+    | Neq
 
 ///<summmary>Boolean expressions.</summary>
 type BExpr =
@@ -127,7 +129,7 @@ type PropertyTerm =
 | KeyRef of k:string * c:string
 
 type Property = 
-| Prop of PropertyTerm * PropertyTerm
+| Prop of PropertyTerm * CmpOp * PropertyTerm
 | All of comp:string * name:string * Property
 | Exists of comp:string * name:string * Property
 

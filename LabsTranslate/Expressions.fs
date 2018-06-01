@@ -22,6 +22,8 @@ let translateBOp = function
 | Equal -> "=="
 | Greater -> ">"
 | Leq -> "<="
+| Geq -> ">="
+| Neq -> "!="
 
 let rec translateBExpr (mapping:KeyMapping) =
     function

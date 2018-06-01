@@ -35,10 +35,12 @@ do pexprRef :=
 /// Parser for comparison operators
 let pcompareop : Parser<_> =
     let plessleq = (attempt (stringReturn "<=" Leq)) <|> (charReturn '<' Less);
+    let pgreatgeq = (attempt (stringReturn ">=" Geq)) <|> (charReturn '>' Greater);
     choice [
         plessleq;
+        pgreatgeq;
+        (stringReturn "!=" Neq);
         (charReturn '=' Equal);
-        (charReturn '>' Greater)
     ]
 
 
