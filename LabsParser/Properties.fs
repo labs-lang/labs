@@ -11,11 +11,11 @@ let ppropTerm =
         (ws KEYNAME) .>> ws (skipString "of") .>>. (ws KEYNAME) |>> KeyRef
     choice [
         pkeyref;
-        pint32 |>> ConstTerm
+        (ws pint32) |>> ConstTerm
     ]
 
 let pbaseprop = 
-    ppropTerm .>>. (ws EQ >>. ppropTerm) |>> Prop
+    tuple3 ppropTerm (ws pcompareop) (ws ppropTerm) |>> Prop
 
 let pQuantifier str pType = 
     tuple3

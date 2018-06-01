@@ -32,10 +32,10 @@ let withcommas x = (String.concat ", " x)
 
 /// Parse p and skip whitespace after.
 let ws p = p .>> spaces
-let betweenBrackets p = between (skipChar '[') (skipChar ']') p
-let betweenBraces p = between (skipChar '{') (skipChar '}') p
-let betweenParen p = between (skipChar '(') (skipChar ')') p
-let betweenAng p = between (skipChar '<') (skipChar '>') p
+let betweenBrackets p = between (ws (skipChar '[')) (skipChar ']') p
+let betweenBraces p = between (ws (skipChar '{')) (skipChar '}') p
+let betweenParen p = between (ws (skipChar '(')) (skipChar ')') p
+let betweenAng p = between (ws (skipChar '<')) (skipChar '>') p
 let sepbycommas p = sepBy p (ws (skipChar ','))
 
 /// Apply parser p1, then apply optional parser p2.
