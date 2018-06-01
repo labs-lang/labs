@@ -1,20 +1,22 @@
-# "Global" processes
-Movex = x <- (x + dirx) % &grid
-Movey = y <- (y + diry) % &grid
+system {
+    extern = _birds, _grid, _delta
+    spawn = Bird: _birds
+    link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+        ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta * _delta
+
+    # "Global" processes
+    Movex = x <- (x + dirx) % _grid
+    Movey = y <- (y + diry) % _grid
+
+}
 
 comp Bird {
-    interface = x: 0..&grid, y: 0..&grid
+    interface = x: 0.._grid, y: 0.._grid
     stigmergy = <dirx: [-1, 1], diry: [-1,1]>
     behavior = Flock
 
     # "Local" processes (can only be used by component Bird)
     Flock = (Movex & Movey); Flock     
-}
-
-system {
-    spawn = Bird: &bird
-    link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
-        ((y of c1 - y of c2) * (y of c1 - y of c2)) <= &delta * &delta
 }
 
 check {
