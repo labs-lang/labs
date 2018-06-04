@@ -15,11 +15,12 @@ let makeRanges (mp: Map<'a, int>) =
             (newC, (Map.add name (c, newC) m) )) (0, Map.empty) 
     |> snd
 
+
 let parse = 
     //manyComments 
     spaces
-    >>. tuple4 (processes) (ws ((pcomp |> ws |> many)>>= toMap)) psys pproperties
-    |>> (fun (procs, comps, (env, spawn, link), props) -> 
+    >>. tuple3 psys (ws ((pcomp |> ws |> many) >>= toMap)) pproperties
+    |>> (fun ((_, env, spawn, link, procs), comps, props) -> 
         {
         processes = procs;
         components = comps;
@@ -33,6 +34,11 @@ let stripComments =
     stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>. preturn "")
 
 let pre =
+    attempt (skipMany1Till skipAnyChar (eof <|> followedBy (pstring "extern"))
+    >>. (pstringEq "extern" (ws pextern))
+    .>> skipMany1Till skipAnyChar (eof)) <|> preturn Set.empty
+
+let allPlaceholders =
     let pplaceholder = (skipChar '_') >>. KEYNAME
     manyTill
         (skipMany1Till skipAnyChar (eof <|> followedBy pplaceholder) >>. 

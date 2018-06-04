@@ -5,6 +5,7 @@ open Types
 open Link
 open Expressions
 open Properties
+open Processes
 
 let pspawn = 
     ws ((ws IDENTIFIER) .>>. (ws COLON >>. pint32)) |> sepbycommas >>= toMap
@@ -46,13 +47,16 @@ do plinkRef :=
         attempt pcompare
     ] |> ws
 
+let pextern = ws ((sepbycommas (skipChar '_' >>. KEYNAME))) |>> Set.ofList
 
 let psys = 
     ws (skipString "system")
-    >>. (spaces
-        >>. tuple3
+    >>. 
+        (tuple5
+            (opt (pstringEq "extern" (ws (skipRestOfLine true))))
             (opt (pstringEq "environment" pkeys))
             (pstringEq "spawn" pspawn)
             (pstringEq "link" plink)
-        |> betweenBraces
-        |> ws)
+            (processes)
+        |> betweenBraces)
+        |> ws
