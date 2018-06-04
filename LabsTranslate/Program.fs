@@ -30,7 +30,8 @@ let main argv =
         >>= parse
         >>= checkNames
         >>= checkComponents
-        >>= (encode <&> analyzeKeys)
+        >>= analyzeKeys
+        >>= encode
         >+> (bound cli)
         >>= translateHeader
         >>= chosenInit
@@ -45,7 +46,8 @@ let main argv =
         >+> (placeholders cli)
         >>= parse
         >>= checkNames
-        >>= (checkComponents <&> analyzeKeys)
+        >>= checkComponents
+        >>= analyzeKeys
         >>= serializeInfo
         |> logErr // Log any error at the end
         |> setReturnCode

@@ -110,4 +110,4 @@ let analyzeKeys sys =
     let mapping = 
         attrKeys |> Map.merge lstigKeys |> Map.merge envKeys
 
-    Result.Ok (mapping)
+    Result.Ok (sys, mapping)

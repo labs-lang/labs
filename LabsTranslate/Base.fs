@@ -4,6 +4,8 @@ open Types
 open System.IO
 open Parser
 
+type pcCondition = {pc:int; value:int}
+
 type TypeofKey = | I | L | E
 type KeyInfo = {index:int; location:TypeofKey}
 type KeyMapping = Map<Key, KeyInfo>
@@ -85,17 +87,32 @@ let parse (text, (placeholders:Map<string, string>)) =
         |> Set.difference s
         |> fun z -> 
             if (Set.isEmpty z) then Result.Ok(s) 
-            else Result.Error(sprintf "Undefined external variable: %s" (withcommas z))
+            else Result.Error(sprintf "Uninitialized external variable: %s" (withcommas z))
 
-    let foundPlaceholders = 
-        wrapParserResult pre text
-        |> Result.map Set.ofList
+
+    let stripped =
+        CharParsers.run stripComments text
+        |> function | Success(a, _, _) -> a | Failure(msg,_,_) -> failwith msg
+
+    let defPlaceholders = 
+        stripped
+        |> (wrapParserResult pre)
+        //|> Result.map Set.ofList
         |> Result.map (Set.filter ((<>) ""))
         >>= checkPlaceholders
+        >+> (wrapParserResult allPlaceholders stripped |> Result.map Set.ofList |> Result.map (Set.filter ((<>) "")))
+        >>= fun (def, all) -> 
+            let diff = (Set.difference all def)
+            if diff.IsEmpty then Result.Ok(def)
+            else
+                diff
+                |> Set.map ((+) "_")
+                |> withcommas
+                |> sprintf "External variables %s have not been defined in the 'extern' section." 
+                |> Result.Error
 
-    foundPlaceholders
-    |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("_"+ph,placeholders.[ph])) text))
-    |> Result.bind (wrapParserResult stripComments)
+    defPlaceholders
+    |> Result.map ((Set.fold (fun (txt:string) ph -> txt.Replace("_"+ph, placeholders.[ph])) stripped))
     >>= (wrapParserResult parse)
 
 let enumerate s = 

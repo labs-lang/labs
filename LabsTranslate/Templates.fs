@@ -28,11 +28,11 @@ let assume = sprintf "__VERIFIER_assume(%s);\n"
 let assertion = sprintf "assert(%s);\n"
 let inlineassertion = sprintf "assert(%s);"
 
-let entrypoint pc entry =
-    assume <| (sprintf "pc[tid][%i] == %i" pc entry)
+let entrypoint entry =
+    assume <| (sprintf "pc[tid][%i] == %i" entry.pc entry.value)
 
-let exitpoint =
-    sprintf "pc[tid][%i] = %i;\n"
+let exitpoint exit =
+    sprintf "pc[tid][%i] = %i;\n" exit.pc exit.value
 
 
 let translatePoint = sprintf "packTuple(%i, %i)"
@@ -54,7 +54,7 @@ lstig(tid, %i, val);
 let env =
     sprintf """
 int val = %s;
-E[%i] = val;
+env(%i, val);
 """
 
 let cfunc retType fName args body =
@@ -147,7 +147,7 @@ let tmain typeofInterleaving body finallyProperties =
 int main(void) {
     init();
     unsigned char choice[BOUND];
-    int i;
+    int __LABS_step;
 %s
 %s
 }
@@ -157,15 +157,17 @@ let fullInterleaving body =
     body
     |> indent 8
     |> sprintf """
-for (i=0; i<BOUND; i++) {
-    __VERIFIER_assume(choice[i] < MAXPROCS + 2);
+for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
+    if (all_term()) break;
 
-    if (choice[i] < MAXPROCS) {
+    __VERIFIER_assume(choice[__LABS_step] < MAXCOMPONENTS + 2);
+
+    if (choice[__LABS_step] < MAXCOMPONENTS) {
 %s
     }
-    else if (choice[i] == MAXPROCS) 
+    else if (choice[__LABS_step] == MAXCOMPONENTS) 
         propagate();
-    else if (choice[i] == MAXPROCS + 1)
+    else if (choice[__LABS_step] == MAXCOMPONENTS + 1)
         confirm();
     monitor();
 }
@@ -176,18 +178,19 @@ let fairInterleaving body =
     |> indent 8
     |> sprintf """
 unsigned char last;
-for (i=0; i<BOUND; i++) {
+for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
+    if (all_term()) break;
 
-    __VERIFIER_assume(choice[i] < MAXPROCS + 2);
+    __VERIFIER_assume(choice[__LABS_step] < MAXCOMPONENTS + 2);
 
-    if (choice[i] < MAXPROCS) {
-        __VERIFIER_assume(choice[i] == last+1 || (last == MAXPROCS - 1 && choice[i] == 0));
+    if (choice[__LABS_step] < MAXCOMPONENTS) {
+        __VERIFIER_assume(choice[__LABS_step] == last+1 || (last == MAXCOMPONENTS - 1 && choice[__LABS_step] == 0));
 %s
-        last = choice[i];
+        last = choice[__LABS_step];
     }
-    else if (choice[i] == MAXPROCS) 
+    else if (choice[__LABS_step] == MAXCOMPONENTS) 
         propagate();
-    else if (choice[i] == MAXPROCS + 1)
+    else if (choice[__LABS_step] == MAXCOMPONENTS + 1)
         confirm();
     monitor();
 }
@@ -209,19 +212,20 @@ int mod(int n, int m) {
   return n;
 }
 
-int I[MAXPROCS][MAXKEYI];
-int Lvalue[MAXPROCS][MAXKEYL];
-int Ltstamp[MAXPROCS][MAXKEYL];
+int I[MAXCOMPONENTS][MAXKEYI];
+int Lvalue[MAXCOMPONENTS][MAXKEYL];
+int Ltstamp[MAXCOMPONENTS][MAXKEYL];
 
 unsigned char isTuple[MAXKEYL];
 unsigned char tupleStart[MAXKEYL];
 unsigned char tupleEnd[MAXKEYL];
 
-unsigned int Hin[MAXPROCS][MAXKEYL];
-unsigned int Hout[MAXPROCS][MAXKEYL]; 
-unsigned char HinCnt[MAXPROCS];
-unsigned char HoutCnt[MAXPROCS];
-int pc[MAXPROCS][MAXPC];
+unsigned int Hin[MAXCOMPONENTS][MAXKEYL];
+unsigned int Hout[MAXCOMPONENTS][MAXKEYL]; 
+unsigned char HinCnt[MAXCOMPONENTS];
+unsigned char HoutCnt[MAXCOMPONENTS];
+unsigned char term[MAXCOMPONENTS];
+int pc[MAXCOMPONENTS][MAXPC];
 int E[MAXKEYE];
 int __LABS_t;
 """
@@ -266,26 +270,30 @@ void lstig(int component_id, int key, int value) {
 
     Lvalue[component_id][key] = value;
     int k;
-    for (k = tupleStart[key]; k <= tupleEnd[key]; k++) {
-        Ltstamp[component_id][k] = now();
+    for (k = 0; k < MAXKEYL; k++) {
+        if (k >= tupleStart[key] && k <= tupleEnd[key]) {
+            Ltstamp[component_id][k] = now();
+        }
     }
 
     setHout(component_id, key);
 }
 
 unsigned char differentLstig(int comp1, int comp2, int key) {
-    unsigned char result, k;
-    result = 0;
-    for (k = tupleStart[key]; k <= tupleEnd[key]; k++) {
-        result = result || (Lvalue[comp1][k] != Lvalue[comp1][k]);
-        result = result || (Ltstamp[comp1][k] !=  Ltstamp[comp2][k]);
+    unsigned char k;
+    for (k = 0; k < MAXKEYL; k++) {
+        if (k >= tupleStart[key] && k <= tupleEnd[key]) {
+            if (Lvalue[comp1][k] != Lvalue[comp1][k] || (Ltstamp[comp1][k] != Ltstamp[comp2][k])) {
+                return 1;
+            }
+        }
     }
-    return result; 
+    return 0;
 }
 
 void confirm(void) {
     unsigned char guessedcomp;
-    __VERIFIER_assume(guessedcomp < MAXPROCS);
+    __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
     __VERIFIER_assume(HinCnt[guessedcomp] > 0);
     // __VERIFIER_assume(HoutCnt[guessedcomp] == 0); // Priority to propagate()
 
@@ -297,13 +305,15 @@ void confirm(void) {
     int t = Ltstamp[guessedcomp][guessedkey];
     ////printf(">>>[%d] start Hin (%d)\n", guessedcomp, guessedkey);    
     
-    for (i=0; i<MAXPROCS; i++) {
+    for (i=0; i<MAXCOMPONENTS; i++) {
         if ( (guessedcomp!=i) && link(guessedcomp,i) && differentLstig(guessedcomp, i, guessedkey) ) {
             setHout(i, guessedkey);
-            for (k = tupleStart[guessedkey]; k <= tupleEnd[guessedkey]; k++) {
-                if (Ltstamp[i][k]<=t) {
-                    Lvalue[i][k] = Lvalue[guessedcomp][k];
-                    Ltstamp[i][k] = t;
+            for (k = 0; k < MAXKEYL; k++) {
+                if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
+                    if (Ltstamp[i][k]<=t) {
+                        Lvalue[i][k] = Lvalue[guessedcomp][k];
+                        Ltstamp[i][k] = t;
+                    }
                 }
             }
         }
@@ -315,7 +325,7 @@ void confirm(void) {
 
 void propagate(void) {
     unsigned char guessedcomp;
-     __VERIFIER_assume(guessedcomp < MAXPROCS);
+     __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
      __VERIFIER_assume(HoutCnt[guessedcomp] > 0);
      // __VERIFIER_assume(HinCnt[guessedcomp] == 0); // Priority to Confirm()
 
@@ -326,12 +336,14 @@ void propagate(void) {
     int i, k;
     int t = Ltstamp[guessedcomp][guessedkey];
 
-    for (i=0; i<MAXPROCS; i++) {
+    for (i=0; i<MAXCOMPONENTS; i++) {
 
         if ((guessedcomp!=i) && (link(guessedcomp,i)) && (Ltstamp[i][guessedkey]<t)) {
-            for (k = tupleStart[guessedkey]; k <= tupleEnd[guessedkey]; k++) {
-                Lvalue[i][k] = Lvalue[guessedcomp][k];
-                Ltstamp[i][k] = t;
+            for (k = 0; k < MAXKEYL; k++) {
+                if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
+                    Lvalue[i][k] = Lvalue[guessedcomp][k];
+                    Ltstamp[i][k] = t;
+                }
             }
             setHout(i, guessedkey);
         }
@@ -340,6 +352,14 @@ void propagate(void) {
     Hout[guessedcomp][guessedkey] = 0;
     HoutCnt[guessedcomp] = HoutCnt[guessedcomp] - 1;
 }
+
+char all_term() {
+    int i;
+    for (i=0; i<MAXCOMPONENTS; i++) {
+        if (term[i] == 0) return 0;
+    }
+    return 1;
+}
 """
 
 let baseInit = sprintf """
@@ -347,7 +367,8 @@ int i,j;
 for (i=0; i<MAXKEYE; i++) {
         E[i] = undef_value;
     }
-for (i=0; i<MAXPROCS; i++) {
+for (i=0; i<MAXCOMPONENTS; i++) {
+    term[i] = 0;
     for (j=0; j<MAXKEYI; j++) {
         I[i][j] = undef_value;
     }
@@ -370,7 +391,7 @@ j=0;
 %s
 __LABS_t = j;
 
-for (i=0; i<MAXPROCS; i++) {
+for (i=0; i<MAXCOMPONENTS; i++) {
     for (j=0; j<MAXKEYL; j++) {
         Ltstamp[i][j] = Ltstamp[i][tupleEnd[j]];
     }
@@ -378,6 +399,11 @@ for (i=0; i<MAXPROCS; i++) {
 
 """
 
+let resetPcs = """int i;
+for (i=1; i<MAXPC; i++) {
+    pc[tid][i] = 0;
+}
+"""
 
 let serializeInfo (sys, mapping:KeyMapping) =
     let serializeKeys (m:KeyMapping) =
@@ -408,12 +434,5 @@ let serializeInfo (sys, mapping:KeyMapping) =
         |> serializeKeys)
     |> fun x -> if Seq.isEmpty x then "" else String.concat "\n" x
     |> fun s -> printfn "%s\n%s\nunwind %i" s ranges (maxTupleLength + 1)
-
-    //printfn "%s\n%s" attrNames ranges
-//    sprintf """{
-//    "ranges": {%s}
-//    "keyNames": [%s]
-//}""" ranges keyNames
-    //|> printfn "%s"
 
     Result.Ok(0)

@@ -20,7 +20,6 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'VoterINFO' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/voter.labs --bound 10 --info</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2sim' ">
