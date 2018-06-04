@@ -2,6 +2,7 @@
 open Types
 open Base
 open Templates
+open Expressions
 
 let rec encodeProp name sys (mapping:KeyMapping)  (sub:Map<string, string>) = 
     let makeAssumptions c (cmin, cmax) = 
@@ -15,8 +16,8 @@ let rec encodeProp name sys (mapping:KeyMapping)  (sub:Map<string, string>) =
         (translateKey mapping csub k)
 
     function
-    | Prop(t1, t2) ->
-        sprintf "%s == %s" (encodeTerm t1) (encodeTerm t2)
+    | Prop(t1, op, t2) ->
+        sprintf "%s %s %s" (encodeTerm t1) (translateBOp op) (encodeTerm t2)
         |> fun s -> sprintf "%s //%s\n" (inlineassertion s) name
     | All(compType, comp, prop) -> 
         sys.spawn.[compType]
