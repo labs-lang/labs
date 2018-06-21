@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import begin
+import lib.begin as begin
 import re
 import platform
 import sys
@@ -7,7 +7,7 @@ from subprocess import check_output, DEVNULL, CalledProcessError
 from enum import Enum
 from os import remove
 import uuid
-from cex import translateCPROVER
+from lib.cex import translateCPROVER
 
 SYS = platform.system()
 
@@ -15,6 +15,7 @@ SYS = platform.system()
 class Backends(Enum):
     CBMC = "cbmc"
     ESBMC = "esbmc"
+    CSeq = "cseq"
 
 
 backend_descr = """choose the verification backend.
@@ -30,14 +31,18 @@ backends = {
     "esbmc": [
         "esbmc", "--no-bounds-check", "--no-div-by-zero-check",
         "--no-pointer-check", "--no-align-check", "--no-unwinding-assertions",
-        "--z3"]
+        "--z3"],
+    "cseq": [
+        "./cseq.py", "-l", "labs_parallel", "--split", "choice",
+        "--cores", "4"]
 }
 
 backends_debug = {
     "cbmc": ["cbmc", "--bounds-check" "--signed-overflow-check"],
     "esbmc": [
         "esbmc", "--no-pointer-check", "--no-align-check",
-        "--no-unwinding-assertions", "--z3"]
+        "--no-unwinding-assertions", "--z3"],
+    "cseq": backends["cseq"]
 }
 
 
@@ -45,26 +50,15 @@ def check_cbmc_version():
     cbmc_check = ["cbmc", "--version"]
     CBMC_V, CBMC_SUBV = check_output(cbmc_check).decode().strip().split(".")
     if not (int(CBMC_V) <= 5 and int(CBMC_SUBV) <= 4):
-        backends["cbmc"].append("--trace")
-        backends_debug["cbmc"].append("--trace")
+        additional_flags = ["--trace", "--stop-on-fail"]
+        backends["cbmc"].extend(additional_flags)
+        backends_debug["cbmc"].extend(additional_flags)
 
 
-def unwind(backend, num):
-    return {
-        "cbmc":
-            ["--unwindset",
-                "confirm.0:{0},propagate.0:{0},differentLstig.0:{0}".format(
-                    num)],
-        "esbmc":
-            ["--unwindset", "1:{0},2:{0},4:{0}".format(num)]
-
-    }[backend]
-
-
-cmd = "core/LabsTranslate"
+cmd = "labs/LabsTranslate"
 
 if "Linux" in SYS:
-    env = {"LD_LIBRARY_PATH": "core/libunwind"}
+    env = {"LD_LIBRARY_PATH": "labs/libunwind"}
     TIMEOUT_CMD = "/usr/bin/timeout"
 else:
     env = {}
@@ -150,7 +144,7 @@ def main(file: "path to LABS file",
          debug: "enable additional checks in the backend" = False,
          timeout: timeout_descr = 0,
          *values: values_descr):
-    """ SLiVER - Symbolyc LAbS VERification.
+    """ SLiVER - Symbolyc LAbS VERification. v1.0 (May 2018)
 """
     print("Encoding...", file=sys.stderr)
     c_program, fname, info = parse_linux(file, values, steps, fair, simulate)
@@ -160,9 +154,14 @@ def main(file: "path to LABS file",
             return
         if backend == "cbmc":
             check_cbmc_version()
+
         backend_call = backends_debug[backend] if debug else backends[backend]
+
+        if backend == "cseq":
+            backend_call.extend(["--steps", str(steps), "-i"])
+
         backend_call.append(fname)
-        backend_call.extend(unwind(backend, info["unwind"]))
+        # backend_call.extend(unwind(backend, info["unwind"]))
         if timeout > 0:
             backend_call = [TIMEOUT_CMD, str(timeout)] + backend_call
         try:
@@ -177,6 +176,8 @@ def main(file: "path to LABS file",
         except CalledProcessError as err:
             if err.returncode == 10:
                 out = err.output
+            elif err.returncode == 1 and backend == "cseq":
+                out = err.output
             elif err.returncode == 6:
                 print("Backend failed with parsing error.", file=sys.stderr)
             elif err.returncode == 124:
@@ -187,6 +188,7 @@ def main(file: "path to LABS file",
                 print(
                     "Unexpected error (return code: {})"
                     .format(err.returncode), file=sys.stderr)
+                print(err.output.decode())
         finally:
             out = out.decode("utf-8")
             remove(fname)
@@ -194,6 +196,7 @@ def main(file: "path to LABS file",
                 print("No properties violated!", end="", file=sys.stderr)
                 if simulate:
                     print(" (simulation mode)", file=sys.stderr)
+                else:
+                    print("", file=sys.stderr)
             else:
-                print(translateCPROVER(out, c_program, info))
-                # cex_cbmc(out, i_names, l_names)
+                print(translateCPROVER(out, c_program, info, backend))
