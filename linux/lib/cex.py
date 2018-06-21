@@ -5,9 +5,10 @@ ATTR = re.compile(r"I\[([0-9]+)l?\]\[([0-9]+)l?\]")
 LSTIG = re.compile(r"Lvalue\[([0-9]+)l?\]\[([0-9]+)l?\]")
 LTSTAMP = re.compile(r"Ltstamp\[([0-9]+)l?\]\[([0-9]+)l?\]")
 ENV = re.compile(r"E\[([0-9]+)l?\]")
+STEP = re.compile(r"__LABS_step")
 
 
-def translateCPROVER(cex, c_program, info):
+def translateCPROVER(cex, c_program, info, backend):
     translatedcex = ''
     lines = cex.split('\n')
     k = 0  # cex[:cex.find('Trace for')].count('\n') + 1 + 1
@@ -30,13 +31,17 @@ def translateCPROVER(cex, c_program, info):
             translatedcex += _mapCPROVERstate(A, B, C, info)
 
         # case 2: final transation with property violation
-        elif ln.startswith('Violated property'):
+        elif ln.startswith('Violated property') and backend == "cbmc":
             # Y, Z, W = lines[k + 1], lines[k + 2], lines[k + 3]
             Y = keys_of(lines[k + 1])
             _, prop = c_program.split("\n")[int(Y["line"]) - 1].split("//")
-
             translatedcex += """Violated property: {}\n""".format(prop)
             break  # Stop converting after the 1st property has been violated
+        elif ln.startswith('Violated property'):
+            translatedcex += """Violated property"""
+            Y = keys_of(lines[k + 1])
+            _, prop = c_program.split("\n")[int(Y["line"]) + 10].split("//")
+            translatedcex += """Violated property: {}\n""".format(prop)
 
     if len(translatedcex) > 0:
         translatedcex = "Counterexample:\n\n{}\n".format(translatedcex)
@@ -50,10 +55,11 @@ def keys_of(ln):
 
 
 last_return = ""
+last_step = -1
 
 
 def _mapCPROVERstate(A, B, C, info):
-    global last_return
+    global last_return, last_step
     '''
     'Violated property:'
     '  file _cs_lazy_unsafe.c line 318 function thread3_0'
@@ -87,6 +93,12 @@ def _mapCPROVERstate(A, B, C, info):
         if is_ltstamp and last_return == "lstig":
             last_return = "ltstamp"
             return " ({})\n".format(keys["rvalue"])
+
+        if (keys["lvalue"].startswith("__LABS_step") and
+                keys["rvalue"] != last_step):
+            last_return = "step"
+            last_step = keys["rvalue"]
+            return "--step {}--\n".format(last_step)
 
         is_env = ENV.match(keys["lvalue"])
         if is_env and keys["rvalue"] != "2147483647":
