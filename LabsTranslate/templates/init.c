@@ -1,5 +1,6 @@
 void init() {
-    {{tuples}}
+
+{{tuples}}
 
     int i,j;
     for (i=0; i<MAXKEYE; i++) {
@@ -27,11 +28,9 @@ void init() {
     }
     j=0;
     
-    {{initpcs}}
+{{initenv}}
 
-    {% if initenv <> "" %}initenv{% endif %}
-
-    {{initvars}}
+{{initvars}}
 
     __LABS_t = j;
 
