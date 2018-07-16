@@ -34,7 +34,6 @@ let entrypoint entry =
 let exitpoint exit =
     sprintf "pc[tid][%i] = %i;\n" exit.pc exit.value
 
-
 let translatePoint = sprintf "packTuple(%i, %i)"
 
 let signature = sprintf "%s_%i%s"

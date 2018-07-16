@@ -1,8 +1,6 @@
 ﻿module Checks
 open Types
 open Base
-open Templates
-
 
 /// Verifies that all process names in the program have been defined.
 let checkNames sys =

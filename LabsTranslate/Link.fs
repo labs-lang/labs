@@ -1,6 +1,4 @@
 ﻿module Link
-open Types
-open Base
 open Templates
 open Link
 open Expressions
