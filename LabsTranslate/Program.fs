@@ -10,19 +10,18 @@ let main argv =
     let parsedCli = argv |> parseCLI
 
     let doTranslate cli =
-        let chosenTranslateMain = 
-            let isFair = 
-                parsedCli
-                |> Result.map (fun args -> args.Contains <@ Fair @>)
-                |> function Ok(true) -> true | _ -> false
-            if isFair then (translateMain fairInterleaving)
-            else (translateMain fullInterleaving)
+        let isFair = 
+            parsedCli
+            |> Result.map (fun args -> args.Contains <@ Fair @>)
+            |> function Ok(true) -> true | _ -> false
 
         let chosenInit =
             parsedCli
             |> Result.map (fun args -> args.Contains <@ Simulation @>)
             |> function Ok(true) -> true | _ -> false
-            |> fun x -> if x then translateInitSim else translateInit
+            |> fun x -> 
+                if x then translateInit (initenv (initSimulate 0)) initVarsSim
+                else translateInit (initenv init) initVars
 
         (filenameOf cli)
         >>= readFile
@@ -36,7 +35,7 @@ let main argv =
         >>= translateHeader
         >>= chosenInit
         >>= translateAll 
-        >>= chosenTranslateMain
+        >>= (translateMain isFair)
         |> logErr // Log any error at the end
         |> setReturnCode
 

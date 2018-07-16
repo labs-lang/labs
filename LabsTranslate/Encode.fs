@@ -5,6 +5,7 @@ open Templates
 open Expressions
 open Properties
 open Link
+open Liquid
 
 /// A Node is composed by a program counter identifier, an entry/exit point,
 /// and some contents: either an action or a pair of parallel nodes.
@@ -118,6 +119,7 @@ let initPc sys trees =
 
 let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
 
+    // Find the number of PCs used in the program
     let maxPc =
         let rec getPc = function
             | Goto(entry=e; parent=p)
@@ -139,76 +141,70 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     let maxcomps = 
         Map.fold (fun state k (_, cmax) -> max state cmax) 0 sys.spawn
 
-    printfn "#define BOUND %i" bound
-    printfn "#define MAXCOMPONENTS %i" maxcomps
-    printfn "#define MAXPC %i" maxPc
-    printfn "#define MAXKEYI %i" ((findMaxIndex I mapping) + 1)
-    printfn "#define MAXKEYL %i" ((findMaxIndex L mapping) + 1)
-    printfn "#define MAXKEYE %i" ((findMaxIndex E mapping) + 1)
-    printfn "%s" baseHeader
-    printfn "%s" (encodeLink mapping sys.link)
-    printfn "%s" systemFunctions
-    Result.Ok(sys, trees, mapping)
+    [
+        "defines", makehash [
+            "BOUND", bound; 
+            "MAXCOMPONENTS", maxcomps;
+            "MAXPC", maxPc; 
+            "MAXKEYI", ((findMaxIndex I mapping) + 1)
+            "MAXKEYL", ((findMaxIndex L mapping) + 1)
+            "MAXKEYE", ((findMaxIndex E mapping) + 1)];
+        "link", box (translateLink mapping sys.link)
+    ]
+    |> renderFile "templates/header.c"
+    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
-let translateInitSim (sys,trees, mapping:KeyMapping) =
-    let makeInits i initMap = 
-        initMap
-        |> Map.map (fun k v -> initSimulate i mapping.[k] v)
-        |> Map.values
-        |> String.concat "\n"
-    sys.spawn
-    |> Map.map (fun x (minI, maxI) -> 
-        seq [minI..maxI-1]
-        |> Seq.map (fun i -> 
-            (makeInits i sys.components.[x].iface) + "\n" +
-            (sys.components.[x].lstig
-             |> Seq.map (makeInits i)
-             |> String.concat "\n"))
-        |> String.concat "\n")
+let makeInits initFn (mapping:KeyMapping) initMap = 
+    initMap
+    |> Map.map (fun k v -> initFn mapping.[k] v)
     |> Map.values
     |> String.concat "\n"
-    |> 
-        if not sys.environment.IsEmpty then 
-            (+) (makeInits 0 sys.environment)
-        else id
-    |> (+) (initPc sys trees)
-    |> baseInit
-    |> (+) (makeTuples (Map.values sys.components) mapping)
-    |> (indent 4)
-    |> (cvoid "init" "")
-    |> printfn "%s"
 
-    Result.Ok(sys, trees, mapping)
-
-let translateInit (sys,trees, mapping:KeyMapping) =
-    let makeInits initMap = 
-        initMap
-        |> Map.map (fun k v -> init mapping.[k] v)
-        |> Map.values
-        |> String.concat "\n"
-
+let initVars sys (mapping:KeyMapping) =
+    let mkinits = makeInits init mapping
     sys.spawn
-    |> Map.map (fun x range -> range, (makeInits sys.components.[x].iface))
+    |> Map.map (fun x range -> range, (mkinits sys.components.[x].iface))
     |> Map.map (fun x (r, inits) -> 
         let lstigsinit = 
             sys.components.[x].lstig
-            |> Seq.map makeInits
+            |> Seq.map mkinits
             |> String.concat "\n"
         (r, inits+ "\n" + lstigsinit))
     |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
         (str + (forLoop rangeStart rangeEnd inits))) ""
-    |> 
-        if not sys.environment.IsEmpty then
-            (+) (makeInits sys.environment)
-        else id
-    |> (+) (initPc sys trees) 
-    |> baseInit
-    |> (+) (makeTuples (Map.values sys.components) mapping)
-    |> (indent 4)
-    |> (cvoid "init" "")
-    |> printfn "%s"
 
-    Result.Ok(sys, trees, mapping)
+let initVarsSim sys (mapping:KeyMapping) =
+    let mkinits i = makeInits (initSimulate i) mapping
+     
+    sys.spawn
+    |> Map.map (fun x (minI, maxI) -> 
+        seq [minI..maxI-1]
+        |> Seq.map (fun i -> 
+            (mkinits i sys.components.[x].iface) + "\n" +
+            (sys.components.[x].lstig
+             |> Seq.map (mkinits i)
+             |> String.concat "\n"))
+        |> Set.ofSeq
+        |> String.concat "\n")
+    |> Map.values
+    |> String.concat "\n"
+
+let initenv initFn sys mapping =
+    if not sys.environment.IsEmpty
+    then (makeInits initFn mapping sys.environment)
+    else ""
+
+let translateInit envFn varsFn (sys,trees, mapping:KeyMapping) =
+
+    [
+        "initenv", envFn sys mapping;
+        "initvars", varsFn sys mapping;
+        "initpcs", (initPc sys trees);
+        "tuples", (makeTuples (Map.values sys.components) mapping)
+    ]
+    |> List.map (fun (a, b) -> a, box (indent 4 b))
+    |> renderFile "templates/init.c"    
+    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
 let translateAll (sys, trees, mapping:KeyMapping) =
 
@@ -262,7 +258,7 @@ let translateAll (sys, trees, mapping:KeyMapping) =
 
     Result.Ok(sys, trees, mapping)
 
-let translateMain typeofInterleaving (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
+let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
 
     cvoid "monitor" "" (indent 4 (translateAlwaysProperties sys mapping))
     |> printfn "%s"
@@ -283,10 +279,10 @@ let translateMain typeofInterleaving (sys, trees:Map<string, Set<Node> * 'a>, ma
         )
         |> String.concat "\n"
 
-    printfn "%s"
-        (tmain 
-            typeofInterleaving
-            schedule
-            (translateFinallyProperties sys mapping))
-
-    Result.Ok(sys, trees, mapping)
+    [
+        "fair", box fair;
+        "schedule", box (schedule |> indent 12);
+        "finallyasserts", box (translateFinallyProperties sys mapping |> indent 4)
+    ]
+    |> renderFile "templates/main.c"
+    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))

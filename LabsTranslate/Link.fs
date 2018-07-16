@@ -18,12 +18,6 @@ let rec translateLink mapping expr =
     let tl = translateLink mapping
     match expr with
     | True -> "1"
-    | Compare(a, op, b) -> sprintf "(%s)\n%s\n(%s)" (tlexpr a) (translateBOp op) (tlexpr b) //TODO
+    | Compare(a, op, b) -> sprintf "(%s)\n%s\n(%s)" (tlexpr a) (translateBOp op) (tlexpr b)
     | Neg(a) -> sprintf "!(%s)" (tl a)
     | Conj(a, b) -> sprintf "(%s) && (%s)" (tl a) (tl b)
-
-let encodeLink mapping link =
-    translateLink mapping link
-    |> sprintf "int __LABS_link = %s;\nreturn __LABS_link;"
-    |> (indent 4)
-    |> cfunc "int" "link" "int __LABS_link1, int __LABS_link2"
