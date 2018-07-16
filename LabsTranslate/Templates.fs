@@ -2,7 +2,6 @@
 open Types
 open Base
 
-
 let indent num (s:string) = 
     s.Split "\n"
     |> Seq.map (sprintf "%s%s" (String.replicate num " "))
@@ -33,10 +32,6 @@ let entrypoint entry =
 
 let exitpoint exit =
     sprintf "pc[tid][%i] = %i;\n" exit.pc exit.value
-
-let translatePoint = sprintf "packTuple(%i, %i)"
-
-let signature = sprintf "%s_%i%s"
 
 let attr = 
     sprintf """
@@ -78,7 +73,6 @@ let initLtstamp keyInfo i =
     match keyInfo.location with 
     | L -> sprintf "Ltstamp[%s][%i] = j++;" i keyInfo.index
     | _ -> ""
-
 
 let def name = 
     let typeofVar =
@@ -127,43 +121,6 @@ let init keyInfo values =
             |> assume
         | RangeI(minI, maxI) -> assumeIntRange keyInfo.index minI maxI)
         + (assign values) 
-
-let baseInit = sprintf """
-int i,j;
-for (i=0; i<MAXKEYE; i++) {
-        E[i] = undef_value;
-    }
-for (i=0; i<MAXCOMPONENTS; i++) {
-    term[i] = 0;
-    for (j=0; j<MAXKEYI; j++) {
-        I[i][j] = undef_value;
-    }
-    for (j=0; j<MAXKEYI; j++) {
-        I[i][j] = undef_value;
-    }
-    for (j=0; j<MAXKEYL; j++) {
-        Lvalue[i][j] = undef_value;
-        Ltstamp[i][j] = 0;
-        Hin[i][j] = 0;
-        Hout[i][j] = 0;
-    }
-    for (j=0; j<MAXPC; j++) {
-        pc[i][j] = 0;
-    } 
-    HinCnt[i] = 0;
-    HoutCnt[i] = 0;
-}
-j=0;
-%s
-__LABS_t = j;
-
-for (i=0; i<MAXCOMPONENTS; i++) {
-    for (j=0; j<MAXKEYL; j++) {
-        Ltstamp[i][j] = Ltstamp[i][tupleEnd[j]];
-    }
-}
-
-"""
 
 let resetPcs = """int i;
 for (i=1; i<MAXPC; i++) {
