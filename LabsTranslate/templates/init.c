@@ -1,6 +1,9 @@
 void init() {
 
-{{tuples}}
+{% for t in tuples -%}
+    tupleStart[{{t.index}}] = {{t.start}};
+    tupleEnd[{{t.index}}] = {{t.end}};
+{% endfor -%}
 
     int i,j;
     for (i=0; i<MAXKEYE; i++) {

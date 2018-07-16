@@ -7,8 +7,9 @@ open Properties
 open Link
 open Liquid
 
-/// A Node is composed by a program counter identifier, an entry/exit point,
-/// and some contents: either an action or a pair of parallel nodes.
+/// A Node is composed by a label, an entry/exit point,
+/// and an action. Additional entry conditions are specified in the
+/// "parent" set. 
 /// Nodes can be augmented by guards.
 
 
@@ -101,12 +102,8 @@ let makeTuples comps mapping =
     lstigKeys
     |> Map.map (fun k info ->
         let extrema = tupleExtrema k
-        (sprintf """
-tupleStart[%i] = %i;
-tupleEnd[%i] = %i;
-""" info.index (fst extrema) info.index (snd extrema)))
+        ["index", box info.index; "start", box (fst extrema); "end", box (snd extrema)])
     |> Map.values
-    |> String.concat ""
 
 let initPc sys trees =
     trees
@@ -141,14 +138,19 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     let maxcomps = 
         Map.fold (fun state k (_, cmax) -> max state cmax) 0 sys.spawn
 
+    let defines = 
+        [
+        "BOUND", bound; 
+        "MAXCOMPONENTS", maxcomps;
+        "MAXPC", maxPc; 
+        "MAXKEYI", ((findMaxIndex I mapping) + 1)
+        "MAXKEYL", ((findMaxIndex L mapping) + 1)
+        "MAXKEYE", ((findMaxIndex E mapping) + 1)
+        ]
+        |> List.map (fun (a,b) -> ["name", box a; "value", box b])
+
     [
-        "defines", makehash [
-            "BOUND", bound; 
-            "MAXCOMPONENTS", maxcomps;
-            "MAXPC", maxPc; 
-            "MAXKEYI", ((findMaxIndex I mapping) + 1)
-            "MAXKEYL", ((findMaxIndex L mapping) + 1)
-            "MAXKEYE", ((findMaxIndex E mapping) + 1)];
+        "defines", box defines;
         "link", box (translateLink mapping sys.link)
     ]
     |> renderFile "templates/header.c"
@@ -197,12 +199,11 @@ let initenv initFn sys mapping =
 let translateInit envFn varsFn (sys,trees, mapping:KeyMapping) =
 
     [
-        "initenv", envFn sys mapping;
-        "initvars", varsFn sys mapping;
-        "initpcs", (initPc sys trees);
-        "tuples", (makeTuples (Map.values sys.components) mapping)
+        "initenv", envFn sys mapping |> indent 4 |> box;
+        "initvars", varsFn sys mapping |> indent 4 |> box;
+        "initpcs", (initPc sys trees) |> indent 4 |> box;
+        "tuples", (makeTuples (Map.values sys.components) mapping) |> box
     ]
-    |> List.map (fun (a, b) -> a, box (indent 4 b))
     |> renderFile "templates/init.c"    
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
@@ -259,10 +260,6 @@ let translateAll (sys, trees, mapping:KeyMapping) =
     Result.Ok(sys, trees, mapping)
 
 let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
-
-    cvoid "monitor" "" (indent 4 (translateAlwaysProperties sys mapping))
-    |> printfn "%s"
-
     let schedule = 
         let nodes = 
             trees
@@ -282,6 +279,7 @@ let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
     [
         "fair", box fair;
         "schedule", box (schedule |> indent 12);
+        "alwaysasserts", box (translateAlwaysProperties sys mapping |> indent 4)
         "finallyasserts", box (translateFinallyProperties sys mapping |> indent 4)
     ]
     |> renderFile "templates/main.c"

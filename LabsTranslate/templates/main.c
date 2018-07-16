@@ -1,3 +1,7 @@
+void monitor() {
+{{alwaysasserts}}
+}
+
 int main(void) {
     init();
     unsigned char choice[BOUND];
