@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import lib.begin as begin
+import begin
 import re
 import platform
 import sys
@@ -7,7 +7,7 @@ from subprocess import check_output, DEVNULL, CalledProcessError
 from enum import Enum
 from os import remove
 import uuid
-from lib.cex import translateCPROVER
+from cex import translateCPROVER
 
 SYS = platform.system()
 
