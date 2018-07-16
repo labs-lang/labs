@@ -5,7 +5,7 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/flock.labs --values bird="10" delta=21 grid=16 --bound 10</StartArguments>
+    <StartArguments>--file ../examples/flock.labs --values birds=10 delta=21 grid=16 --bound 10 --fair</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2' ">
@@ -35,6 +35,7 @@
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="Base.fs" />
+    <Compile Include="Liquid.fs" />
     <Compile Include="Templates.fs" />
     <Compile Include="Checks.fs" />
     <Compile Include="Expressions.fs" />
@@ -46,5 +47,6 @@
     <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
     <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
     <PackageReference Include="Argu" Version="4.2.1" />
+    <PackageReference Include="DotLiquid" Version="2.0.266" />
   </ItemGroup>
 </Project>
