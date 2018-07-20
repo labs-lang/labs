@@ -97,7 +97,6 @@ let parse (text, (placeholders:Map<string, string>)) =
     let defPlaceholders = 
         stripped
         |> (wrapParserResult pre)
-        //|> Result.map Set.ofList
         |> Result.map (Set.filter ((<>) ""))
         >>= checkPlaceholders
         >+> (wrapParserResult allPlaceholders stripped |> Result.map Set.ofList |> Result.map (Set.filter ((<>) "")))
