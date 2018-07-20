@@ -43,7 +43,6 @@ let rec encodeProp name sys (mapping:KeyMapping) (sub:Map<string, string>) =
         |> List.map (fun i -> encodeProp name sys mapping (sub.Add (comp, i.ToString())) prop)
         |> String.concat " || "
         |> sprintf "(%s)"
-    //enc p |> fun s -> sprintf "%s //%s\n" (inlineassertion s) name
 
 let translateProperties sys mapping properties =
     properties

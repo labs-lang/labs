@@ -64,7 +64,7 @@ for (i=%i; i<%i; i++) {
 }
 """ i j)
 
-let arrayname keyInfo (i: string) =
+let arrayname keyInfo i =
         match keyInfo.location with
         | I -> sprintf "I[%s]" i
         | L -> sprintf "Lvalue[%s]" i
