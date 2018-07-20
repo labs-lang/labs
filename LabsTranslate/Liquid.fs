@@ -3,21 +3,42 @@
 open Base
 open DotLiquid
 
-let rec hash (l: ((string * obj) seq)) =
-    l
-    |> Seq.map (fun (k,v) -> 
-        if v :? (string * obj) seq then 
-            k, box (hash (unbox v))
-        elif v :? (string * obj) seq seq then
-            k, box (unbox v |> Seq.map hash)
-        else k, v)
-    |> dict
-    |> Hash.FromDictionary
+type LiquidDict =
+    (string * LiquidVal) seq
+and LiquidVal = 
+    | Str of string
+    | Int of int
+    | Bool of bool
+    | Lst of LiquidVal seq
+    | Dict of LiquidDict
 
 ///<summmary>Opens a template file and renders it using the specified
 ///local variables.</summary>
-let renderFile path (data:(string * obj) list) = 
+let renderFile path (vals:LiquidDict) =
+    let rec hashval = function
+    | Int(i) -> box i
+    | Bool(b) -> box b
+    | Str(s) -> box s
+    | Lst(l) -> l |> Seq.map hashval |> box
+    | Dict(x) -> hashdict x |> box
+    and hashdict x = 
+        Seq.map (fun (k,v) -> k, (hashval v)) x
+        |> dict
+        |> Hash.FromDictionary
+
     readFile(path)
     |> Result.map Template.Parse
-    |> Result.map (fun x -> x.Render (hash data))
-    |> Result.map (printfn "%s")
+    |> Result.map (fun x -> x, x.Render (hashdict vals))
+    // Return a Eesult.Error if DotLiquid cannot render the template
+    |> Result.bind(
+        fun (x,y) ->
+            if x.Errors.Count = 0 then Result.Ok (x,y)
+            else 
+                x.Errors
+                |> Seq.map (fun x -> x.Message )
+                |> String.concat "\n"
+                |> sprintf "%s: Code generation failed with the following message:\n%s" path
+                |> Result.Error
+        )
+    // If no error, print the rendered template
+    |> Result.map (fun (_,y) -> printfn "%s" y)

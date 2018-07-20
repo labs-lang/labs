@@ -1,4 +1,4 @@
-﻿module Encode
+﻿module internal Encode
 open Types
 open Base
 open Templates
@@ -20,11 +20,19 @@ type Node =
 | Stop of parent:Set<pcCondition> * entry:pcCondition
 with 
     member this.lbl = 
-       match this with
-       | Basic(lbl=l;entry=e)
-       | Goto(lbl=l;entry=e) -> sprintf "%s_%i" l e.value
-       | Stop(entry=e) -> sprintf "Stop_%i" e.value
-       | Guarded(_,n) -> n.lbl
+        match this with
+        | Basic(lbl=l;entry=e)
+        | Goto(lbl=l;entry=e) -> sprintf "%s_%i" l e.value
+        | Stop(entry=e) -> sprintf "Stop_%i" e.value
+        | Guarded(_,n) -> n.lbl
+    member this.entrypoints = 
+        match this with
+        | Guarded(_,n) -> n.entrypoints
+        | Basic(parent=par;entry=e)
+        | Goto(parent=par;entry=e)
+        | Stop(parent=par;entry=e) ->
+            Set.filter (fun p -> p.pc = e.pc) par
+            |> fun x -> if x.IsEmpty then Set.add e par else par
 
 let baseVisit (procs:Map<string, Process>) counter mapping rootName =
     let pccount = makeCounter(-1)
@@ -102,7 +110,7 @@ let makeTuples comps mapping =
     lstigKeys
     |> Map.map (fun k info ->
         let extrema = tupleExtrema k
-        ["index", box info.index; "start", box (fst extrema); "end", box (snd extrema)])
+        Dict ["index", Int info.index; "start", Int (fst extrema); "end", Int (snd extrema)])
     |> Map.values
 
 let initPc sys trees =
@@ -147,11 +155,11 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
         "MAXKEYL", ((findMaxIndex L mapping) + 1)
         "MAXKEYE", ((findMaxIndex E mapping) + 1)
         ]
-        |> List.map (fun (a,b) -> ["name", box a; "value", box b])
+        |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Int b])
 
     [
-        "defines", box defines;
-        "link", box (translateLink mapping sys.link)
+        "defines", Lst defines;
+        "link", Str (translateLink mapping sys.link)
     ]
     |> renderFile "templates/header.c"
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
@@ -199,13 +207,14 @@ let initenv initFn sys mapping =
 let translateInit envFn varsFn (sys,trees, mapping:KeyMapping) =
 
     [
-        "initenv", envFn sys mapping |> indent 4 |> box;
-        "initvars", varsFn sys mapping |> indent 4 |> box;
-        "initpcs", (initPc sys trees) |> indent 4 |> box;
-        "tuples", (makeTuples (Map.values sys.components) mapping) |> box
+        "initenv", envFn sys mapping |> indent 4 |> Str;
+        "initvars", varsFn sys mapping |> indent 4 |> Str;
+        "initpcs", (initPc sys trees) |> indent 4 |> Str;
+        "tuples", Lst (makeTuples (Map.values sys.components) mapping)
     ]
     |> renderFile "templates/init.c"    
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
+
 
 let translateAll (sys, trees, mapping:KeyMapping) =
 
@@ -219,68 +228,80 @@ let translateAll (sys, trees, mapping:KeyMapping) =
         (template (translateExpr mapping e)(info.index)) +
         (updateKq <| getLstigKeys mapping e)
 
+    let liquid a =
+        let template, k, e = 
+            match a with
+            | AttrUpdate(k,e) -> "attr",k,e
+            | LStigUpdate(k,e) -> "lstig",k,e
+            | EnvWrite(k,e) -> "env",k,e
+        let info = getInfoOrFail mapping k
+        [
+            "labs", Str (a.ToString());
+            "type", Str template;
+            "key",  Int info.index;
+            "expr", Str (translateExpr mapping e);
+            "qrykeys", Lst (getLstigKeys mapping e |> Seq.map Int);
+        ]
+
     let entrychecks parent entry =
         Set.filter (fun e -> e.pc = entry.pc) parent
         |> fun x -> if x.IsEmpty then Set.add entry parent else parent
         |> Set.map entrypoint
         |> String.concat "\n"
 
-    let rec translateNode guards n = 
-        let rec inner = function
-        | Basic(parent, entry, a, exit, lbl) ->
-            (sprintf "// %s\n   " (a.ToString()) +
-                (entrychecks parent entry) + 
-                guards +
-                (encodeAction a) +
-                (exitpoint exit))
-        | Guarded(s, node) -> inner node
-        | Goto(parent, entry, exit, lbl) ->  
-            (guards + (entrychecks parent entry) +
-                resetPcs +
-                (exitpoint exit))
-        | Stop(parent, entry) -> 
-            (guards + (entrychecks parent entry) +
-                ("term[tid] = 1;"))
+    let rec newTranslate guards n = 
+        let entries (node:Node) =
+            node.entrypoints
+            |> Seq.map (fun x -> Dict ["pc", Int x.pc; "value", Int x.value]) 
 
-        match n with
-        | Guarded(s, node) ->  
-            translateNode (s+guards) node
-        | _ ->
-            cvoid n.lbl "int tid" (indent 4 (inner n))
+        let exitHash e = 
+            seq [
+                "exitpc", Int e.pc;
+                "exitvalue", Int e.value;
+            ]
+
+        let path, list = 
+            match n with
+            | Guarded(s, node) -> newTranslate (s+guards) node
+            | Basic(parent, entry, a, exit, lbl) ->
+                "templates/transition.c",
+                liquid a
+                |> Seq.append (exitHash exit)
+            | Goto(parent, entry, exit, lbl) ->
+                "templates/goto.c",
+                (exitHash exit)
+            | Stop(parent, entry) ->
+                "templates/stop.c", Seq.empty
+        path,
+        [
+            "label", Str n.lbl;
+            "entrypoints", (entries n) |> Lst ;
+            "guards", Str guards
+        ] |> Seq.append list
 
     trees
-    |> Map.map (fun x (y, _) -> y |> Set.map (translateNode ""))
-    |> Map.toSeq
-    |> Seq.map snd
-    |> Seq.map (String.concat "\n")
-    |> Set.ofSeq
-    |> String.concat "\n"
-    |> printfn "%s"
+    |> Map.values
+    |> Seq.map fst
+    |> Set.unionMany
+    |> Seq.map (fun n -> newTranslate "" n)
+    |> Seq.map (fun (path,list) -> renderFile path list)
+    |> Seq.fold (fun state y -> Result.bind (fun () -> y) state) (Result.Ok ())
+    /// This will be a Result.Ok iff. all results in the sequence are Ok
+    |> Result.bind(fun () -> Result.Ok(sys, trees, mapping))
 
-    Result.Ok(sys, trees, mapping)
 
 let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
-    let schedule = 
-        let nodes = 
-            trees
-            |> Map.values 
-            |> Seq.map fst
-            |> Seq.concat
-            |> List.ofSeq
-        nodes
-        |> List.mapi (fun i n ->
-            let ifproc = sprintf "if (nondet_bool()) %s(choice[__LABS_step]);" n.lbl
-            if i = 0 then ifproc
-            else if i = nodes.Length-1 then sprintf "else %s(choice[__LABS_step]);" n.lbl
-            else sprintf "else %s" ifproc 
-        )
-        |> String.concat "\n"
+    let nodes = 
+        trees
+        |> Map.values 
+        |> Seq.map fst
+        |> Seq.concat
 
     [
-        "fair", box fair;
-        "schedule", box (schedule |> indent 12);
-        "alwaysasserts", box (translateAlwaysProperties sys mapping |> indent 4)
-        "finallyasserts", box (translateFinallyProperties sys mapping |> indent 4)
+        "fair", Bool fair;
+        "schedule", nodes |> Seq.map (fun n -> Str n.lbl) |> Lst;
+        "alwaysasserts", translateAlwaysProperties sys mapping |> indent 4 |> Str;
+        "finallyasserts", translateFinallyProperties sys mapping |> indent 4 |> Str
     ]
     |> renderFile "templates/main.c"
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
