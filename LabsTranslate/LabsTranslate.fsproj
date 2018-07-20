@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock' ">
     <StartAction>Project</StartAction>
@@ -33,7 +33,6 @@
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
-    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="Base.fs" />
     <Compile Include="Liquid.fs" />
     <Compile Include="Templates.fs" />
@@ -49,4 +48,7 @@
     <PackageReference Include="Argu" Version="4.2.1" />
     <PackageReference Include="DotLiquid" Version="2.0.266" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="Microsoft.NETCore.App" Version="2.1.0" />
+</ItemGroup>
 </Project>
