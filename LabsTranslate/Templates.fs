@@ -33,29 +33,6 @@ let entrypoint entry =
 let exitpoint exit =
     sprintf "pc[tid][%i] = %i;\n" exit.pc exit.value
 
-let attr = 
-    sprintf """
-int val = %s;
-attr(tid, %i, val);
-"""
-
-let lstig = 
-    sprintf """
-int val = %s;
-lstig(tid, %i, val);
-"""
-
-let env =
-    sprintf """
-int val = %s;
-env(%i, val);
-"""
-
-let cfunc retType fName args body =
-    (sprintf "%s %s(%s) {\n%s\n}\n") retType fName args body
-
-let cvoid = cfunc "void"
-
 let forLoop i j s = 
     (indent 4 s) |>
     (sprintf """
@@ -120,13 +97,7 @@ let init keyInfo values =
             |> String.concat " || "
             |> assume
         | RangeI(minI, maxI) -> assumeIntRange keyInfo.index minI maxI)
-        + (assign values) 
-
-let resetPcs = """int i;
-for (i=1; i<MAXPC; i++) {
-    pc[tid][i] = 0;
-}
-"""
+        + (assign values)
 
 let serializeInfo (sys, mapping:KeyMapping) =
     let serializeKeys (m:KeyMapping) =

@@ -205,7 +205,6 @@ let initenv initFn sys mapping =
     else ""
 
 let translateInit envFn varsFn (sys,trees, mapping:KeyMapping) =
-
     [
         "initenv", envFn sys mapping |> indent 4 |> Str;
         "initvars", varsFn sys mapping |> indent 4 |> Str;
@@ -217,16 +216,6 @@ let translateInit envFn varsFn (sys,trees, mapping:KeyMapping) =
 
 
 let translateAll (sys, trees, mapping:KeyMapping) =
-
-    let encodeAction (a:Action) = 
-        let template, k, e = 
-            match a with
-            | AttrUpdate(k,e) -> attr,k,e
-            | LStigUpdate(k,e) -> lstig,k,e
-            | EnvWrite(k,e) -> env,k,e
-        let info = getInfoOrFail mapping k
-        (template (translateExpr mapping e)(info.index)) +
-        (updateKq <| getLstigKeys mapping e)
 
     let liquid a =
         let template, k, e = 
@@ -242,12 +231,6 @@ let translateAll (sys, trees, mapping:KeyMapping) =
             "expr", Str (translateExpr mapping e);
             "qrykeys", Lst (getLstigKeys mapping e |> Seq.map Int);
         ]
-
-    let entrychecks parent entry =
-        Set.filter (fun e -> e.pc = entry.pc) parent
-        |> fun x -> if x.IsEmpty then Set.add entry parent else parent
-        |> Set.map entrypoint
-        |> String.concat "\n"
 
     let rec newTranslate guards n = 
         let entries (node:Node) =

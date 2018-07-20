@@ -6,16 +6,16 @@ open Expressions
 
 let rec Negate = 
     function
-    | Prop(a, op, b) -> match op with
-                        | Equal -> Prop(a, Neq, b)
-                        | Neq -> Prop(a, Equal, b)
-                        | Greater -> Prop(a, Leq, b)
-                        | Leq -> Prop(a, Greater, b)
-                        | Less -> Prop(a, Geq, b)
-                        | Geq -> Prop(a, Less, b)
+    | Prop(a, op, b) ->
+        match op with
+        | Equal -> Prop(a, Neq, b)
+        | Neq -> Prop(a, Equal, b)
+        | Greater -> Prop(a, Leq, b)
+        | Leq -> Prop(a, Greater, b)
+        | Less -> Prop(a, Geq, b)
+        | Geq -> Prop(a, Less, b)
     | All(c, n, p) -> Exists(c, n, Negate(p))
     | Exists(c, n, p) -> All(c,n, Negate(p))
-
 
 let rec encodeProp name sys (mapping:KeyMapping) (sub:Map<string, string>) = 
     let makeAssumptions c (cmin, cmax) = 
