@@ -243,19 +243,16 @@ let translateAll (sys, trees, mapping:KeyMapping) =
                 "exitvalue", Int e.value;
             ]
 
-        let path, list = 
+        let template, list = 
             match n with
             | Guarded(s, node) -> newTranslate (s+guards) node
             | Basic(parent, entry, a, exit, lbl) ->
-                "templates/transition.c",
-                liquid a
-                |> Seq.append (exitHash exit)
+                transition, Seq.append (exitHash exit) (liquid a)
             | Goto(parent, entry, exit, lbl) ->
-                "templates/goto.c",
-                (exitHash exit)
+                goto, (exitHash exit)
             | Stop(parent, entry) ->
-                "templates/stop.c", Seq.empty
-        path,
+                stop, Seq.empty
+        template,
         [
             "label", Str n.lbl;
             "entrypoints", (entries n) |> Lst ;
@@ -267,9 +264,9 @@ let translateAll (sys, trees, mapping:KeyMapping) =
     |> Seq.map fst
     |> Set.unionMany
     |> Seq.map (fun n -> newTranslate "" n)
-    |> Seq.map (fun (path,list) -> renderFile path list)
-    |> Seq.fold (fun state y -> Result.bind (fun () -> y) state) (Result.Ok ())
+    |> Seq.map (fun (t, list) -> t |> Result.bind (render list))
     /// This will be a Result.Ok iff. all results in the sequence are Ok
+    |> Seq.fold (fun state y -> Result.bind (fun () -> y) state) (Result.Ok ())
     |> Result.bind(fun () -> Result.Ok(sys, trees, mapping))
 
 
