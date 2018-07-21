@@ -4,19 +4,6 @@ open Base
 open Templates
 open Expressions
 
-let rec Negate = 
-    function
-    | Prop(a, op, b) ->
-        match op with
-        | Equal -> Prop(a, Neq, b)
-        | Neq -> Prop(a, Equal, b)
-        | Greater -> Prop(a, Leq, b)
-        | Leq -> Prop(a, Greater, b)
-        | Less -> Prop(a, Geq, b)
-        | Geq -> Prop(a, Less, b)
-    | All(c, n, p) -> Exists(c, n, Negate(p))
-    | Exists(c, n, p) -> All(c,n, Negate(p))
-
 let rec encodeProp name sys (mapping:KeyMapping) (sub:Map<string, string>) = 
     let makeAssumptions c (cmin, cmax) = 
         sprintf "%s%s >= %i && %s%s < %i" c name cmin c name cmax
@@ -25,22 +12,26 @@ let rec encodeProp name sys (mapping:KeyMapping) (sub:Map<string, string>) =
     let encodeTerm = function
     | ConstTerm(i) -> sprintf "%i" i
     | KeyRef(k,c) ->
-        let csub = sub.TryFind c |> Option.defaultValue (c+name)
+        let csub = defaultArg (sub.TryFind c) (c+name)
         (translateKey mapping csub k)
 
     function
     | Prop(t1, op, t2) ->
-        sprintf "%s %s %s" (encodeTerm t1) (translateBOp op) (encodeTerm t2)
+        if (encodeTerm t1) <> (encodeTerm t2) then
+            sprintf "%s %s %s" (encodeTerm t1) (translateBOp op) (encodeTerm t2)
+        else ""
     | All(compType, comp, prop) -> 
         sys.spawn.[compType]
         |> fun (x, y) -> [x..y-1]
         |> List.map (fun i -> encodeProp name sys mapping (sub.Add (comp, i.ToString())) prop)
+        |> List.filter ((<>) "")
         |> String.concat " && "
         |> sprintf "(%s)"
     | Exists(compType, comp, prop) -> 
         sys.spawn.[compType]
         |> fun (x, y) -> [x..y-1]
         |> List.map (fun i -> encodeProp name sys mapping (sub.Add (comp, i.ToString())) prop)
+        |> List.filter ((<>) "")
         |> String.concat " || "
         |> sprintf "(%s)"
 
