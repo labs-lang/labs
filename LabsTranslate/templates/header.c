@@ -83,6 +83,14 @@ void lstig(int component_id, int key, int value) {
     setHout(component_id, key);
 }
 
+
+void env(int component_id, int key, int value) {
+    __VERIFIER_assume(HoutCnt[component_id] == 0);
+    __VERIFIER_assume(HinCnt[component_id] == 0);
+    E[key] = value;
+    now(); // local step
+}
+
 unsigned char differentLstig(int comp1, int comp2, int key) {
     unsigned char k;
     for (k = 0; k < MAXKEYL; k++) {

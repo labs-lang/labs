@@ -13,7 +13,7 @@ void {{label}}(int tid) {
     {%- elsif type == "lstig" -%}
     lstig(tid, {{key}}, val);
     {%- elsif type == "env" -%}
-    env({{key}}, val);
+    env(tid, {{key}}, val);
     {%- endif -%}
 
     {%- for k in qrykeys -%}
