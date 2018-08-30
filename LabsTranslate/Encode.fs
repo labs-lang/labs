@@ -35,7 +35,7 @@ with
             |> fun x -> if x.IsEmpty then Set.add e par else par
 
 let baseVisit (procs:Map<string, Process>) counter mapping rootName =
-    let pccount = makeCounter(-1)
+    let pccount = makeCounter -1
     let rec visit name rootEntry cnt parent entry exit p lbl =
         let vs = visit name rootEntry cnt
         let parentUnion = Set.union parent
