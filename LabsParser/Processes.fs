@@ -4,7 +4,6 @@ open FParsec
 open Types
 open Expressions    
 
-
 /// Parses elementary processes ("actions")
 let paction : Parser<_> =
     let parseArrow : Parser<_> =

@@ -7,21 +7,20 @@ open Link
 type Init =
     | ChooseI of int list
     | RangeI of int * int
-
-
-type ComponentDef = {
+    
+type ComponentDef = { 
     name: string
-    iface: Map<Key, Init>; 
-    lstig: Map<Key, Init> list;
-    behavior: string;
-    processes: Map<string, Process>    
+    iface: Map<Key, Init>
+    lstig: Map<Key, Init> list
+    behavior: string
+    processes: Map<string, Process>
 }
 
 type SystemDef = {
-    environment: Map<Key, Init>;
-    components: Map<string, ComponentDef>;
-    processes: Map<string, Process>;
-    spawn: Map<string, int*int>;
+    environment: Map<Key, Init>
+    components: Map<string, ComponentDef>
+    processes: Map<string, Process>
+    spawn: Map<string, int*int>
     properties: Map<string, TemporalProperty>
     link: Link
 }

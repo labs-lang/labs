@@ -130,7 +130,8 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
             | Goto(entry=e; parent=p)
             | Stop(entry=e; parent=p)
             | Basic(entry=e; parent=p) -> 
-                if p.IsEmpty then e.pc
+                if p.IsEmpty then
+                    e.pc
                 else
                     (p |> Set.map (fun x -> x.pc) |> Set.maxElement)
                     |> max e.pc

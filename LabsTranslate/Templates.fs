@@ -9,13 +9,13 @@ let indent num (s:string) =
 
 let translateKey (mapping:KeyMapping) index k = 
     let getTranslation index = function
-    | I -> sprintf "I[%s][%i]" index mapping.[k].index
-    | L -> sprintf "Lvalue[%s][%i]" index mapping.[k].index
-    | E -> sprintf "E[%i]" mapping.[k].index
+        | I -> sprintf "I[%s][%i]" index mapping.[k].index
+        | L -> sprintf "Lvalue[%s][%i]" index mapping.[k].index
+        | E -> sprintf "E[%i]" mapping.[k].index
 
     let tryKeyInfo = mapping.TryFind k
     match tryKeyInfo with
-    | Some(info) -> getTranslation index info.location
+    | Some info -> getTranslation index info.location
     | None -> failwith ("Unexpected key " + k)
 
 let updateKq keys = 
@@ -52,17 +52,15 @@ let initLtstamp keyInfo i =
     | _ -> ""
 
 let def name = 
-    let typeofVar =
-        function
-        | (a,b) when a >= 0     && b < 256      -> "unsigned char "
-        | (a,b) when a > -128   && b < 128      -> "char "
-        | (a,b) when a >= 0     && b < 65536    -> "unsigned short "
-        | (a,b) when a > -32768 && b < 32768    -> "short "
-        | (a,b) when a >=0                      -> "unsigned int "
+    let typeofVar = function
+        | a, b when a >= 0     && b < 256      -> "unsigned char "
+        | a, b when a > -128   && b < 128      -> "char "
+        | a, b when a >= 0     && b < 65536    -> "unsigned short "
+        | a, b when a > -32768 && b < 32768    -> "short "
+        | a, b when a >=0                      -> "unsigned int "
         | _ -> "int "
-
     function
-    | ChooseI(l) -> (typeofVar (List.min l, List.max l) ) + name + ";"
+    | ChooseI l -> (typeofVar (List.min l, List.max l) ) + name + ";"
     | RangeI(minI, maxI) -> (typeofVar (minI, maxI) + name + ";")
 
 let initSimulate i keyInfo values =
@@ -89,9 +87,9 @@ let init keyInfo values =
 
     (def guess values) + "\n" + (
         match values with
-        | ChooseI(l) when l.Length = 1 -> 
+        | ChooseI l when l.Length = 1 -> 
             sprintf "%s = %i;\n" guess l.Head
-        | ChooseI(l) -> 
+        | ChooseI l -> 
             l
             |> Seq.map (assumeInt)
             |> String.concat " || "
@@ -101,13 +99,14 @@ let init keyInfo values =
 
 let serializeInfo (sys, mapping:KeyMapping) =
     let serializeKeys (m:KeyMapping) =
-        if m.Count = 0 then ""
+        if m.Count = 0 then 
+            ""
         else
-        m
-        |> Map.toSeq
-        |> Seq.sortBy (fun (_,info) -> info.index)
-        |> Seq.map (fun (name, _) -> name)
-        |> String.concat ","
+            m
+            |> Map.toSeq
+            |> Seq.sortBy (fun (_,info) -> info.index)
+            |> Seq.map (fun (name, _) -> name)
+            |> String.concat ","
 
     let maxTupleLength =
         sys.components
@@ -129,4 +128,4 @@ let serializeInfo (sys, mapping:KeyMapping) =
     |> fun x -> if Seq.isEmpty x then "" else String.concat "\n" x
     |> fun s -> printfn "%s\n%s\nunwind %i" s ranges (maxTupleLength + 1)
 
-    Result.Ok(0)
+    Result.Ok 0

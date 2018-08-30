@@ -15,7 +15,6 @@ type Val =
         | (Int(a), Int(b)) -> Some(Int(a+b)) // Sum
         | (P(p1), P(p2)) -> Some(P(fst p1 + fst p2, snd p1 + snd p2))
         | _ -> None
-
     static member (-) (left: Val, right: Val) =
         match (left, right) with
         | (Int(a), Int(b)) -> Some(Int(a-b))
@@ -29,15 +28,14 @@ type Interface = Map<Key, Val>
 
 [<StructuredFormatDisplay("{AsString}")>]
 type ArithmOp =
-| Plus
-| Minus
-| Times
-| Mod
-    with 
-        member this.AsString = this.ToString()
-        override this.ToString() = 
-            match this with
-            | Plus -> "+" | Minus -> "-" | Times -> "*" | Mod -> "%"
+    | Plus
+    | Minus
+    | Times
+    | Mod
+    member this.AsString = this.ToString()
+    override this.ToString() = 
+        match this with
+        | Plus -> "+" | Minus -> "-" | Times -> "*" | Mod -> "%"
 
 [<StructuredFormatDisplay("{AsString}")>]
 type Expr =
@@ -51,8 +49,6 @@ type Expr =
             | Const(v) -> v.ToString()
             | K(k) -> k
             | Arithm(e1, op, e2) -> sprintf "%A %A %A" e1 op e2
-
-
 
 type CmpOp = 
     | Equal
@@ -72,10 +68,9 @@ type BExpr =
 
 [<StructuredFormatDisplay("{AsString}")>]
 type Action =
-| AttrUpdate of Key * Expr
-| LStigUpdate of Key * Expr
-| EnvWrite of Key * Expr
-with
+    | AttrUpdate of Key * Expr
+    | LStigUpdate of Key * Expr
+    | EnvWrite of Key * Expr
     member this.AsString = this.ToString()
     override this.ToString() = 
         match this with
@@ -85,33 +80,26 @@ with
 
 [<StructuredFormatDisplay("{AsString}")>]
 type Process = 
-| Nil
-| Skip
-| Base of Action
-| Seq of Process * Process
-| Choice of Process * Process
-| Par of Process * Process
-| Await of BExpr * Process
-| Name of string
-with
+    | Nil
+    | Skip
+    | Base of Action
+    | Seq of Process * Process
+    | Choice of Process * Process
+    | Par of Process * Process
+    | Await of BExpr * Process
+    | Name of string
     static member monoid left right op = 
         match left,right with
         | Skip, Skip -> Skip
         | _, Skip -> left
         | Skip, _ -> right
         | _ -> op(left, right)
-
-
     static member ( ^. )(left: Process, right: Process) =
         Process.monoid left right Seq
-
     static member ( ^+ )(left: Process, right: Process) =
         Process.monoid left right Choice
-
     static member ( ^| )(left: Process, right: Process) =
         Process.monoid left right Par
-
-
     member this.AsString = this.ToString()        
     override this.ToString() =
         match this with
@@ -125,14 +113,14 @@ with
         | Name(s) -> s
 
 type PropertyTerm =
-| ConstTerm of int
-| KeyRef of k:string * c:string
+    | ConstTerm of int
+    | KeyRef of k:string * c:string
 
 type Property = 
-| Prop of PropertyTerm * CmpOp * PropertyTerm
-| All of comp:string * name:string * Property
-| Exists of comp:string * name:string * Property
+    | Prop of PropertyTerm * CmpOp * PropertyTerm
+    | All of comp:string * name:string * Property
+    | Exists of comp:string * name:string * Property
 
 type TemporalProperty =
-| Finally of Property
-| Always of Property
+    | Finally of Property
+    | Always of Property

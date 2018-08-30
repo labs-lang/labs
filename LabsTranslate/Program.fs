@@ -20,7 +20,8 @@ let main argv =
             |> Result.map (fun args -> args.Contains <@ Simulation @>)
             |> function Ok(true) -> true | _ -> false
             |> fun x -> 
-                if x then translateInit (initenv (initSimulate 0)) initVarsSim
+                if x
+                then translateInit (initenv (initSimulate 0)) initVarsSim
                 else translateInit (initenv init) initVars
 
         (filenameOf cli)

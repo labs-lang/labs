@@ -32,7 +32,7 @@ let parseCLI argv =
         let parsed = argParser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
         Result.Ok parsed
     with e ->
-        e.Message |> Result.Error
+        Result.Error e.Message
 
 let bound result = 
     Result.map (fun (args:ParseResults<_>) -> args.GetResult <@ Bound @>) result

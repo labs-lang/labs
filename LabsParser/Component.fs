@@ -21,8 +21,8 @@ let pcomp =
             processes)
     |>> (fun (n, (i,l,p,procs)) ->
         (n, {
-            name = n; 
-            iface= (i |> Option.defaultValue Map.empty);
-            lstig= (l |> Option.defaultValue List.empty); 
-            behavior = p; 
-            processes = procs}))
+            name = n
+            iface= (i |> Option.defaultValue Map.empty)
+            lstig= (l |> Option.defaultValue List.empty) 
+            behavior = p
+            processes = procs }))

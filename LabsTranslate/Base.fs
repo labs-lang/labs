@@ -47,8 +47,7 @@ let (>+>) r2 r1 =
 
 let (<&>) f g a =
     (f a) >+> (g a)
-
-
+    
 let log msg r = 
     match r with
     | Result.Ok(_) -> 
@@ -61,22 +60,11 @@ let logErr result =
     | Result.Ok(_) -> result
     | Result.Error(s) -> 
         eprintfn "\n%s" (s)
-        Result.Error("")
+        Result.Error ""
 
 let readFile filepath =
-    try
-        Result.Ok(File.ReadAllText filepath)
-    with
-    | ex -> Result.Error(ex.Message)
-
-let wrapParserResult p text = 
-    try
-        match CharParsers.run p text with
-        | Success(a, _, _) -> Result.Ok(a)
-        | Failure(errorMsg, _, _) -> 
-            Result.Error (sprintf "Parsing failed:\n %s" errorMsg)
-    with
-        ex -> Result.Error ex.Message
+    Result.Ok filepath
+    >>= (Result.Ok << File.ReadAllText)
 
 let withcommas x = (String.concat ", " x)
 
@@ -86,9 +74,18 @@ let parse (text, (placeholders:Map<string, string>)) =
         (Map.keys placeholders)
         |> Set.difference s
         |> fun z -> 
-            if (Set.isEmpty z) then Result.Ok(s) 
+            if (Set.isEmpty z)
+            then Result.Ok(s) 
             else Result.Error(sprintf "Uninitialized external variable: %s" (withcommas z))
 
+    let wrapParserResult p text = 
+        try
+            match CharParsers.run p text with
+            | Success(a, _, _) -> Result.Ok a
+            | Failure(errorMsg, _, _) -> 
+                Result.Error (sprintf "Parsing failed:\n %s" errorMsg)
+        with
+            ex -> Result.Error ex.Message
 
     let stripped =
         CharParsers.run stripComments text
@@ -102,7 +99,8 @@ let parse (text, (placeholders:Map<string, string>)) =
         >+> (wrapParserResult allPlaceholders stripped |> Result.map Set.ofList |> Result.map (Set.filter ((<>) "")))
         >>= fun (def, all) -> 
             let diff = (Set.difference all def)
-            if diff.IsEmpty then Result.Ok(def)
+            if diff.IsEmpty
+            then Result.Ok(def)
             else
                 diff
                 |> Set.map ((+) "_")

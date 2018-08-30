@@ -2,10 +2,6 @@
 open Types
 open FParsec
 
-
-/// Parser for values
-
-
 let parithmop : Parser<_> =
     choice [
         (charReturn '+' Plus);
@@ -24,8 +20,7 @@ let pexprTerm =
         betweenParen pexpr;
         KEYNAME |>> K;
     ]
-
-
+    
 // assign to "pexprRef" the choice of the above parsers
 do pexprRef :=
     maybeTuple2 (ws pexprTerm) 
@@ -42,7 +37,6 @@ let pcompareop : Parser<_> =
         (stringReturn "!=" Neq);
         (charReturn '=' Equal);
     ]
-
 
 let pbexpr, private pbexprRef = createParserForwardedToRef()
 

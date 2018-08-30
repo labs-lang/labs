@@ -4,10 +4,10 @@ open Base
 open Templates
 
 let translateAOp = function
-| Plus -> sprintf "( (%s) + (%s) )"
-| Minus -> sprintf "( (%s) - (%s) )"
-| Times -> sprintf "( (%s) * (%s) )"
-| Mod -> sprintf "mod(%s, %s)"
+    | Plus -> sprintf "( (%s) + (%s) )"
+    | Minus -> sprintf "( (%s) - (%s) )"
+    | Times -> sprintf "( (%s) * (%s) )"
+    | Mod -> sprintf "mod(%s, %s)"
 
 let rec translateExpr (mapping:KeyMapping) expr =
     let trexp = translateExpr mapping
@@ -18,15 +18,14 @@ let rec translateExpr (mapping:KeyMapping) expr =
         ((translateAOp op) (trexp e1) (trexp e2))
 
 let translateBOp = function
-| Less -> "<"
-| Equal -> "=="
-| Greater -> ">"
-| Leq -> "<="
-| Geq -> ">="
-| Neq -> "!="
+    | Less -> "<"
+    | Equal -> "=="
+    | Greater -> ">"
+    | Leq -> "<="
+    | Geq -> ">="
+    | Neq -> "!="
 
-let rec translateBExpr (mapping:KeyMapping) =
-    function
+let rec translateBExpr (mapping:KeyMapping) = function
     | True -> "1"
     | False -> "0"
     | Neg(b) -> sprintf "!(%s)" (translateBExpr mapping b)
@@ -39,8 +38,7 @@ let rec translateBExpr (mapping:KeyMapping) =
             (translateBOp op)
             (translateExpr mapping e2)
 
-let rec getLstigKeys (mapping:KeyMapping) = 
-    function
+let rec getLstigKeys (mapping:KeyMapping) = function
     | K(k) -> 
         let info = getInfoOrFail mapping k
         if info.location = L then Set.singleton info.index else Set.empty

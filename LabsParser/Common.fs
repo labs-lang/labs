@@ -42,7 +42,8 @@ let sepbycommas p = sepBy p (ws (skipChar ','))
 /// If p2 succeeds, pass both results to if2.
 /// Otherwise return the result of p1.
 let maybeTuple2 p1 p2 if2 =
-    p1 .>>. (opt p2) |>> function
+    p1 .>>. (opt p2) |>> 
+    function
     | a, Some(b) -> if2(a, b)
     | a, None -> a
 
@@ -63,7 +64,8 @@ let setDef str pelem mappingFn =
             dup.ToString()
             |> sprintf "%s: multiple definitions of %s" str
             |> (fun msg -> Reply(Error, ErrorMessageList(Message(msg))))
-        else Reply(x |> Set.ofList))
+        else
+            Reply(x |> Set.ofList))
 
 let unexpected msg = fun _ -> Reply(Error, ErrorMessageList(Unexpected(msg)))
 
@@ -73,7 +75,8 @@ let toMap lst =
         withcommas dup
         |> sprintf "Multiple definitions of %s"
         |> unexpected
-    else preturn (lst |> Map.ofList)
+    else
+        preturn (lst |> Map.ofList)
 
 
 /// Parses a point (i.e. a pair of integers)

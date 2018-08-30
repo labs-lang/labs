@@ -34,7 +34,7 @@ let render vals (template:Template) =
         |> Result.Error
 
 let parse path =
-    readFile(path)
+    readFile path
     |> Result.map Template.Parse
 
 ///<summmary>Opens a template file and renders it using the specified

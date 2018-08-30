@@ -10,15 +10,15 @@ let rec encodeProp name sys (mapping:KeyMapping) (sub:Map<string, string>) =
         |> assume |> (sprintf "int %s%s;\n%s" c name)
 
     let encodeTerm = function
-    | ConstTerm(i) -> sprintf "%i" i
-    | KeyRef(k,c) ->
-        let csub = defaultArg (sub.TryFind c) (c+name)
-        (translateKey mapping csub k)
+        | ConstTerm(i) -> sprintf "%i" i
+        | KeyRef(k,c) ->
+            let csub = defaultArg (sub.TryFind c) (c+name)
+            (translateKey mapping csub k)
 
     function
     | Prop(t1, op, t2) ->
-        if (encodeTerm t1) <> (encodeTerm t2) then
-            sprintf "%s %s %s" (encodeTerm t1) (translateBOp op) (encodeTerm t2)
+        if (encodeTerm t1) <> (encodeTerm t2)
+        then sprintf "%s %s %s" (encodeTerm t1) (translateBOp op) (encodeTerm t2)
         else ""
     | All(compType, comp, prop) -> 
         sys.spawn.[compType]
