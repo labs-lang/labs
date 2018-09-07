@@ -5,18 +5,18 @@ open Types
 open Expressions    
 
 /// Parses elementary processes ("actions")
-let paction : Parser<_> =
-    let parseArrow : Parser<_> =
-        skipChar '<' >>.
-            choice [
-                followedBy (pstring "--") >>. stringReturn "--" EnvWrite; 
-                charReturn '-' AttrUpdate;
-                charReturn '~' LStigUpdate;]
+let paction =
+    let parseArrow =
+        skipChar '<' >>. choice [
+            followedBy (pstring "--") >>. stringReturn "--" EnvWrite; 
+            charReturn '-' AttrUpdate;
+            charReturn '~' LStigUpdate
+        ]
     (pipe3 
-        (ws KEYNAME) 
+        (ws (simpleRef pexpr))
         (ws parseArrow) 
         (ws pexpr) 
-        (fun k action e -> action(k, e)))
+        (fun (target, offset) action e -> action(target, offset, e)))
 
 let pproc, pprocRef = createParserForwardedToRef()
 let pprocTerm, pprocTermRef = createParserForwardedToRef()
@@ -29,7 +29,7 @@ do pprocTermRef :=
         attempt pNil; 
         attempt pSkip;
         followedBy pbexpr >>. pGuard |>> Await;
-        IDENTIFIER |>> Process.Name; 
+        IDENTIFIER |>> Name; 
         paction |>> Base;
         betweenParen pproc
     ]

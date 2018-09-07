@@ -3,19 +3,19 @@ open Types
 open Expressions
 open FParsec
 
-//let ppropTerm, ppropTermRef = createParserForwardedToRef()
+
 let pprop, ppropRef = createParserForwardedToRef()
 
-let ppropTerm =
-    let pkeyref = 
-        (ws KEYNAME) .>> ws (skipString "of") .>>. (ws KEYNAME) |>> KeyRef
-    choice [
-        pkeyref;
-        (ws pint32) |>> ConstTerm
-    ]
+let propertyRef p =
+    pipe2
+        (simpleRef p)
+        (ws (skipString "of") >>. (ws KEYNAME))
+        (fun (a,b) c -> (a,c), b)
 
-let pbaseprop = 
-    tuple3 ppropTerm (ws pcompareop) (ws ppropTerm) |>> Prop
+let prova1 = makeExprParser simpleRef
+let prova = makeExprParser propertyRef
+
+let pbaseprop = makeBExprParser (makeExprParser propertyRef)
 
 let pQuantifier str pType = 
     tuple3
@@ -26,9 +26,8 @@ let pQuantifier str pType =
 do ppropRef :=
     let pAll = pQuantifier "forall" All
     let pSome = pQuantifier "exists" Exists
-    ws (choice [pAll; pSome; pbaseprop])
-
-
+    ws (choice [pAll; pSome; pbaseprop |>> Prop])
+    
 let ptemp : Parser<_> = 
     let ptemptype = 
         choice [

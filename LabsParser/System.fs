@@ -10,42 +10,15 @@ open Processes
 let pspawn = 
     ws ((ws IDENTIFIER) .>>. (ws COLON >>. pint32)) |> sepbycommas >>= toMap
 
-let mapToLinkTerm prop = fun _ -> 
-    match prop with
-    | PropertyTerm.ConstTerm(v) -> Reply(T (ConstTerm v))
-    | PropertyTerm.KeyRef(k,c) -> 
-        match c with 
-        | "c1" -> Reply(T (KeyRefC1 k))
-        | "c2" -> Reply(T (KeyRefC2 k))
-        | s -> 
-            sprintf "Invalid link identifier %s" s 
-            |> fun msg -> Reply(Error, ErrorMessageList(Message msg))
 
-let plinkexpr, private plinkexprRef = createParserForwardedToRef()
+let linkref p =
+    pipe2 
+        (simpleRef p)
+        (ws (skipString "of c") >>. 
+            choice [charReturn '1' RefC1; charReturn '2' RefC2])
+        (fun (a, b) c -> c(a), b)
 
-let plinkterm = 
-    let pterm = ppropTerm >>= mapToLinkTerm
-    let pparen = betweenParen plinkexpr
-    let pabs = (skipString "abs") >>. (betweenParen (ws plinkexpr)) |> ws |>> Abs
-    choice [pabs; pparen; attempt pterm]
-
-
-do plinkexprRef := 
-    maybeTuple2 (ws plinkterm) ((ws parithmop) .>>. (ws plinkexpr)) 
-        (fun (t1, (op, t2)) -> Arithm(t1, op, t2))
-
-
-let plink, private plinkRef = createParserForwardedToRef()
-
-do plinkRef :=
-    let pneg = NEG >>. plink |>> Neg
-    let pcompare =
-        tuple3 plinkexpr (ws pcompareop) plinkexpr |>> Compare
-    choice [
-        followedBy (pstring "true") >>. stringReturn "true" True;
-        attempt pneg;
-        attempt pcompare
-    ] |> ws
+let plink = makeBExprParser (makeExprParser linkref)
 
 let pextern = ws ((sepbycommas (skipChar '_' >>. KEYNAME))) |>> Set.ofList
 

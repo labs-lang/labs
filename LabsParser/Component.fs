@@ -19,10 +19,10 @@ let pcomp =
             (opt (pstringEq "stigmergy" plstigkeys))
             (pstringEq "behavior" (ws IDENTIFIER))
             processes)
-    |>> (fun (n, (i,l,p,procs)) ->
+    |>> fun (n, (i, l, p, procs)) ->
         (n, {
             name = n
             iface= (i |> Option.defaultValue Map.empty)
             lstig= (l |> Option.defaultValue List.empty) 
             behavior = p
-            processes = procs }))
+            processes = procs })

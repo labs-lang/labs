@@ -2,7 +2,6 @@
 
 open FParsec
 open Common
-open Processes
 open Components
 open System
 open Properties
@@ -17,18 +16,19 @@ let makeRanges (mp: Map<'a, int>) =
 
 
 let parse = 
-    //manyComments 
-    spaces
-    >>. tuple3 psys (ws ((pcomp |> ws |> many) >>= toMap)) pproperties
-    |>> (fun ((_, env, spawn, link, procs), comps, props) -> 
-        {
-        processes = procs;
-        components = comps;
-        environment = (env |> Option.defaultValue Map.empty);
-        spawn = (makeRanges spawn);
-        properties = props;
-        link = link;
-        })
+    spaces >>. pipe3
+        psys 
+        (ws ((pcomp |> ws |> many) >>= toMap))
+        pproperties
+        (fun (_, env, spawn, link, procs) comps props -> 
+            {
+            processes = procs;
+            components = comps;
+            environment = (env |> Option.defaultValue Map.empty);
+            spawn = (makeRanges spawn);
+            properties = props;
+            link = link;
+            })
 
 let stripComments = 
     stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>. preturn "")

@@ -1,6 +1,7 @@
 ﻿[<AutoOpen>]
 module internal Common
 open FParsec
+open Types
 
 type Parser<'t> = Parser<'t, unit>
 
@@ -17,18 +18,13 @@ let isAlphanum x = isAsciiLetter x || isDigit x
 let isAlphanumlower x = isAsciiLower x || isDigit x
 
 let KEYNAME : Parser<_> =
-    asciiLower 
-    .>>. (manySatisfy isAlphanumlower)
-    |>> (fun (x, y) -> (string x) + y)
+    pipe2 asciiLower (manySatisfy isAlphanumlower)
+        (fun x y -> sprintf "%O%s" x y)
 
 let IDENTIFIER : Parser<_> = 
-    asciiUpper 
-    .>>. (manySatisfy isAlphanum)
-    |>> (fun (x, y) -> (string x) + y)
+    pipe2 asciiUpper (manySatisfy isAlphanum) (fun x y -> sprintf "%O%s" x y)
 
-
-let withcommas x = (String.concat ", " x)
-
+let withcommas x = x |> Seq.map (sprintf "%A") |> String.concat ", "
 
 /// Parse p and skip whitespace after.
 let ws p = p .>> spaces
@@ -82,19 +78,24 @@ let toMap lst =
 /// Parses a point (i.e. a pair of integers)
 let ppoint : Parser<_> =
     (betweenParen (pint32 .>>. (ws (skipChar ',') >>. pint32)))
-
-
+    
 /// Parses a single init definition.
 let pinit =
     let pChoose = 
-        (sepbycommas pint32) |> betweenBrackets |>> ChooseI
+        (sepbycommas pint32) |> betweenBrackets |>> Choose
     let pRange = 
         followedBy (pint32 >>. (skipString ".."))
         >>. ((ws pint32) .>>. ((skipString "..") >>. (ws pint32)) 
-        |>> RangeI)
-    let pSingle = (ws pint32) |>> (ChooseI << List.singleton)
+        |>> Range)
+    let pSingle = (ws pint32) |>> (Choose << List.singleton)
 
-    (ws KEYNAME) .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle]))
+    let pvar =
+        KEYNAME .>>. (opt (betweenBraces puint32)) |>> 
+        function
+        | a, Some(b) -> ArrayVar(a, int(b))
+        | a, None -> ScalarVar(a)
+
+    pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle]))
 
 let pkeys = 
     (ws (sepbycommas (ws pinit)) >>= toMap)

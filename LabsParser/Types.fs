@@ -5,22 +5,41 @@ open Link
 
 /// Initialization values
 type Init =
-    | ChooseI of int list
-    | RangeI of int * int
-    
-type ComponentDef = { 
-    name: string
-    iface: Map<Key, Init>
-    lstig: Map<Key, Init> list
-    behavior: string
-    processes: Map<string, Process>
+    | Choose of int list
+    | Range of int * int
+
+type KeyLocation = | I | L | E
+
+type KeyInfo = {
+    var:Var
+    index:int
+    location:KeyLocation
 }
 
-type SystemDef = {
-    environment: Map<Key, Init>
-    components: Map<string, ComponentDef>
-    processes: Map<string, Process>
+type Property<'a> = 
+    | Prop of BExpr<'a>
+    | All of comp:string * name:string * Property<'a>
+    | Exists of comp:string * name:string * Property<'a>
+
+type TemporalProperty<'a> =
+    | Finally of Property<'a>
+    | Always of Property<'a>
+
+type ComponentDef<'a> = { 
+    name: string
+    iface: Map<Var, Init>
+    lstig: Map<Var, Init> list
+    behavior: string
+    processes: Map<string, Process<'a>>
+}
+
+
+
+type SystemDef<'a> = {
+    environment: Map<Var, Init>
+    components: Map<string, ComponentDef<'a>>
+    processes: Map<string, Process<'a>>
     spawn: Map<string, int*int>
-    properties: Map<string, TemporalProperty>
-    link: Link
+    properties: Map<string, TemporalProperty<'a * string>>
+    link: Link<'a>
 }
