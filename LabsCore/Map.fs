@@ -1,9 +1,9 @@
 ﻿module Map
 /// Returns the set of keys in m.
-let keys table =
-    if Map.count table = 0
+let keys m =
+    if Map.count m = 0
     then Set.empty
-    else table |> Map.toSeq |> Seq.map fst |> Set.ofSeq
+    else m |> Map.toSeq |> Seq.map fst |> Set.ofSeq
 /// Returns a sequence of all the values in m.
 let values table =
     if Map.count table = 0
