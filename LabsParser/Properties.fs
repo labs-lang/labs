@@ -17,13 +17,14 @@ let prova = makeExprParser propertyRef
 
 let pbaseprop = makeBExprParser (makeExprParser propertyRef)
 
-let pQuantifier str pType = 
-    tuple3
-        (ws (skipString str) >>. (ws IDENTIFIER))
-        ((ws KEYNAME) .>> ws (skipChar ','))
-        pprop
-    |>> pType
 do ppropRef :=
+    let pQuantifier str pType = 
+        tuple3
+            (ws (skipString str) >>. (ws IDENTIFIER))
+            ((ws KEYNAME) .>> ws (skipChar ','))
+            pprop
+        |>> pType
+
     let pAll = pQuantifier "forall" All
     let pSome = pQuantifier "exists" Exists
     ws (choice [pAll; pSome; pbaseprop |>> Prop])
