@@ -25,8 +25,8 @@ let mapiFrom start mapping table  =
             (index+1, (Map.add k (mapping index k v) result))) (start, Map.empty) 
     |> snd
 
-/// Builds a new map by applying the given function to each element of the table.
-/// The first argument of the function is the index of the element being transformed,
-/// starting from 0.
-let mapi mapping table =
-    mapiFrom 0 mapping table
+/// Builds a new collection whose elements are the result of
+/// applying the given function to each value in the map.
+/// The key is ignored.
+let mapValues mapping table =
+    Map.map (fun _ -> mapping) table
