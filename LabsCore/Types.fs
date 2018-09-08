@@ -1,5 +1,6 @@
 module Types
 
+type Location = | I | L | E
 [<StructuredFormatDisplay("{AsString}")>]
 type Var = 
     | ScalarVar of name:string

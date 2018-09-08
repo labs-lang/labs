@@ -6,7 +6,6 @@ open Parser
 
 type pcCondition = {pc:int; value:int}
 
-type TypeofKey = | I | L | E
 type KeyInfo = {index:int; location:TypeofKey}
 type KeyMapping = Map<Key, KeyInfo>
 
