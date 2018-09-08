@@ -74,13 +74,8 @@ let toMap lst =
     else
         preturn (lst |> Map.ofList)
 
-
-/// Parses a point (i.e. a pair of integers)
-let ppoint : Parser<_> =
-    (betweenParen (pint32 .>>. (ws (skipChar ',') >>. pint32)))
-    
 /// Parses a single init definition.
-let pinit =
+let pinit loc =
     let pChoose = 
         (sepbycommas pint32) |> betweenBrackets |>> Choose
     let pRange = 
@@ -89,16 +84,18 @@ let pinit =
         |>> Range)
     let pSingle = (ws pint32) |>> (Choose << List.singleton)
 
-    let pvar =
-        KEYNAME .>>. (opt (betweenBraces puint32)) |>> 
-        function
-        | a, Some(b) -> ArrayVar(a, int(b))
-        | a, None -> ScalarVar(a)
+    let pvar = 
+        pipe2
+            KEYNAME
+            (opt (betweenBrackets puint32))
+            (fun name -> function
+            | Some(b) -> {vartype=Array(int b); name=name; location=loc}
+            | None -> {vartype=Scalar; name=name; location=loc})
 
     pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle]))
 
-let pkeys = 
-    (ws (sepbycommas (ws pinit)) >>= toMap)
+let pkeys loc = 
+    (ws (sepbycommas (ws (pinit loc))) >>= toMap)
 
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)

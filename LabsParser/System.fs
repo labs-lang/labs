@@ -27,7 +27,7 @@ let psys =
     >>. 
         (tuple5
             (opt (pstringEq "extern" (ws (skipRestOfLine true))))
-            (opt (pstringEq "environment" pkeys))
+            (opt (pstringEq "environment" (pkeys E)))
             (pstringEq "spawn" pspawn)
             (pstringEq "link" plink)
             (processes)

@@ -2,14 +2,15 @@ module Types
 
 type Location = | I | L | E
 [<StructuredFormatDisplay("{AsString}")>]
-type Var = 
-    | ScalarVar of name:string
-    | ArrayVar of name:string * size:int
-    member this.AsString = this.ToString()
-    override this.ToString() = 
-        match this with
-        | ScalarVar(n)
-        | ArrayVar(n, _) -> n
+type VarType = 
+    | Scalar
+    | Array of size:int
+type Var = {
+    name:string
+    vartype:VarType
+    location:Location
+}
+
 
 [<StructuredFormatDisplay("{AsString}")>]
 type ArithmOp =

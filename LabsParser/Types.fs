@@ -8,14 +8,6 @@ type Init =
     | Choose of int list
     | Range of int * int
 
-type KeyLocation = | I | L | E
-
-type KeyInfo = {
-    var:Var
-    index:int
-    location:KeyLocation
-}
-
 type Property<'a> = 
     | Prop of BExpr<'a>
     | All of comp:string * name:string * Property<'a>
