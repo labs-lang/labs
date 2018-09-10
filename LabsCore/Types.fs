@@ -1,7 +1,6 @@
 module Types
 
 type Location = | I | L | E
-[<StructuredFormatDisplay("{AsString}")>]
 type VarType = 
     | Scalar
     | Array of size:int
