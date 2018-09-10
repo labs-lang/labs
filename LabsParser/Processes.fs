@@ -4,6 +4,8 @@ open FParsec
 open Types
 open Expressions    
 
+let pexpr = makeExprParser simpleRef
+
 /// Parses elementary processes ("actions")
 let paction =
     let parseArrow =
@@ -22,13 +24,14 @@ let pproc, pprocRef = createParserForwardedToRef()
 let pprocTerm, pprocTermRef = createParserForwardedToRef()
 
 do pprocTermRef :=
+    let pguard = makeBExprParser pexpr
     let pNil = stringReturn "Nil" Nil
     let pSkip = stringReturn "Skip" Skip
-    let pGuard = (ws pbexpr) .>>. (ws (skipString "->") >>. pproc)
+    let pGuarded = (ws pguard) .>>. (ws (skipString "->") >>. pproc)
     choice [
         attempt pNil; 
         attempt pSkip;
-        followedBy pbexpr >>. pGuard |>> Await;
+        followedBy pguard >>. pGuarded |>> Await;
         IDENTIFIER |>> Name; 
         paction |>> Base;
         betweenParen pproc
@@ -45,9 +48,7 @@ do pprocRef :=
     // Either returns a single term, or creates a choice/par/seq
     // from two processes
     maybeTuple2 (ws pprocTerm) ((ws OP) .>>. (ws pproc)) (fun (a, (b, c)) -> b a c)
-
-let pdef = 
-    (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc))
-
+    
 let processes = 
+    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc))
     ws (many pdef) >>= toMap
