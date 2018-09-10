@@ -13,7 +13,7 @@ let pspawn =
 
 let linkref p =
     pipe2 
-        (simpleRef p)
+        (ws (simpleRef p))
         (ws (skipString "of c") >>. 
             choice [charReturn '1' RefC1; charReturn '2' RefC2])
         (fun (a, b) c -> c(a), b)
