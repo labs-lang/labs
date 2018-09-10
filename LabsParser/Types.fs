@@ -8,14 +8,21 @@ type Init =
     | Choose of int list
     | Range of int * int
 
-type Property<'a> = 
-    | Prop of BExpr<'a>
-    | All of comp:string * name:string * Property<'a>
-    | Exists of comp:string * name:string * Property<'a>
+type Modality =
+    | Always
+    | Finally
 
-type TemporalProperty<'a> =
-    | Finally of Property<'a>
-    | Always of Property<'a>
+type Quantifier =
+    | All
+    | Exists
+
+type Property<'a> = {
+        name:string
+        predicate:BExpr<'a * string>
+        modality:Modality
+        quantifiers: Map<string, string * Quantifier>
+    }
+
 
 type ComponentDef<'a> = { 
     name: string
@@ -32,6 +39,6 @@ type SystemDef<'a> = {
     components: Map<string, ComponentDef<'a>>
     processes: Map<string, Process<'a>>
     spawn: Map<string, int*int>
-    properties: Map<string, TemporalProperty<'a * string>>
+    properties: Map<string, Property<'a>>
     link: Link<'a>
 }

@@ -10,7 +10,7 @@ let makeRanges (mp: Map<'a, int>) =
     mp 
     |> Map.fold 
         (fun (c, m) name num -> 
-            let newC = c+num
+            let newC = c + num
             (newC, (Map.add name (c, newC) m) )) (0, Map.empty) 
     |> snd
 
