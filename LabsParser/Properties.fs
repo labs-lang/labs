@@ -3,43 +3,43 @@ open Types
 open Expressions
 open FParsec
 
-
-let pprop, ppropRef = createParserForwardedToRef()
-
 let propertyRef p =
     pipe2
-        (simpleRef p)
+        (ws (simpleRef p))
         (ws (skipString "of") >>. (ws KEYNAME))
         (fun (a,b) c -> (a,c), b)
 
-let prova1 = makeExprParser simpleRef
-let prova = makeExprParser propertyRef
+let pquantifier =
+        pipe3
+            (ws <| choice [
+                stringReturn "forall" All;
+                stringReturn "exists" Exists
+            ])
+            (ws IDENTIFIER)
+            (ws KEYNAME)
+            (fun a b c -> c, (b, a))
 
-let pbaseprop = makeBExprParser (makeExprParser propertyRef)
-
-do ppropRef :=
-    let pQuantifier str pType = 
-        tuple3
-            (ws (skipString str) >>. (ws IDENTIFIER))
-            ((ws KEYNAME) .>> ws (skipChar ','))
-            pprop
-        |>> pType
-
-    let pAll = pQuantifier "forall" All
-    let pSome = pQuantifier "exists" Exists
-    ws (choice [pAll; pSome; pbaseprop |>> Prop])
-    
-let ptemp : Parser<_> = 
-    let ptemptype = 
+let pproperty = 
+    let pbaseprop = makeBExprParser (makeExprParser propertyRef)
+    let pmodality = 
         choice [
-            ws (stringReturn "finally" Finally);
-            ws (stringReturn "always" Always)]
-    ptemptype .>>. (ws pprop) |>> (fun (x,y) -> x y)
+            stringReturn "finally" Finally;
+            stringReturn "always" Always]
+        |> ws
+    pipe4 
+        (ws IDENTIFIER .>> (ws EQ))
+        pmodality
+        ((sepEndBy1 pquantifier (ws (skipChar ','))) >>= toMap)
+        pbaseprop
+        (fun n m qs pred -> n, {
+            name=n;
+            modality=m;
+            quantifiers=qs;
+            predicate=pred
+            })
 
 let pproperties = 
-    (ws IDENTIFIER .>>. (ws EQ >>. ptemp))
-    |> many
-    >>= toMap
+    pproperty |> many >>= toMap
     |> (>>.) spaces
     |> ws
     |> betweenBraces
