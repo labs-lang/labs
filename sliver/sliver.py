@@ -89,13 +89,12 @@ def gather_info(call):
     call_info = call + ["--info"]
     info = check_output(call_info, env=env)
     # Deserialize system info
-    i_names, l_names, e_names, comps, unwind, *_ = info.decode().split("\n")
+    i_names, l_names, e_names, comps, *_ = info.decode().split("\n")
     info = {
         "I": i_names.split(","),
         "L": l_names.split(","),
         "E": e_names.split(","),
-        "Comp": split_comps(comps),
-        "unwind": unwind.split(" ")[1]
+        "Comp": split_comps(comps)
     }
     return info
 
