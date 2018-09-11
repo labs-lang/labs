@@ -5,19 +5,16 @@ open System.IO
 open Parser
 
 type pcCondition = {pc:int; value:int}
-
-type KeyInfo = {index:int; location:TypeofKey}
-type KeyMapping = Map<Key, KeyInfo>
+type KeyMapping = Map<string, Var * int>
 
 let getInfoOrFail (m:KeyMapping) k = 
     match m.TryFind k with
     | Some(info) -> info
     | None -> failwith (sprintf "Unexpected key: %s" k)
-
-
-///Bind operator
-let (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
-
+    
+/// Bind operator for Result.
+let inline (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
+    
 let setReturnCode r =
     match r with 
     | Result.Ok(_) -> 0
@@ -37,11 +34,11 @@ let (>>=.) r f =
         f b >>= fun x -> Result.Ok(a,x)
     | Result.Error(_) -> r
 
-///// Puts the result of r2 and that of r1 in a new Result
+/// Puts the results of r2 and r1 in a new Result
 let (>+>) r2 r1 =
     match r2, r1 with
     | Result.Ok(a), Result.Ok(b) -> Result.Ok (a, b)
-    | Result.Error(err), _ -> Result.Error err
+    | Result.Error(err), _
     | _, Result.Error(err) -> Result.Error err
 
 let (<&>) f g a =
@@ -66,7 +63,6 @@ let readFile filepath =
     >>= (Result.Ok << File.ReadAllText)
 
 let withcommas x = (String.concat ", " x)
-
 
 let parse (text, (placeholders:Map<string, string>)) =
     let checkPlaceholders s =
@@ -124,10 +120,10 @@ let makeCounter (start: int) =
         !x
     incr
 
-let findIndex comparison typeofkey mapping =
+let findIndex comparison typeofkey (mapping:KeyMapping) =
     mapping
-    |> Map.filter (fun _ info -> info.location = typeofkey)
-    |> Map.fold (fun state k (info) -> comparison state info.index) 0
+    |> Map.filter (fun _ (v, _) -> v.location = typeofkey)
+    |> Map.fold (fun state k (_, n) -> comparison state n) 0
 
 let findMaxIndex mapping = findIndex max mapping
 let findMinIndex mapping = findIndex min mapping

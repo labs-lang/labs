@@ -1,5 +1,6 @@
 ﻿module Checks
 open Types
+open Link
 open Base
 
 /// Verifies that all process names in the program have been defined.
@@ -44,7 +45,7 @@ let checkNames sys =
     if msg = "" then Result.Ok sys else Result.Error msg
 
 let checkComponents sys =
-    let isDefined (def:ComponentDef) name  =
+    let isDefined (def:ComponentDef<'a>) name  =
         sys.processes.ContainsKey name || def.processes.ContainsKey name
 
     let undefBehaviors = 
@@ -64,53 +65,145 @@ let checkComponents sys =
             |> withcommas
             |> Result.Error
 
-let rec checkKeysExpr = function
-    | K(k) -> k |> Set.singleton
-    | Arithm(e1,_,e2) -> Set.union (checkKeysExpr e1) (checkKeysExpr e2)
-    | Const(_) -> Set.empty
+let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
+    let findVar name = getInfoOrFail mapping name |> fst
 
-let rec checkKeys (procs:Map<string,Process>) (names:Set<string>) = function
-    | Nil
-    | Skip -> Set.empty
-    | Base a -> 
-        match a with
-        | AttrUpdate(k,e)
-        | LStigUpdate(k,e)
-        | EnvWrite(k,e) -> (checkKeysExpr e).Add(k)
-    | Await(_, a) -> checkKeys procs names a
-    | Seq(a,b) 
-    | Choice(a,b)
-    | Par(a,b) -> Set.union (checkKeys procs names a) (checkKeys procs names b)
-    // Only visit a named process if it has not been visited yet
-    | Name s when (not <| names.Contains s) -> 
-        checkKeys procs (names.Add s) procs.[s]
-    | Name s -> Set.empty
+    let resolveLinkTerm = function
+        | RefC1 k -> findVar k |> RefC1
+        | RefC2 k -> findVar k |> RefC2
+        
+    let rec toVarExpr finder = function
+        | Expr.Const i -> Const i
+        | Expr.Ref (r, offset) -> 
+            Expr.Ref(finder r, Option.map (toVarExpr finder) offset)
+        | Expr.Arithm(e1, op, e2) ->
+            Expr.Arithm(toVarExpr finder e1, op, toVarExpr finder e2)
+
+    let rec toVarBExpr finder = function
+    | BExpr.True -> BExpr.True
+    | BExpr.False -> False
+    | BExpr.Compare(e1, bop, e2) ->
+        BExpr.Compare(toVarExpr finder e1, bop, toVarExpr finder e2)
+    | BExpr.Neg b -> toVarBExpr finder b |> BExpr.Neg
+    | BExpr.Conj(b1, b2) ->
+        BExpr.Conj(toVarBExpr finder b1, toVarBExpr finder b2)
+
+    let resolveAction action =
+        let r, o, expr, expectedLoc, actionType = 
+            match action with
+            | AttrUpdate(r, o, expr) -> r, o, expr, I, AttrUpdate
+            | LStigUpdate(r, o, expr) -> r, o, expr, L, LStigUpdate
+            | EnvWrite(r, o, expr) -> r, o, expr, E, EnvWrite
+        let info, _ = getInfoOrFail mapping r
+        if info.location <> expectedLoc then 
+            sprintf "%A variable %s, treated as %A" info.location r expectedLoc
+            |> failwith
+        else
+            actionType(
+                info,
+                Option.map (toVarExpr findVar) o,
+                toVarExpr findVar expr)
+
+    let rec resolveProcess = function
+    | Nil -> Nil
+    | Skip -> Skip
+    | Base(a) -> resolveAction a |> Base
+    | Await(b, p) -> Await(toVarBExpr findVar b, resolveProcess p)
+    | Seq(p1, p2) -> Seq(resolveProcess p1, resolveProcess p2)
+    | Choice(p1, p2) -> Choice(resolveProcess p1, resolveProcess p2)
+    | Par(p1, p2) -> Par(resolveProcess p1, resolveProcess p2)
+    | Name(n) -> Name n
+
+    let resolveComponent (c:ComponentDef<string>) = {
+        name = c.name
+        behavior = c.behavior
+        iface = c.iface
+        lstig = c.lstig
+        processes = c.processes |> Map.mapValues resolveProcess
+    }
+
+    let resolveProp (pr:Property<string>) = 
+        let find (name, otherStuff) = 
+            findVar name, otherStuff
+        {
+            name=pr.name
+            predicate=(toVarBExpr find pr.predicate)
+            modality=pr.modality
+            quantifiers=pr.quantifiers
+        }
+
+    ({
+        components = sys.components |> Map.mapValues resolveComponent
+        environment = sys.environment 
+        processes = sys.processes |> Map.mapValues resolveProcess
+        spawn = sys.spawn
+        properties = sys.properties |> Map.mapValues resolveProp
+        link = sys.link |> (toVarBExpr resolveLinkTerm)
+    }, mapping) |> Result.Ok
 
 let analyzeKeys sys = 
     let comps = Map.values sys.components
+
+    let conflicts setOfVars =
+        let hasSameName (v1:Var) (v2:Var) =
+            v1.ToString() = v2.ToString()
+        setOfVars
+        |> Set.map (fun x -> (x.ToString(), Set.filter (hasSameName x) setOfVars))
+        |> Set.filter (fun (name, number) -> number.Count > 1)
+        |> fun x -> 
+            if x.IsEmpty 
+            then Result.Ok setOfVars
+            else 
+                x 
+                |> Set.map fst
+                |> withcommas
+                |> sprintf "Duplicate variable definitions for %s"
+                |> Result.Error
+
+    /// Makes a dictionary with information about each 
+    /// variable in setOfVars.
+    let makeInfo location startFrom setOfVars = 
+        let update (mapping, nextIndex) (var:Var) =
+            let newMapping = 
+                Map.add 
+                    (var.name) 
+                    (var, nextIndex)
+                    mapping
+            let newIndex =
+                match var.vartype with
+                | Scalar _ -> nextIndex + 1
+                | Array n -> nextIndex + n
+            (newMapping, newIndex)
+           
+        setOfVars
+        |> Set.fold update (Map.empty, startFrom)
+        
     let attrKeys = 
         comps
-        |> Seq.map (fun c -> c.iface)
-        |> fun x ->
-            if Seq.isEmpty x then
-                Map.empty 
-            else 
-                x
-                |> Seq.map (Map.mapi (fun i _ _ -> {index=i; location=I}))
-                |> Seq.fold (fun result m -> Map.merge result m) Map.empty
-    let lstigKeys = 
-        let cnt = makeCounter(-1)
+        |> Seq.map (fun c -> Map.keys c.iface)
+        |> Set.unionMany
+        |> conflicts
+        |> Result.map (makeInfo I 0)
+        |> Result.map fst
+
+    let lstigkeys = 
         comps
-        |> Seq.map (fun c -> c.lstig)
-        |> Seq.concat
-        |> Seq.map (Map.map (fun _ _ -> {index=cnt(); location=L}))
-        |> Seq.fold (fun result m -> Map.merge result m) Map.empty
+        |> Seq.map (fun c -> List.map Map.keys c.lstig)
+        |> Seq.map Set.unionMany
+        |> Seq.fold 
+            (fun (map, i) vars -> 
+                let newInfo, newI = makeInfo L i vars
+                (Map.merge map newInfo, newI)
+            )
+            (Map.empty, 0)
+        |> fst
 
     let envKeys = 
-        sys.environment
-        |> Map.mapi (fun i _ _ -> {index=i; location=E})
+        Map.keys sys.environment
+        |> makeInfo E 0
+        |> fst 
 
-    let mapping = 
-        attrKeys |> Map.merge lstigKeys |> Map.merge envKeys
-
-    Result.Ok (sys, mapping)
+    attrKeys
+    >>= Map.mergeIfDisjoint lstigkeys
+    >>= Map.mergeIfDisjoint envKeys
+    |> Result.map (fun m -> (sys, m))

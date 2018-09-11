@@ -1,5 +1,7 @@
 ﻿open Base
 open Checks
+open Expressions
+open Properties
 open Encode
 open Templates
 open ArgParse
@@ -21,8 +23,8 @@ let main argv =
             |> function Ok(true) -> true | _ -> false
             |> fun x -> 
                 if x
-                then translateInit (initenv (initSimulate 0)) initVarsSim
-                else translateInit (initenv init) initVars
+                then translateInit initVar
+                else translateInit initVar //FIXME
 
         (filenameOf cli)
         >>= readFile
@@ -31,6 +33,7 @@ let main argv =
         >>= checkNames
         >>= checkComponents
         >>= analyzeKeys
+        >>= resolveSystem
         >>= encode
         >+> (bound cli)
         >>= translateHeader

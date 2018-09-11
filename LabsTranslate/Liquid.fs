@@ -14,13 +14,13 @@ and LiquidVal =
 
 let render vals (template:Template) =
     let rec hashval = function
-        | Int(i) -> box i
-        | Bool(b) -> box b
-        | Str(s) -> box s
-        | Lst(l) -> l |> Seq.map hashval |> box
-        | Dict(x) -> hashdict x |> box
+        | Int i -> box i
+        | Bool b -> box b
+        | Str s -> box s
+        | Lst l -> l |> Seq.map hashval |> box
+        | Dict x -> hashdict x |> box
         and hashdict x = 
-            Seq.map (fun (k,v) -> k, (hashval v)) x
+            Seq.map (fun (k, v) -> k, (hashval v)) x
             |> dict
             |> Hash.FromDictionary
     let render = template.Render (hashdict vals)

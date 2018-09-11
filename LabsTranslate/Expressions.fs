@@ -1,48 +1,78 @@
 ﻿module Expressions
 open Types
 open Base
+open Link
 open Templates
 
-let translateAOp = function
-    | Plus -> sprintf "( (%s) + (%s) )"
-    | Minus -> sprintf "( (%s) - (%s) )"
-    | Times -> sprintf "( (%s) * (%s) )"
-    | Mod -> sprintf "mod(%s, %s)"
+let refTypeCheck v (offset:'a option) =
+    let test, msg = 
+        match v.vartype with
+        | Scalar -> offset.IsSome, (sprintf "Scalar %s treated as Array")
+        | Array(_) -> offset.IsNone, (sprintf "Array %s treated as Scalar")
+    if test then failwith (msg v.name) else ()
 
-let rec translateExpr (mapping:KeyMapping) expr =
-    let trexp = translateExpr mapping
-    match expr with
-    | Const(i) -> sprintf "%i" i
-    | K(k) -> translateKey mapping "tid" k
+let rec translate trRef =
+    let translateAOp = function
+        | Plus -> sprintf "( %s + %s )"
+        | Minus -> sprintf "( %s - %s )"
+        | Times -> sprintf "( %s * %s )"
+        | Mod -> sprintf "mod( %s, %s )"
+    function
+    | Const i -> sprintf "%i" i
+    | Ref(v, offset) -> (trRef v (offset |> Option.map (translate trRef)))
     | Arithm(e1, op, e2) -> 
-        ((translateAOp op) (trexp e1) (trexp e2))
+        ((translateAOp op) (translate trRef e1) (translate trRef e2))
 
-let translateBOp = function
-    | Less -> "<"
-    | Equal -> "=="
-    | Greater -> ">"
-    | Leq -> "<="
-    | Geq -> ">="
-    | Neq -> "!="
+/// Translates a variable reference.
+let trref mapping cmp (v:Var) (offset:string option) =
+    do refTypeCheck v offset
+    let index =
+        let _, i = getInfoOrFail mapping (v.name)
+        match offset with
+        | None -> i.ToString()
+        | Some off -> sprintf "%i + %s" i off
+    (translateLocation v.location) cmp index
 
-let rec translateBExpr (mapping:KeyMapping) = function
+let translateExpr mapping = translate (trref mapping "tid")
+
+let rec translateBExpr trExpr =
+    let translateBOp = function
+        | Less -> "<"
+        | Equal -> "=="
+        | Greater -> ">"
+        | Leq -> "<="
+        | Geq -> ">="
+        | Neq -> "!="
+    function
     | True -> "1"
     | False -> "0"
-    | Neg(b) -> sprintf "!(%s)" (translateBExpr mapping b)
+    | Neg(b) -> sprintf "!(%s)" (translateBExpr trExpr b)
     | Conj(b1, b2) -> 
         sprintf "((%s) && (%s))" 
-            (translateBExpr mapping b1) (translateBExpr mapping b2)
+            (translateBExpr trExpr b1) (translateBExpr trExpr b2)
     | Compare(e1, op, e2) ->
-        sprintf "((%s) %s (%s))"
-            (translateExpr mapping e1)
+        sprintf "(%s) %s (%s)"
+            (trExpr e1)
             (translateBOp op)
-            (translateExpr mapping e2)
+            (trExpr e2)
 
-let rec getLstigKeys (mapping:KeyMapping) = function
-    | K(k) -> 
-        let info = getInfoOrFail mapping k
-        if info.location = L then Set.singleton info.index else Set.empty
-    | Arithm(e1, _, e2) -> Set.union (getLstigKeys mapping e1) (getLstigKeys mapping e2)
+let translateGuard mapping = translateBExpr (translateExpr mapping)
+
+let translateLink mapping = 
+    let trLinkRef (l:LinkTerm<Var>) (offset:string option) =
+        match l with
+        | RefC1 v -> trref mapping "__LABS_link1" v offset 
+        | RefC2 v -> trref mapping "__LABS_link2" v offset
+    translateBExpr (translate trLinkRef)
+
+/// Returns the set of all stigmergy variables accessed by the expression.
+let rec getLstigVars = function
+    | Ref(v, offset) -> 
+        match offset with
+        | Some e -> getLstigVars e
+        | None -> Set.empty
+        |> if v.location = L then Set.add v else id
+    | Arithm(e1, _, e2) -> Set.union (getLstigVars e1) (getLstigVars e2)
     | Const(_) -> Set.empty
 
 

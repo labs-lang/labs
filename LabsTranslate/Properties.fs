@@ -4,52 +4,57 @@ open Base
 open Templates
 open Expressions
 
-let rec encodeProp name sys (mapping:KeyMapping) (sub:Map<string, string>) = 
-    let makeAssumptions c (cmin, cmax) = 
-        sprintf "%s%s >= %i && %s%s < %i" c name cmin c name cmax
-        |> assume |> (sprintf "int %s%s;\n%s" c name)
+/// Cartesian product of a list of lists.
+//http://techneilogy.blogspot.com/2010/07/cartesian-product-of-lists-in-f.html
+let rec cart nll = 
+    let f0 n = function
+    | [] -> [[n]]
+    | nll -> List.map (fun nl->n::nl) nll
+    match nll with
+    | [] -> []
+    | h::t -> List.collect (fun n->f0 n (cart t)) h
+    
 
-    let encodeTerm = function
-        | ConstTerm(i) -> sprintf "%i" i
-        | KeyRef(k,c) ->
-            let csub = defaultArg (sub.TryFind c) (c+name)
-            (translateKey mapping csub k)
+let translateProp sys mapping (p:Property<Var>) =
+    let exists, forall = 
+        Map.partition
+            (fun _ (_, q) -> match q with Exists -> true | _ -> false)
+            p.quantifiers
+    //Given a substitution table, resolves references to quantified
+    //component names.
+    let tr (sub:Map<string, int>) (v, cmp) offset =
+        match snd p.quantifiers.[cmp] with
+        | All -> 
+            (trref mapping (cmp+p.name) v offset)
+        | Exists -> (trref mapping (sprintf "%i" sub.[cmp]) v offset)
 
-    function
-    | Prop(t1, op, t2) ->
-        if (encodeTerm t1) <> (encodeTerm t2)
-        then sprintf "%s %s %s" (encodeTerm t1) (translateBOp op) (encodeTerm t2)
-        else ""
-    | All(compType, comp, prop) -> 
-        sys.spawn.[compType]
-        |> fun (x, y) -> [x..y-1]
-        |> List.map (fun i -> encodeProp name sys mapping (sub.Add (comp, i.ToString())) prop)
-        |> List.filter ((<>) "")
-        |> String.concat " && "
-        |> sprintf "(%s)"
-    | Exists(compType, comp, prop) -> 
-        sys.spawn.[compType]
-        |> fun (x, y) -> [x..y-1]
-        |> List.map (fun i -> encodeProp name sys mapping (sub.Add (comp, i.ToString())) prop)
-        |> List.filter ((<>) "")
-        |> String.concat " || "
-        |> sprintf "(%s)"
+    let subs =
+        exists
+        |> Map.map (fun id (cmpType, _) -> sys.spawn.[cmpType])
+        |> Map.toList
+        |> List.map (fun (id, (starts, ends)) ->
+            [starts..ends-1]
+            |> List.map (fun i -> id,i))
+        |> cart
+        |> List.map Map.ofList
+        |> fun x -> if x.IsEmpty then [Map.empty] else x
 
-let translateProperties sys mapping properties =
-    properties
-    |> Map.map (fun _ -> function Finally(p)| Always(p) -> p)
-    |> Map.map (fun name -> encodeProp name sys mapping Map.empty)
-    |> Map.map (fun _ -> inlineassertion)
-    |> Map.map (fun n assertion -> sprintf "%s //%s\n" assertion n)
-    |> Map.values
-    |> String.concat "\n"
+    let assumptions =
+        forall
+        |> Map.map (
+            fun id (cmpType, _) ->
+                let varName = id + p.name
+                let cmin, cmax = sys.spawn.[cmpType]
+                sprintf "%s >= %i && %s < %i" varName cmin varName cmax
+                |> assume 
+                |> (sprintf "int %s;\n%s" varName)
+            )
+        |> Map.values
+        |> String.concat ""
 
-let translateFinallyProperties sys mapping =
-    sys.properties
-    |> Map.filter (fun _ -> function Finally(_) -> true | _ -> false)
-    |> translateProperties sys mapping
-
-let translateAlwaysProperties sys mapping =
-    sys.properties
-    |> Map.filter (fun _ -> function Always(_) -> true | _ -> false)
-    |> translateProperties sys mapping
+    subs
+    |> List.map (fun s -> translateBExpr (translate (tr s)) p.predicate)
+    |> String.concat " || "
+    |> inlineassertion
+    |> fun x -> sprintf "%s; //%s\n" x p.name
+    |> (+) assumptions

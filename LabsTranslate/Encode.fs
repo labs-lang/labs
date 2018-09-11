@@ -4,17 +4,13 @@ open Base
 open Templates
 open Expressions
 open Properties
-open Link
 open Liquid
 
 /// A Node is composed by a label, an entry/exit point,
 /// and an action. Additional entry conditions are specified in the
-/// "parent" set. 
-/// Nodes can be augmented by guards.
-
-
+/// "parent" set. Nodes can be augmented by guards.
 type Node = 
-| Basic of parent:Set<pcCondition> * entry:pcCondition * Action * exit:pcCondition * lbl:string
+| Basic of parent:Set<pcCondition> * entry:pcCondition * Action<Var> * exit:pcCondition * lbl:string
 | Guarded of string * Node
 | Goto of parent:Set<pcCondition> * entry:pcCondition * exit:pcCondition * lbl:string
 | Stop of parent:Set<pcCondition> * entry:pcCondition
@@ -31,10 +27,10 @@ with
         | Basic(parent=par;entry=e)
         | Goto(parent=par;entry=e)
         | Stop(parent=par;entry=e) ->
-            Set.filter (fun p -> p.pc = e.pc) par
-            |> fun x -> if x.IsEmpty then Set.add e par else par
+            let x = Set.filter (fun p -> p.pc = e.pc) par
+            if x.IsEmpty then Set.add e par else par
 
-let baseVisit (procs:Map<string, Process>) counter mapping rootName =
+let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
     let pccount = makeCounter -1
     let rec visit name rootEntry cnt parent entry exit p lbl =
         let vs = visit name rootEntry cnt
@@ -42,14 +38,14 @@ let baseVisit (procs:Map<string, Process>) counter mapping rootName =
 
         match p with
         | Base(a) -> 
-            Set.singleton <| Basic(parent, entry, a, exit, lbl), Set.singleton <| exit
+            Set.singleton <| Basic(parent, entry, a, exit, lbl), Set.singleton exit
         | Name(s) when s = name ->
             Set.singleton <| Goto(parent, entry, rootEntry, lbl), Set.empty
         | Name(s) -> visit name rootEntry cnt parent entry exit procs.[s] (lbl)
         | Await(b, p) -> 
             let pnodes, pexits = (vs parent entry exit p lbl)
             pnodes
-            |> Set.map (fun n -> Guarded((assume (translateBExpr mapping b)), n))
+            |> Set.map (fun n -> Guarded((assume (translateGuard mapping b)), n))
             |> fun nodes -> nodes, pexits
         | Choice(p, q) -> 
             let pnodes, pexits = (vs parent entry exit p (lbl+"_L"))
@@ -62,17 +58,19 @@ let baseVisit (procs:Map<string, Process>) counter mapping rootName =
             (Set.union pnodes qnodes), qexits
         | Par(p, q) ->
             let leftPc, rightPc = pccount(), pccount()
-            let lCount, rCount = makeCounter(-1), makeCounter(-1)
+            let lCount, rCount = makeCounter -1, makeCounter -1
             let newPar = parent.Add entry
-            let pnodes, pexits = visit name rootEntry lCount newPar {pc=leftPc;value=lCount()} {pc=leftPc;value=lCount()} p (lbl+"_L")
-            let qnodes, qexits = visit name rootEntry rCount newPar {pc=rightPc;value=rCount()} {pc=rightPc;value=rCount()} q (lbl+"_R")
+            let pnodes, pexits = visit name rootEntry lCount newPar {pc=leftPc;value=lCount()} {pc=leftPc;value=lCount()} p (lbl + "_L")
+            let qnodes, qexits = visit name rootEntry rCount newPar {pc=rightPc;value=rCount()} {pc=rightPc;value=rCount()} q (lbl + "_R")
             (Set.union pnodes qnodes), (Set.union pexits qexits).Add(entry)
         | Skip -> Set.singleton <| Goto(parent, entry, exit, lbl), Set.singleton <| exit
         | Nil -> Set.singleton <| Stop(parent, entry), Set.empty
 
     let pc = pccount()
     let entry = {pc=pc;value=counter()}
-    (visit rootName entry counter Set.empty entry {pc=pc;value=counter()} (procs.[rootName] ^. Nil) rootName
+    (visit 
+        rootName entry counter Set.empty entry 
+        {pc=pc;value=counter()} (procs.[rootName] ^. Nil) rootName
     |> fst), entry.value
 
 let encode (sys, mapping) = 
@@ -80,7 +78,7 @@ let encode (sys, mapping) =
         sys.components
         |> Map.filter (fun n _ -> sys.spawn.ContainsKey n)
     let counter = makeCounter(-1)
-       
+
     let trees = 
         spawnedComps
         |> Map.map (fun _ def -> (def, Map.merge sys.processes def.processes))
@@ -88,30 +86,31 @@ let encode (sys, mapping) =
 
     Result.Ok(sys, trees, mapping)
 
-let makeTuples comps mapping =
-    let lstigKeys = Map.filter (fun k info -> info.location = L) mapping
+let makeTuples comps (mapping:KeyMapping) =
 
-    let tupleExtrema key =
-        let filtered (m:Map<Key, 'a>) =
-            lstigKeys
-            |> Map.filter (fun k _ -> m.ContainsKey k)
+    /// Finds the min and max indexes of the given tuple.
+    let extrema (tup:Map<Var,Init>) =
+        let indexes = 
+            tup
+            |> Map.toSeq
+            |> Seq.map (fun (v, _) -> snd mapping.[v.name])
+        (Seq.min indexes, Seq.max indexes)
 
-        comps
-        |> Seq.map (fun c -> 
-            c.lstig
-            |> Seq.filter (fun m -> m.ContainsKey key)
-            |> Seq.map (fun m -> 
-                if m.Count > 1
-                then (findMinIndex L (filtered m), findMaxIndex L (filtered m))
-                else (mapping.[key].index, mapping.[key].index)))
-        |> Seq.concat
-        |> Seq.head
+    let doLiquid (tup: Map<Var,Init>) =
+        let extr = extrema tup
+        tup 
+        |> Map.map (fun v _ -> Dict [
+            "index", Int (snd mapping.[v.name])
+            "start", Int (fst extr)
+            "end", Int (snd extr)
+            ])
+        |> Map.values
 
-    lstigKeys
-    |> Map.map (fun k info ->
-        let extrema = tupleExtrema k
-        Dict ["index", Int info.index; "start", Int (fst extrema); "end", Int (snd extrema)])
-    |> Map.values
+    comps
+    |> Seq.map (fun c -> c.lstig)
+    |> Seq.map (List.map doLiquid)
+    |> Seq.map Seq.concat
+    |> Seq.concat
 
 let initPc sys trees =
     trees
@@ -165,50 +164,55 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     |> renderFile "templates/header.c"
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
-let makeInits initFn (mapping:KeyMapping) initMap = 
-    initMap
-    |> Map.map (fun k v -> initFn mapping.[k] v)
-    |> Map.values
-    |> String.concat "\n"
-
-let initVars sys (mapping:KeyMapping) =
-    let mkinits = makeInits init mapping
+let initVars initFn sys =
     sys.spawn
-    |> Map.map (fun x range -> range, (mkinits sys.components.[x].iface))
-    |> Map.map (fun x (r, inits) -> 
+    |> Map.map (fun x range -> 
+        let ifaceinit =
+            sys.components.[x].iface 
+            |> Map.map initFn
+            |> Map.values
+            |> String.concat "\n"
         let lstigsinit = 
             sys.components.[x].lstig
-            |> Seq.map mkinits
+            |> Seq.map (Map.map initFn)
+            |> Seq.map Map.values
+            |> Seq.concat
             |> String.concat "\n"
-        (r, inits+ "\n" + lstigsinit))
+        (range, ifaceinit + "\n" + lstigsinit))
     |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
         (str + (forLoop rangeStart rangeEnd inits))) ""
 
-let initVarsSim sys (mapping:KeyMapping) =
-    let mkinits i = makeInits (initSimulate i) mapping
+//let initVarsSim sys (mapping:KeyMapping) =
+//    let mkinits i = makeInits (initSimulate i) mapping
      
-    sys.spawn
-    |> Map.map (fun x (minI, maxI) -> 
-        seq [minI..maxI-1]
-        |> Seq.map (fun i -> 
-            (mkinits i sys.components.[x].iface) + "\n" +
-            (sys.components.[x].lstig
-             |> Seq.map (mkinits i)
-             |> String.concat "\n"))
-        |> Set.ofSeq
-        |> String.concat "\n")
-    |> Map.values
-    |> String.concat "\n"
+//    sys.spawn
+//    |> Map.map (fun x (minI, maxI) -> 
+//        seq [minI..maxI-1]
+//        |> Seq.map (fun i -> 
+//            (mkinits i sys.components.[x].iface) + "\n" +
+//            (sys.components.[x].lstig
+//             |> Seq.map (mkinits i)
+//             |> String.concat "\n"))
+//        |> Set.ofSeq
+//        |> String.concat "\n")
+//    |> Map.values
+//    |> String.concat "\n"
 
-let initenv initFn sys mapping =
-    if not sys.environment.IsEmpty
-    then (makeInits initFn mapping sys.environment)
-    else ""
+//let initenv initFn sys mapping =
+    //if sys.environment.IsEmpty
+    //then ""
+    //else sys.environment |> Map.map (initFn mapping)
 
-let translateInit envFn varsFn (sys,trees, mapping:KeyMapping) =
+let translateInit (initFn:KeyMapping->Var->Init->string) (sys,trees, mapping:KeyMapping) =
+    let init = initFn mapping
     [
-        "initenv", envFn sys mapping |> indent 4 |> Str;
-        "initvars", varsFn sys mapping |> indent 4 |> Str;
+        "initenv", 
+            sys.environment
+            |> Map.map init
+            |> Map.values
+            |> String.concat "\n"
+            |> indent 4 |> Str;
+        "initvars", initVars init sys |> indent 4 |> Str;
         "initpcs", (initPc sys trees) |> indent 4 |> Str;
         "tuples", Lst (makeTuples (Map.values sys.components) mapping)
     ]
@@ -217,20 +221,33 @@ let translateInit envFn varsFn (sys,trees, mapping:KeyMapping) =
 
 
 let translateAll (sys, trees, mapping:KeyMapping) =
+    let doOffset o =
+        match o with
+        | Some e -> translateExpr mapping e
+        | None -> "0"
+
 
     let liquid a =
-        let template, k, e = 
+        let template, (k:Var), o, e =  //FIXME
             match a with
-            | AttrUpdate(k,e) -> "attr",k,e
-            | LStigUpdate(k,e) -> "lstig",k,e
-            | EnvWrite(k,e) -> "env",k,e
-        let info = getInfoOrFail mapping k
+            | AttrUpdate(k, o, e) -> "attr", k, o, e
+            | LStigUpdate(k, o, e) -> "lstig", k, o, e
+            | EnvWrite(k, o, e) -> "env", k, o, e
+
+        let _, index = mapping.[k.name]
+        let size = match k.vartype with Array(s) -> s | _ -> 0
+
         [
-            "labs", Str (a.ToString());
+            "labs", Str (a.ToString())
             "type", Str template;
-            "key",  Int info.index;
-            "expr", Str (translateExpr mapping e);
-            "qrykeys", Lst (getLstigKeys mapping e |> Seq.map Int);
+            "key",  Int index;
+            "offset", doOffset o |> Str
+            "size", Int size
+            "expr", translateExpr mapping e |> Str
+            "qrykeys", Lst (
+                getLstigVars e 
+                |> Set.map (fun v -> snd mapping.[v.name])
+                |> Seq.map Int);
         ]
 
     let rec newTranslate guards n = 
@@ -277,12 +294,27 @@ let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
         |> Map.values 
         |> Seq.map fst
         |> Seq.concat
-
+    let finallyP, alwaysP =
+        sys.properties
+        |> Map.partition (
+            fun _ {modality=m} -> 
+                match m with Finally -> true | Always -> false)
+    let translateProperties props =
+        props
+        |> Map.mapValues (translateProp sys mapping)
+        |> Map.values
+        |> String.concat "\n"
     [
         "fair", Bool fair;
-        "schedule", nodes |> Seq.map (fun n -> Str n.lbl) |> Lst;
-        "alwaysasserts", translateAlwaysProperties sys mapping |> indent 4 |> Str;
-        "finallyasserts", translateFinallyProperties sys mapping |> indent 4 |> Str
+        "schedule", nodes |> Seq.map (fun n -> Str n.lbl) |> Lst
+        "alwaysasserts",
+            alwaysP
+            |> translateProperties
+            |> indent 4 |> Str
+        "finallyasserts",  
+            finallyP
+            |> translateProperties
+            |> indent 4 |> Str
     ]
     |> renderFile "templates/main.c"
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
