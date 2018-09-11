@@ -4,7 +4,6 @@ open Common
 open Types
 open Link
 open Expressions
-open Properties
 open Processes
 
 let pspawn = 

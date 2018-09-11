@@ -122,7 +122,6 @@ let initPc sys trees =
     |> String.concat "\n"
 
 let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
-
     // Find the number of PCs used in the program
     let maxPc =
         let rec getPc = function

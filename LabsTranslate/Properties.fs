@@ -1,6 +1,5 @@
 ﻿module Properties
 open Types
-open Base
 open Templates
 open Expressions
 
