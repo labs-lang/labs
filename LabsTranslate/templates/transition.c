@@ -8,12 +8,17 @@ void {{label}}(int tid) {
     {%- endfor -%}
 
     int val = {{expr}};
+    int offset = {{offset}};
+    {%- if size != 0 -%}
+    assert(offset >= 0 && offset < size);
+    {%- endif -%}
+
     {%- if type == "attr" -%}
-    attr(tid, {{key}}, val);
+    attr(tid, {{key}} + offset, val);
     {%- elsif type == "lstig" -%}
-    lstig(tid, {{key}}, val);
+    lstig(tid, {{key}} + offset, val);
     {%- elsif type == "env" -%}
-    env(tid, {{key}}, val);
+    env(tid, {{key}} + offset, val);
     {%- endif -%}
 
     {%- for k in qrykeys -%}
