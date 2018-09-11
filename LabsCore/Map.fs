@@ -14,17 +14,7 @@ let values table =
 /// Values with the same key will be overwritten.
 let merge other table =
     Map.fold (fun acc key value -> Map.add key value acc) table other
-
-/// Builds a new map by applying the given function to each element of the table.
-/// The first argument of the function is the index of the element being transformed,
-/// starting from start.
-let mapiFrom start mapping table  = 
-    table
-    |> Map.fold (
-        fun (index, result) k v -> 
-            (index+1, (Map.add k (mapping index k v) result))) (start, Map.empty) 
-    |> snd
-
+    
 /// Builds a new collection whose elements are the result of
 /// applying the given function to each value in the map.
 /// The key is ignored.
