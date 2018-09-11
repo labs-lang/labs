@@ -162,7 +162,7 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     ]
     |> renderFile "templates/header.c"
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
-
+    
 let initVars initFn sys =
     sys.spawn
     |> Map.map (fun x range -> 
@@ -180,27 +180,6 @@ let initVars initFn sys =
         (range, ifaceinit + "\n" + lstigsinit))
     |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
         (str + (forLoop rangeStart rangeEnd inits))) ""
-
-//let initVarsSim sys (mapping:KeyMapping) =
-//    let mkinits i = makeInits (initSimulate i) mapping
-     
-//    sys.spawn
-//    |> Map.map (fun x (minI, maxI) -> 
-//        seq [minI..maxI-1]
-//        |> Seq.map (fun i -> 
-//            (mkinits i sys.components.[x].iface) + "\n" +
-//            (sys.components.[x].lstig
-//             |> Seq.map (mkinits i)
-//             |> String.concat "\n"))
-//        |> Set.ofSeq
-//        |> String.concat "\n")
-//    |> Map.values
-//    |> String.concat "\n"
-
-//let initenv initFn sys mapping =
-    //if sys.environment.IsEmpty
-    //then ""
-    //else sys.environment |> Map.map (initFn mapping)
 
 let translateInit (initFn:KeyMapping->Var->Init->string) (sys,trees, mapping:KeyMapping) =
     let init = initFn mapping
@@ -224,10 +203,9 @@ let translateAll (sys, trees, mapping:KeyMapping) =
         match o with
         | Some e -> translateExpr mapping e
         | None -> "0"
-
-
+        
     let liquid a =
-        let template, (k:Var), o, e =  //FIXME
+        let template, (k:Var), o, e =
             match a with
             | AttrUpdate(k, o, e) -> "attr", k, o, e
             | LStigUpdate(k, o, e) -> "lstig", k, o, e

@@ -24,7 +24,7 @@ let main argv =
             |> fun x -> 
                 if x
                 then translateInit initVar
-                else translateInit initVar //FIXME
+                else translateInit initVarSim
 
         (filenameOf cli)
         >>= readFile

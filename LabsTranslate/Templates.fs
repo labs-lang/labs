@@ -2,6 +2,8 @@
 open Types
 open Base
 
+let rng = System.Random()
+
 let indent num (s:string) = 
     s.Split "\n"
     |> Seq.map (sprintf "%s%s" (String.replicate num " "))
@@ -35,17 +37,28 @@ let def name =
     | Choose l -> (typeofVar (List.min l, List.max l)) + name + ";\n"
     | Range(minI, maxI) -> (typeofVar (minI, maxI)) + name + ";\n"
 
-//let initSimulate i keyInfo values =
-//    let ar key i = arrayname key (sprintf "%i" i)
-//    let ltstamp key i = initLtstamp key (sprintf "%i" i)
+let assign var cVarName index =
+    sprintf "%s = %s;" 
+        (translateLocation var.location "i" (index.ToString())) 
+        cVarName
+    + (match var.location with 
+        | L -> sprintf "\nLtstamp[%s][%i] = j++;" "i" index
+        | _ -> "")
 
-//    let guess = sprintf "guess%i%A" keyInfo.index keyInfo.location
-//    let rng = System.Random()
-//    sprintf "%s[%i] = %i;\n%s" (ar keyInfo i) keyInfo.index
-//        (match values with
-//        | Choose(l) -> l.Item (rng.Next l.Length)
-//        | Range(minI, maxI) -> rng.Next(minI, maxI))
-//        (ltstamp keyInfo i)
+let initVarSim (mapping:KeyMapping) (var:Var) init =
+    let baseIndex = snd mapping.[var.name]
+    let initValue = 
+        match init with
+        | Choose(l) -> l.Item (rng.Next l.Length)
+        | Range(minI, maxI) -> rng.Next(minI, maxI)
+        |> string
+    match var.vartype with
+    | Scalar -> assign var initValue baseIndex
+    | Array(s) ->
+        seq [baseIndex..baseIndex+s-1]
+        |> Seq.map (assign var initValue)
+        |> String.concat "\n"
+
 
 let initVar (mapping:KeyMapping) (var:Var) init =
     let baseIndex = snd mapping.[var.name]
@@ -63,21 +76,14 @@ let initVar (mapping:KeyMapping) (var:Var) init =
             |> assume
         | Range(minI, maxI) -> //assumeIntRange index minI maxI
             sprintf "%s >= %i && %s < %i" cVarName minI cVarName maxI |> assume
-    let assign index =
-        sprintf "%s = %s;" 
-            (translateLocation var.location "i" (index.ToString())) 
-            cVarName
-        + (match var.location with 
-            | L -> sprintf "\nLtstamp[%s][%i] = j++;" "i" index
-            | _ -> "")
 
     cVarDef +
     cVarAssume + (
         match var.vartype with
-        | Scalar -> assign baseIndex
+        | Scalar -> assign var cVarName baseIndex
         | Array(s) ->
         seq [baseIndex..(baseIndex+s-1)]
-        |> Seq.map assign
+        |> Seq.map (assign var cVarName)
         |> String.concat "\n"
     )
 
