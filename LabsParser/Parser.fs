@@ -13,8 +13,7 @@ let makeRanges (mp: Map<'a, int>) =
             let newC = c + num
             (newC, (Map.add name (c, newC) m) )) (0, Map.empty) 
     |> snd
-
-
+    
 let parse = 
     spaces >>. pipe3
         psys 
