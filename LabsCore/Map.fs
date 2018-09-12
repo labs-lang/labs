@@ -18,12 +18,13 @@ let merge other table =
 let mergeIfDisjoint map1 map2 = 
     let intersect =
         map2 |> Map.filter (fun x _ -> (Map.containsKey x map1)) |> keys
-    if not intersect.IsEmpty then 
+    if intersect.IsEmpty 
+    then merge map1 map2
+    else
         intersect
         |> String.concat ", "
         |> sprintf "Duplicate variable definitions for %s"
-        |> Result.Error
-    else Result.Ok <| merge map1 map2
+        |> failwith
 
 /// Builds a new collection whose elements are the result of
 /// applying the given function to each value in the map.
