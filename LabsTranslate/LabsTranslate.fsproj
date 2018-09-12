@@ -35,7 +35,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.NETCore.App" Version="2.1.0" />
-</ItemGroup>
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="Base.fs" />
     <Compile Include="Liquid.fs" />
@@ -48,6 +48,7 @@
     <Compile Include="Checks.fs" />
     <Compile Include="Expressions.fs" />
     <Compile Include="Properties.fs" />
+    <Compile Include="EncodeInit.fs" />
     <Compile Include="Encode.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
