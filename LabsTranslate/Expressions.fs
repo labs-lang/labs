@@ -24,10 +24,10 @@ let rec translate trRef =
         ((translateAOp op) (translate trRef e1) (translate trRef e2))
 
 /// Translates a variable reference.
-let trref mapping cmp (v:Var) (offset:string option) =
+let trref (mapping:KeyMapping) cmp v offset =
     do refTypeCheck v offset
     let index =
-        let _, i = getInfoOrFail mapping (v.name)
+        let _, i = mapping.[v.name]
         match offset with
         | None -> i.ToString()
         | Some off -> sprintf "%i + %s" i off
