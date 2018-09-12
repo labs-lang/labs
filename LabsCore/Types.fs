@@ -73,9 +73,8 @@ type Process<'a> =
     | Par of Process<'a> * Process<'a>
     | Await of BExpr<'a> * Process<'a>
     | Name of string
-    static member monoid left right op = 
+    static member private monoid left right op = 
         match left,right with
-        | Skip, Skip -> Skip
         | _, Skip -> left
         | Skip, _ -> right
         | _ -> op(left, right)
