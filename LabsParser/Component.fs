@@ -15,15 +15,13 @@ let pcomp =
         ((ws (skipString "comp")) >>. ws IDENTIFIER)
         (betweenBraces (
             spaces
-            >>. tuple4
+            >>. tuple3
                 (opt (pstringEq "interface" (pkeys I)))
                 (opt (pstringEq "stigmergy" plstigkeys))
-                (pstringEq "behavior" (ws IDENTIFIER))
                 processes))
-        (fun n (i, l, p, procs) ->
+        (fun n (i, l, procs) ->
             (n, {
                 name = n
                 iface= (i |> Option.defaultValue Map.empty)
                 lstig= (l |> Option.defaultValue List.empty) 
-                behavior = p
                 processes = procs }))

@@ -28,7 +28,6 @@ type ComponentDef<'a> = {
     name: string
     iface: Map<Var, Init>
     lstig: Map<Var, Init> list
-    behavior: string
     processes: Map<string, Process<'a>>
 }
 

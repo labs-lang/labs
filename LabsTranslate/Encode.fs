@@ -82,7 +82,7 @@ let encode (sys, mapping) =
     let trees = 
         spawnedComps
         |> Map.map (fun _ def -> (def, Map.merge sys.processes def.processes))
-        |> Map.map (fun _ (def, procs) -> baseVisit procs counter mapping def.behavior)
+        |> Map.map (fun _ (def, procs) -> baseVisit procs counter mapping "Behavior")
 
     Result.Ok(sys, trees, mapping)
     

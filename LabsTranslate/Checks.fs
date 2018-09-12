@@ -50,7 +50,7 @@ let checkComponents sys =
 
     let undefBehaviors = 
         sys.components
-        |> Map.filter (fun _ def -> not <| isDefined def def.behavior)
+        |> Map.filter (fun _ def -> not <| def.processes.ContainsKey "Behavior")
 
     if sys.components.IsEmpty then
         Result.Error "No components defined"
@@ -59,10 +59,9 @@ let checkComponents sys =
             Result.Ok sys
         else
             undefBehaviors
-            |> Map.map (fun _ def -> def.behavior)
-            |> Map.map (sprintf "%s: Behavior is undefined: %s")
+            |> Map.map (fun name _ -> sprintf "%s: Behavior is undefined" name)
             |> Map.values
-            |> withcommas
+            |> String.concat "\n"
             |> Result.Error
 
 /// Binds all references in the system to the corresponding variable.
@@ -119,7 +118,6 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
 
     let resolveComponent (c:ComponentDef<string>) = {
         name = c.name
-        behavior = c.behavior
         iface = c.iface
         lstig = c.lstig
         processes = c.processes |> Map.mapValues resolveProcess
