@@ -21,9 +21,9 @@ for (i=%i; i<%i; i++) {
 """ i j)
 
 let translateLocation = function
-    | I -> sprintf "I[%s][%s]"
-    | L -> sprintf "Lvalue[%s][%s]"
-    | E -> (fun _ -> sprintf "E[%s]")
+    | I -> sprintf "I[%s][%O]"
+    | L -> sprintf "Lvalue[%s][%O]"
+    | E -> (fun _ -> sprintf "E[%O]")
 
 let def name = 
     let typeofVar = function
@@ -38,9 +38,7 @@ let def name =
     | Range(minI, maxI) -> (typeofVar (minI, maxI)) + name + ";\n"
 
 let assign var cVarName index =
-    sprintf "%s = %s;" 
-        (translateLocation var.location "i" (index.ToString())) 
-        cVarName
+    sprintf "%s = %s;" (translateLocation var.location "i" index) cVarName
     + (match var.location with 
         | L -> sprintf "\nLtstamp[%s][%i] = j++;" "i" index
         | _ -> "")

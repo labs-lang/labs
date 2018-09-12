@@ -9,35 +9,31 @@ type Var = {
     vartype:VarType
     location:Location
 }
+with override this.ToString() = this.name
 
 
-[<StructuredFormatDisplay("{AsString}")>]
 type ArithmOp =
     | Plus
     | Minus
     | Times
     | Mod
-    member this.AsString = this.ToString()
     override this.ToString() = 
         match this with
         | Plus -> "+" | Minus -> "-" | Times -> "*" | Mod -> "%"
-        
-[<StructuredFormatDisplay("{AsString}")>]
+
 type Expr<'a> =
     | Const of int
     | Ref of var:'a * offset:Expr<'a> option
     | Arithm of Expr<'a> * ArithmOp * Expr<'a>
-    with 
-        member this.AsString = this.ToString()
-        override this.ToString() = 
-            match this with
-            | Const v -> v.ToString()
-            | Ref(r, offset) -> 
-                match offset with
-                | Some e -> sprintf "%A[%A]" r e
-                | None -> sprintf "%A" r
-            | Arithm(e1, op, e2) -> sprintf "%A %A %A" e1 op e2
-        
+    override this.ToString() = 
+        match this with
+        | Const v -> string v
+        | Ref(r, offset) -> 
+            match offset with
+            | Some e -> sprintf "%O[%O]" r e
+            | None -> r.ToString()
+        | Arithm(e1, op, e2) -> sprintf "%O %A %O" e1 op e2
+
 type CmpOp = 
     | Equal
     | Greater
@@ -54,23 +50,20 @@ type BExpr<'a> =
     | Neg of BExpr<'a>
     | Conj of BExpr<'a> * BExpr<'a>
 
-[<StructuredFormatDisplay("{AsString}")>]
 type Action<'a> =
     | AttrUpdate of target:'a * offset:Expr<'a> option * expr:Expr<'a>
     | LStigUpdate of target:'a * offset:Expr<'a> option * expr:Expr<'a>
     | EnvWrite of target:'a * offset:Expr<'a> option * expr:Expr<'a>
-    member this.AsString = this.ToString()
     override this.ToString() = 
         let printTarget(k, o) = 
             match o with
-            | Some e -> sprintf "%A[%A]" k e
-            | None -> sprintf "%A" k
+            | Some e -> sprintf "%O[%O]" k e
+            | None -> sprintf "%O" k
         match this with
-        | AttrUpdate(k, o, e) -> sprintf "%s <- %A" (printTarget(k,o)) e
-        | LStigUpdate(k, o, e) -> sprintf "%s <~ %A" (printTarget(k,o)) e
-        | EnvWrite(k, o, e) -> sprintf "%s <= %A" (printTarget(k,o)) e
+        | AttrUpdate(k, o, e) -> sprintf "%s <- %O" (printTarget(k,o)) e
+        | LStigUpdate(k, o, e) -> sprintf "%s <~ %O" (printTarget(k,o)) e
+        | EnvWrite(k, o, e) -> sprintf "%s <= %O" (printTarget(k,o)) e
 
-[<StructuredFormatDisplay("{AsString}")>]
 type Process<'a> = 
     | Nil
     | Skip
@@ -92,14 +85,13 @@ type Process<'a> =
         Choice(left, right)
     static member ( ^| )(left: Process<'a>, right: Process<'a>) =
         Process<'a>.monoid left right Par
-    member this.AsString = this.ToString()        
     override this.ToString() =
         match this with
         | Nil -> "0"
         | Skip -> "√"
-        | Base(a) -> a.ToString()
-        | Seq(p, q) -> sprintf "%s; %s" p.AsString q.AsString 
-        | Choice(p, q) -> sprintf "%s + %s" p.AsString q.AsString
-        | Par(p, q) -> sprintf "%s | %s" p.AsString q.AsString
-        | Await(b, p) -> sprintf "%A -> %s" b p.AsString
+        | Base(a) -> string a
+        | Seq(p, q) -> sprintf "%O; %O" p q
+        | Choice(p, q) -> sprintf "%O + %O" p q
+        | Par(p, q) -> sprintf "%O | %O" p q
+        | Await(b, p) -> sprintf "%A -> %O" b p
         | Name(s) -> s
