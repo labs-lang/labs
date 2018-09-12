@@ -24,7 +24,7 @@ let KEYNAME : Parser<_> =
 let IDENTIFIER : Parser<_> = 
     pipe2 asciiUpper (manySatisfy isAlphanum) (fun x y -> sprintf "%O%s" x y)
 
-let withcommas x = x |> Seq.map (sprintf "%A") |> String.concat ", "
+let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
 /// Parse p and skip whitespace after.
 let ws p = p .>> spaces
@@ -92,7 +92,9 @@ let pinit loc =
     pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle]))
 
 let pkeys loc = 
-    (ws (sepbycommas (ws (pinit loc))) >>= toMap)
+    let lbl = function I -> "interface" | L -> "stigmergy" | E -> "environment"
+    ws (sepbycommas (ws (pinit loc)))
+    >>= toMapF (fun x -> x.name) <??> lbl loc
 
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)
