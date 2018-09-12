@@ -93,4 +93,4 @@ type Process<'a> =
         | Choice(p, q) -> sprintf "%O + %O" p q
         | Par(p, q) -> sprintf "%O | %O" p q
         | Await(b, p) -> sprintf "%A -> %O" b p
-        | Name s -> s
+        | Name s -> s
