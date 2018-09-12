@@ -1,7 +1,6 @@
 ﻿open Base
 open Checks
-open Expressions
-open Properties
+open EncodeInit
 open Encode
 open Templates
 open ArgParse
@@ -20,11 +19,8 @@ let main argv =
         let chosenInit =
             parsedCli
             |> Result.map (fun args -> args.Contains <@ Simulation @>)
-            |> function Ok(true) -> true | _ -> false
-            |> fun x -> 
-                if x
-                then translateInit initVar
-                else translateInit initVarSim
+            |> function Ok(true) -> initVarSim | _ -> initVar
+            |> translateInit
 
         (filenameOf cli)
         >>= readFile
@@ -61,5 +57,5 @@ let main argv =
     |> Result.map (
         function 
         | true -> doInfo parsedCli
-        | _ -> doTranslate parsedCli )
+        | _ -> doTranslate parsedCli)
     |> function Ok(i) -> i | Error(_) -> 10

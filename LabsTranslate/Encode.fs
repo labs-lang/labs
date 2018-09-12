@@ -85,42 +85,7 @@ let encode (sys, mapping) =
         |> Map.map (fun _ (def, procs) -> baseVisit procs counter mapping def.behavior)
 
     Result.Ok(sys, trees, mapping)
-
-let makeTuples comps (mapping:KeyMapping) =
-
-    /// Finds the min and max indexes of the given tuple.
-    let extrema (tup:Map<Var,Init>) =
-        let indexes = 
-            tup
-            |> Map.toSeq
-            |> Seq.map (fun (v, _) -> snd mapping.[v.name])
-        (Seq.min indexes, Seq.max indexes)
-
-    let doLiquid (tup: Map<Var,Init>) =
-        let extr = extrema tup
-        tup 
-        |> Map.map (fun v _ -> Dict [
-            "index", Int (snd mapping.[v.name])
-            "start", Int (fst extr)
-            "end", Int (snd extr)
-            ])
-        |> Map.values
-
-    comps
-    |> Seq.map (fun c -> c.lstig)
-    |> Seq.map (List.map doLiquid)
-    |> Seq.map Seq.concat
-    |> Seq.concat
-
-let initPc sys trees =
-    trees
-    |> Map.map (fun n (_, entry) -> 
-        let minI, maxI = sys.spawn.[n]
-        sprintf "pc[i][0] = %i;" entry
-        |> forLoop minI maxI)
-    |> Map.values
-    |> String.concat "\n"
-
+    
 let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     // Find the number of PCs used in the program
     let maxPc =
@@ -162,40 +127,7 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     ]
     |> renderFile "templates/header.c"
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
-    
-let initVars initFn sys =
-    sys.spawn
-    |> Map.map (fun x range -> 
-        let ifaceinit =
-            sys.components.[x].iface 
-            |> Map.map initFn
-            |> Map.values
-            |> String.concat "\n"
-        let lstigsinit = 
-            sys.components.[x].lstig
-            |> Seq.map (Map.map initFn)
-            |> Seq.map Map.values
-            |> Seq.concat
-            |> String.concat "\n"
-        (range, ifaceinit + "\n" + lstigsinit))
-    |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
-        (str + (forLoop rangeStart rangeEnd inits))) ""
 
-let translateInit (initFn:KeyMapping->Var->Init->string) (sys,trees, mapping:KeyMapping) =
-    let init = initFn mapping
-    [
-        "initenv", 
-            sys.environment
-            |> Map.map init
-            |> Map.values
-            |> String.concat "\n"
-            |> indent 4 |> Str;
-        "initvars", initVars init sys |> indent 4 |> Str;
-        "initpcs", (initPc sys trees) |> indent 4 |> Str;
-        "tuples", Lst (makeTuples (Map.values sys.components) mapping)
-    ]
-    |> renderFile "templates/init.c"    
-    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
 
 let translateAll (sys, trees, mapping:KeyMapping) =
