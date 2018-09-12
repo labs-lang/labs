@@ -65,8 +65,12 @@ let checkComponents sys =
             |> withcommas
             |> Result.Error
 
+/// Binds all references in the system to the corresponding variable.
 let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
-    let findVar name = getInfoOrFail mapping name |> fst
+    let findVar k = 
+        match mapping.TryFind k with
+        | Some(var, _) -> var
+        | None -> failwith (sprintf "Undefined variable: %s" k)
 
     let resolveLinkTerm = function
         | RefC1 k -> findVar k |> RefC1
@@ -94,7 +98,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
             | AttrUpdate(r, o, expr) -> r, o, expr, I, AttrUpdate
             | LStigUpdate(r, o, expr) -> r, o, expr, L, LStigUpdate
             | EnvWrite(r, o, expr) -> r, o, expr, E, EnvWrite
-        let info, _ = getInfoOrFail mapping r
+        let info = findVar r
         if info.location <> expectedLoc then 
             sprintf "%A variable %s, treated as %A" info.location r expectedLoc
             |> failwith
@@ -144,21 +148,21 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
 let analyzeKeys sys = 
     let comps = Map.values sys.components
 
-    let conflicts setOfVars =
+    let conflicts (setOfVars:Set<Var>) =
         let hasSameName (v1:Var) (v2:Var) =
-            v1.ToString() = v2.ToString()
+            v1.name = v2.name
         setOfVars
-        |> Set.map (fun x -> (x.ToString(), Set.filter (hasSameName x) setOfVars))
-        |> Set.filter (fun (name, number) -> number.Count > 1)
+        |> Set.map (fun x -> (x.name, Set.filter (hasSameName x) setOfVars))
+        |> Set.filter (fun (name, vars) -> vars.Count > 1)
         |> fun x -> 
-            if x.IsEmpty 
-            then Result.Ok setOfVars
+            if x.IsEmpty
+            then setOfVars
             else 
                 x 
                 |> Set.map fst
                 |> withcommas
                 |> sprintf "Duplicate variable definitions for %s"
-                |> Result.Error
+                |> failwith
 
     /// Makes a dictionary with information about each 
     /// variable in setOfVars.
@@ -183,13 +187,13 @@ let analyzeKeys sys =
         |> Seq.map (fun c -> Map.keys c.iface)
         |> Set.unionMany
         |> conflicts
-        |> Result.map (makeInfo I 0)
-        |> Result.map fst
+        |> (makeInfo I 0)
+        |> fst
 
     let lstigkeys = 
         comps
         |> Seq.map (fun c -> List.map Map.keys c.lstig)
-        |> Seq.map Set.unionMany
+        |> Seq.map Set.unionMany //FIXME duplicate lstig keys may go unnoticed
         |> Seq.fold 
             (fun (map, i) vars -> 
                 let newInfo, newI = makeInfo L i vars
@@ -204,6 +208,6 @@ let analyzeKeys sys =
         |> fst 
 
     attrKeys
-    >>= Map.mergeIfDisjoint lstigkeys
-    >>= Map.mergeIfDisjoint envKeys
-    |> Result.map (fun m -> (sys, m))
+    |> Map.mergeIfDisjoint lstigkeys
+    |> Map.mergeIfDisjoint envKeys
+    |> (fun m -> Result.Ok (sys, m))

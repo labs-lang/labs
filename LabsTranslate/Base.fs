@@ -7,10 +7,6 @@ open Parser
 type pcCondition = {pc:int; value:int}
 type KeyMapping = Map<string, Var * int>
 
-let getInfoOrFail (m:KeyMapping) k = 
-    match m.TryFind k with
-    | Some(info) -> info
-    | None -> failwith (sprintf "Unexpected key: %s" k)
     
 /// Bind operator for Result.
 let inline (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
