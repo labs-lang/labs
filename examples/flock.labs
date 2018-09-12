@@ -13,10 +13,9 @@ system {
 comp Bird {
     interface = x: 0.._grid, y: 0.._grid
     stigmergy = <dirx: [-1, 1], diry: [-1,1]>
-    behavior = Flock
-
+    
     # "Local" processes (can only be used by component Bird)
-    Flock = (Movex & Movey); Flock     
+    Behavior = (Movex & Movey); Behavior
 }
 
 check {
