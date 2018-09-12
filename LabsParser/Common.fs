@@ -57,35 +57,19 @@ let maybeTuple2 p1 p2 if2 =
     | a, None -> a
 
 let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
-
-/// Parses a list of comma-separated elements (each element is parsed by pelem).
-let listDef str pelem = 
-    (ws (skipString str))
-    >>. (ws EQ) >>. betweenBrackets (sepbycommas pelem)
-
-///Parses a set of elements. Fails if two elements are equal according to
-///mappingFn. 
-let setDef str pelem mappingFn = 
-    (listDef str pelem) 
-    >>= (fun x -> fun _ -> 
-        let dup = x |> List.map mappingFn |> List.duplicates
-        if dup.Length > 0 then
-            dup.ToString()
-            |> sprintf "%s: multiple definitions of %s" str
-            |> (fun msg -> Reply(Error, ErrorMessageList(Message(msg))))
-        else
-            Reply(x |> Set.ofList))
-
-let unexpected msg = fun _ -> Reply(Error, ErrorMessageList(Unexpected(msg)))
-
-let toMap lst =
+    
+let toMapF formatonFail lst =
     let dup = lst |> List.map fst |> List.duplicates
     if dup.Length > 0 then
-        withcommas dup
+        dup
+        |> List.map formatonFail
+        |> withcommas 
         |> sprintf "Multiple definitions of %s"
-        |> unexpected
+        |> fun msg _ -> Reply(Error, unexpected msg)
     else
         preturn (lst |> Map.ofList)
+
+let toMap lst = toMapF id lst
 
 /// Parses a single init definition.
 let pinit loc =
