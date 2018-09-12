@@ -29,7 +29,7 @@ type Expr<'a> =
         match this with
         | Const v -> string v
         | Ref(r) -> string r
-        | Arithm(e1, op, e2) -> sprintf "%O %A %O" e1 op e2
+        | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
 
 and Ref<'a> = 
     {var:'a; offset: Expr<'a> option}
@@ -88,9 +88,9 @@ type Process<'a> =
         match this with
         | Nil -> "0"
         | Skip -> "√"
-        | Base(a) -> string a
+        | Base a -> string a
         | Seq(p, q) -> sprintf "%O; %O" p q
         | Choice(p, q) -> sprintf "%O + %O" p q
         | Par(p, q) -> sprintf "%O | %O" p q
         | Await(b, p) -> sprintf "%A -> %O" b p
-        | Name(s) -> s
+        | Name s -> s
