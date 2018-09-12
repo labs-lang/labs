@@ -43,48 +43,6 @@ let assign var cVarName index =
         | L -> sprintf "\nLtstamp[%s][%i] = j++;" "i" index
         | _ -> "")
 
-let initVarSim (mapping:KeyMapping) (var:Var) init =
-    let baseIndex = snd mapping.[var.name]
-    let initValue = 
-        match init with
-        | Choose(l) -> l.Item (rng.Next l.Length)
-        | Range(minI, maxI) -> rng.Next(minI, maxI)
-        |> string
-    match var.vartype with
-    | Scalar -> assign var initValue baseIndex
-    | Array(s) ->
-        seq [baseIndex..baseIndex+s-1]
-        |> Seq.map (assign var initValue)
-        |> String.concat "\n"
-
-
-let initVar (mapping:KeyMapping) (var:Var) init =
-    let baseIndex = snd mapping.[var.name]
-    let cVarName = sprintf "guess%i%A" baseIndex var.location
-    let cVarDef = def cVarName init
-
-    let cVarAssume =
-        match init with
-        | Choose l when l.Length = 1 -> 
-            sprintf "%s = %i;\n" cVarName l.Head
-        | Choose l ->
-            l
-            |> Seq.map (sprintf "(%s == %i)" cVarName)
-            |> String.concat " || "
-            |> assume
-        | Range(minI, maxI) -> //assumeIntRange index minI maxI
-            sprintf "%s >= %i && %s < %i" cVarName minI cVarName maxI |> assume
-
-    cVarDef +
-    cVarAssume + (
-        match var.vartype with
-        | Scalar -> assign var cVarName baseIndex
-        | Array(s) ->
-        seq [baseIndex..(baseIndex+s-1)]
-        |> Seq.map (assign var cVarName)
-        |> String.concat "\n"
-    )
-
 let serializeInfo (sys, mapping:KeyMapping) =
     let serializeKeys (m:KeyMapping) =
         if m.Count = 0 then 
