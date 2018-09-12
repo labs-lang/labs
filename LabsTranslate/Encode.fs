@@ -137,20 +137,20 @@ let translateAll (sys, trees, mapping:KeyMapping) =
         | None -> "0"
         
     let liquid a =
-        let template, (k:Var), o, e =
+        let template, (k:Ref<Var>), e =
             match a with
-            | AttrUpdate(k, o, e) -> "attr", k, o, e
-            | LStigUpdate(k, o, e) -> "lstig", k, o, e
-            | EnvWrite(k, o, e) -> "env", k, o, e
+            | AttrUpdate(k, e) -> "attr", k, e
+            | LStigUpdate(k, e) -> "lstig", k, e
+            | EnvWrite(k, e) -> "env", k, e
 
-        let _, index = mapping.[k.name]
-        let size = match k.vartype with Array(s) -> s | _ -> 0
+        let _, index = mapping.[k.var.name]
+        let size = match k.var.vartype with Array(s) -> s | _ -> 0
 
         [
             "labs", Str (a.ToString())
             "type", Str template;
             "key",  Int index;
-            "offset", doOffset o |> Str
+            "offset", doOffset k.offset |> Str
             "size", Int size
             "expr", translateExpr mapping e |> Str
             "qrykeys", Lst (

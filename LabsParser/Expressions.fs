@@ -9,8 +9,10 @@ let parithmop : Parser<_> =
         (charReturn '*' Times);
         (charReturn '%' Mod)
     ]
-    
-let simpleRef p = KEYNAME .>>. (opt (betweenBrackets p))
+
+let simpleRef p = 
+    KEYNAME .>>. (opt (betweenBrackets p))
+    |>> fun (str, offset) -> {var=str; offset=offset}
 
 /// Creates a parser for arithmetic expressions.
 let rec makeExprParser pref =

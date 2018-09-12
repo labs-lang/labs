@@ -7,7 +7,6 @@ open Parser
 type pcCondition = {pc:int; value:int}
 type KeyMapping = Map<string, Var * int>
 
-    
 /// Bind operator for Result.
 let inline (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
     

@@ -4,10 +4,11 @@ open Expressions
 open FParsec
 
 let propertyRef p =
-    pipe2
-        (ws (simpleRef p))
+    pipe3
+        (ws KEYNAME)
+        (opt (betweenBrackets p))
         (ws (skipString "of") >>. (ws KEYNAME))
-        (fun (a,b) c -> (a,c), b)
+        (fun k offset y -> {var=(k, y); offset=offset})
 
 let pquantifier =
         pipe3

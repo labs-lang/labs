@@ -67,22 +67,22 @@ let checkComponents sys =
 
 /// Binds all references in the system to the corresponding variable.
 let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
-    let findVar k = 
+    let findString k = 
         match mapping.TryFind k with
         | Some(var, _) -> var
         | None -> failwith (sprintf "Undefined variable: %s" k)
 
     let resolveLinkTerm = function
-        | RefC1 k -> findVar k |> RefC1
-        | RefC2 k -> findVar k |> RefC2
+        | RefC1 k -> findString k |> RefC1
+        | RefC2 k -> findString k |> RefC2
         
     let rec toVarExpr finder = function
-        | Expr.Const i -> Const i
-        | Expr.Ref (r, offset) -> 
-            Expr.Ref(finder r, Option.map (toVarExpr finder) offset)
-        | Expr.Arithm(e1, op, e2) ->
+        | Const i -> Const i
+        | Ref r -> Ref (toVarRef finder r)
+        | Arithm(e1, op, e2) ->
             Expr.Arithm(toVarExpr finder e1, op, toVarExpr finder e2)
-
+    and toVarRef finder r = 
+        {var= finder r.var; offset=Option.map (toVarExpr finder) r.offset}
     let rec toVarBExpr finder = function
     | BExpr.True -> BExpr.True
     | BExpr.False -> False
@@ -93,30 +93,29 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         BExpr.Conj(toVarBExpr finder b1, toVarBExpr finder b2)
 
     let resolveAction action =
-        let r, o, expr, expectedLoc, actionType = 
+        let r, expr, expectedLoc, actionType = 
             match action with
-            | AttrUpdate(r, o, expr) -> r, o, expr, I, AttrUpdate
-            | LStigUpdate(r, o, expr) -> r, o, expr, L, LStigUpdate
-            | EnvWrite(r, o, expr) -> r, o, expr, E, EnvWrite
-        let info = findVar r
+            | AttrUpdate(r, expr) -> r, expr, I, AttrUpdate
+            | LStigUpdate(r, expr) -> r, expr, L, LStigUpdate
+            | EnvWrite(r, expr) -> r, expr, E, EnvWrite
+        let info = findString r.var
         if info.location <> expectedLoc then 
-            sprintf "%A variable %s, treated as %A" info.location r expectedLoc
+            sprintf
+                "%A variable %s, treated as %A"
+                info.location r.var expectedLoc
             |> failwith
         else
-            actionType(
-                info,
-                Option.map (toVarExpr findVar) o,
-                toVarExpr findVar expr)
+            actionType(toVarRef findString r, toVarExpr findString expr)
 
     let rec resolveProcess = function
     | Nil -> Nil
     | Skip -> Skip
-    | Base(a) -> resolveAction a |> Base
-    | Await(b, p) -> Await(toVarBExpr findVar b, resolveProcess p)
+    | Base a -> resolveAction a |> Base
+    | Await(b, p) -> Await(toVarBExpr findString b, resolveProcess p)
     | Seq(p1, p2) -> Seq(resolveProcess p1, resolveProcess p2)
     | Choice(p1, p2) -> Choice(resolveProcess p1, resolveProcess p2)
     | Par(p1, p2) -> Par(resolveProcess p1, resolveProcess p2)
-    | Name(n) -> Name n
+    | Name n -> Name n
 
     let resolveComponent (c:ComponentDef<string>) = {
         name = c.name
@@ -128,7 +127,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
 
     let resolveProp (pr:Property<string>) = 
         let find (name, otherStuff) = 
-            findVar name, otherStuff
+            findString name, otherStuff
         {
             name=pr.name
             predicate=(toVarBExpr find pr.predicate)

@@ -23,16 +23,20 @@ type ArithmOp =
 
 type Expr<'a> =
     | Const of int
-    | Ref of var:'a * offset:Expr<'a> option
+    | Ref of Ref<'a>
     | Arithm of Expr<'a> * ArithmOp * Expr<'a>
     override this.ToString() = 
         match this with
         | Const v -> string v
-        | Ref(r, offset) -> 
-            match offset with
-            | Some e -> sprintf "%O[%O]" r e
-            | None -> r.ToString()
+        | Ref(r) -> string r
         | Arithm(e1, op, e2) -> sprintf "%O %A %O" e1 op e2
+
+and Ref<'a> = 
+    {var:'a; offset: Expr<'a> option}
+    override this.ToString() = 
+        match this.offset with
+        | Some e -> sprintf "%O[%O]" this.var e
+        | None -> this.var.ToString()
 
 type CmpOp = 
     | Equal
@@ -51,18 +55,14 @@ type BExpr<'a> =
     | Conj of BExpr<'a> * BExpr<'a>
 
 type Action<'a> =
-    | AttrUpdate of target:'a * offset:Expr<'a> option * expr:Expr<'a>
-    | LStigUpdate of target:'a * offset:Expr<'a> option * expr:Expr<'a>
-    | EnvWrite of target:'a * offset:Expr<'a> option * expr:Expr<'a>
+    | AttrUpdate of target:Ref<'a> * expr:Expr<'a>
+    | LStigUpdate of target:Ref<'a> * expr:Expr<'a>
+    | EnvWrite of target:Ref<'a> * expr:Expr<'a>
     override this.ToString() = 
-        let printTarget(k, o) = 
-            match o with
-            | Some e -> sprintf "%O[%O]" k e
-            | None -> sprintf "%O" k
         match this with
-        | AttrUpdate(k, o, e) -> sprintf "%s <- %O" (printTarget(k,o)) e
-        | LStigUpdate(k, o, e) -> sprintf "%s <~ %O" (printTarget(k,o)) e
-        | EnvWrite(k, o, e) -> sprintf "%s <= %O" (printTarget(k,o)) e
+        | AttrUpdate(r, e) -> sprintf "%O <- %O" r e
+        | LStigUpdate(r, e) -> sprintf "%O <~ %O" r e
+        | EnvWrite(r, e) -> sprintf "%O <= %O" r e
 
 type Process<'a> = 
     | Nil

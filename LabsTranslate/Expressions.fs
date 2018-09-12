@@ -19,12 +19,14 @@ let rec translate trRef =
         | Mod -> sprintf "mod( %s, %s )"
     function
     | Const i -> sprintf "%i" i
-    | Ref(v, offset) -> (trRef v (offset |> Option.map (translate trRef)))
+    | Ref r ->  
+        //do refTypeCheck r
+        (trRef r.var (r.offset |> Option.map (translate trRef)))
     | Arithm(e1, op, e2) -> 
         ((translateAOp op) (translate trRef e1) (translate trRef e2))
 
 /// Translates a variable reference.
-let trref (mapping:KeyMapping) cmp v offset =
+let trref (mapping:KeyMapping) cmp (v:Var) offset =
     do refTypeCheck v offset
     let index =
         let _, i = mapping.[v.name]
@@ -67,11 +69,11 @@ let translateLink mapping =
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let rec getLstigVars = function
-    | Ref(v, offset) -> 
-        match offset with
+    | Ref r -> 
+        match r.offset with
         | Some e -> getLstigVars e
         | None -> Set.empty
-        |> if v.location = L then Set.add v else id
+        |> if r.var.location = L then Set.add r.var else id
     | Arithm(e1, _, e2) -> Set.union (getLstigVars e1) (getLstigVars e2)
     | Const(_) -> Set.empty
 

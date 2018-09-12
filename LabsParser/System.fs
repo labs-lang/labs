@@ -11,11 +11,12 @@ let pspawn =
 
 
 let linkref p =
-    pipe2 
-        (ws (simpleRef p))
+    pipe3
+        (ws KEYNAME)
+        (opt (betweenBrackets p))
         (ws (skipString "of c") >>. 
             choice [charReturn '1' RefC1; charReturn '2' RefC2])
-        (fun (a, b) c -> c(a), b)
+        (fun a b c -> {var=c(a); offset=b})
 
 let plink = makeBExprParser (makeExprParser linkref)
 

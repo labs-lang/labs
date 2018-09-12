@@ -18,7 +18,7 @@ let paction =
         (ws (simpleRef pexpr))
         (ws parseArrow) 
         (ws pexpr) 
-        (fun (target, offset) action e -> action(target, offset, e)))
+        (fun r action e -> action(r, e)))
 
 let pproc, pprocRef = createParserForwardedToRef()
 let pprocTerm, pprocTermRef = createParserForwardedToRef()
