@@ -10,7 +10,7 @@ system {
 
 }
 
-comp Bird {
+agent Bird {
     interface = x: 0.._grid, y: 0.._grid
     stigmergy = <dirx: [-1, 1], diry: [-1,1]>
     
