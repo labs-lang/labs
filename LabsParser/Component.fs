@@ -12,7 +12,7 @@ let plstigkeys =
 
 let pcomp = 
     pipe2
-        ((ws (skipString "comp")) >>. ws IDENTIFIER)
+        ((ws (skipString "agent")) >>. ws IDENTIFIER)
         (betweenBraces (
             spaces
             >>. tuple3
