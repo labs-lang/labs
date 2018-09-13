@@ -19,6 +19,6 @@ comp Bird {
 }
 
 check {
-    Px = finally exists Bird b1, forall Bird b2, dirx of b1 = dirx of b2
-    Py = finally exists Bird b1, forall Bird b2, diry of b1 = diry of b2
+    Px = finally forall Bird b1, forall Bird b2, dirx of b1 = dirx of b2
+    Py = finally forall Bird b1, forall Bird b2, diry of b1 = diry of b2
 }
