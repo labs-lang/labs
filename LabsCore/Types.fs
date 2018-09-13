@@ -1,16 +1,17 @@
 module Types
 
 type Location = | I | L | E
+
 type VarType = 
     | Scalar
     | Array of size:int
+
 type Var = {
     name:string
     vartype:VarType
     location:Location
 }
 with override this.ToString() = this.name
-
 
 type ArithmOp =
     | Plus
@@ -94,3 +95,8 @@ type Process<'a> =
         | Par(p, q) -> sprintf "%O | %O" p q
         | Await(b, p) -> sprintf "%A -> %O" b p
         | Name s -> s
+
+ /// Initialization values
+ type Init =
+     | Choose of int list
+     | Range of int * int

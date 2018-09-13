@@ -3,11 +3,6 @@ module Types
 open Types
 open Link
 
-/// Initialization values
-type Init =
-    | Choose of int list
-    | Range of int * int
-
 type Modality =
     | Always
     | Finally
@@ -30,8 +25,6 @@ type ComponentDef<'a> = {
     lstig: Map<Var, Init> list
     processes: Map<string, Process<'a>>
 }
-
-
 
 type SystemDef<'a> = {
     environment: Map<Var, Init>
