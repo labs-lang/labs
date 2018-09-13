@@ -39,7 +39,7 @@ def translateCPROVER(cex, c_program, info, backend):
             break  # Stop converting after the 1st property has been violated
         elif ln.startswith('Violated property'):
             Y = keys_of(lines[k + 1])
-            _, prop = c_program.split("\n")[int(Y["line"]) + 5].split("//")
+            _, prop = c_program.split("\n")[int(Y["line"]) + 7].split("//")
             translatedcex += """Violated property: {}\n""".format(prop)
 
     if len(translatedcex) > 0:
