@@ -1,6 +1,11 @@
 module Types
 
-type Location = | I | L | E
+type Location = 
+    | I 
+    | L of name:string 
+    | E
+    override this.ToString() =
+        match this with L(n) -> n | I -> "I" | E -> "E"
 
 type VarType = 
     | Scalar
@@ -63,7 +68,7 @@ type Action<'a> =
         match this with
         | AttrUpdate(r, e) -> sprintf "%O <- %O" r e
         | LStigUpdate(r, e) -> sprintf "%O <~ %O" r e
-        | EnvWrite(r, e) -> sprintf "%O <= %O" r e
+        | EnvWrite(r, e) -> sprintf "%O <-- %O" r e
 
 type Process<'a> = 
     | Nil
