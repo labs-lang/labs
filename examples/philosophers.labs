@@ -10,15 +10,16 @@ agent Phil {
     Behavior =
         think <- think + 1;
         
-        fork[id] = 0 -> fork[id] <-- 1;
-        fork[(id + 1) % _n] = 0 -> fork[(id + 1) % _n] <-- 1;
-        
-        # "Critical section"
-        eat <- eat + 1;
+        fork[id] = 0 -> 
+            fork[id] <-- 1;
+            fork[(id + 1) % _n] = 0 ->
+                fork[(id + 1) % _n] <-- 1;
+                # "Critical section"
+                eat <- eat + 1;
 
-        fork[(id + 1) % _n] <-- 0;
-        fork[id] <-- 0;
-        Behavior
+                fork[(id + 1) % _n] <-- 0;
+                fork[id] <-- 0;
+                Behavior
 }
 
 check {
