@@ -65,7 +65,7 @@ let parse (text, (placeholders:Map<string, string>)) =
         |> Set.difference s
         |> fun z -> 
             if (Set.isEmpty z)
-            then Result.Ok(s) 
+            then Result.Ok s 
             else Result.Error(sprintf "Uninitialized external variable: %s" (withcommas z))
 
     let wrapParserResult p text = 
@@ -90,7 +90,7 @@ let parse (text, (placeholders:Map<string, string>)) =
         >>= fun (def, all) -> 
             let diff = (Set.difference all def)
             if diff.IsEmpty
-            then Result.Ok(def)
+            then Result.Ok def
             else
                 diff
                 |> Set.map ((+) "_")
@@ -124,7 +124,7 @@ let private findVar comparison mapping =
 let findMaxIndex (mapping:KeyMapping) = 
     if mapping.IsEmpty then 0 else
     findVar (>) mapping
-    |> fun (v,i) -> match v.vartype with Scalar -> i | Array(s) -> i+s-1 
+    |> fun (v,i) -> match v.vartype with Scalar -> i | Array s -> i+s-1 
 let findMinIndex mapping = 
     findVar (<) mapping
     |> snd

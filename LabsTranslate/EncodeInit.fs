@@ -13,7 +13,7 @@ let initVarSim (mapping:KeyMapping) (var:Var) init =
         |> string
     match var.vartype with
     | Scalar -> assign var initValue baseIndex
-    | Array(s) ->
+    | Array s ->
         seq [baseIndex..baseIndex+s-1]
         |> Seq.map (assign var initValue)
         |> String.concat "\n"
@@ -39,7 +39,7 @@ let initVar (mapping:KeyMapping) (var:Var) init =
     cVarAssume + (
         match var.vartype with
         | Scalar -> assign var cVarName baseIndex
-        | Array(s) ->
+        | Array s ->
             seq [baseIndex..(baseIndex+s-1)]
             |> Seq.map (assign var cVarName)
             |> String.concat "\n")

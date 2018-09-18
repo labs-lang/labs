@@ -46,11 +46,11 @@ let assign var cVarName index =
 let serializeInfo (sys, mapping:KeyMapping) =
     let serializeKeys (m:seq<Var*int>) =
         m
-        |> Seq.sortBy (fun (v, i) -> i)
+        |> Seq.sortBy (fun (_, i) -> i)
         |> Seq.map (fun (v, _) ->
             match v.vartype with
             | Scalar -> v.name
-            | Array(s) -> 
+            | Array s -> 
                 seq [0..s-1] 
                 |> Seq.map (sprintf "%s[%i]" v.name)
                 |> String.concat ",")

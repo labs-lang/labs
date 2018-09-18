@@ -171,7 +171,7 @@ let translateAll (sys, trees, mapping:KeyMapping) =
             | EnvWrite(k, e) -> "env", k, e
 
         let _, index = mapping.[k.var.name]
-        let size = match k.var.vartype with Array(s) -> s | _ -> 0
+        let size = match k.var.vartype with Array s -> s | _ -> 0
 
         [
             "labs", Str (string a)
