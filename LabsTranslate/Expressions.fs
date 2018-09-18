@@ -73,7 +73,7 @@ let rec getLstigVars = function
         match r.offset with
         | Some e -> getLstigVars e
         | None -> Set.empty
-        |> if r.var.location = L then Set.add r.var else id
+        |> match r.var.location with | L(_) -> Set.add r.var | _ -> id
     | Arithm(e1, _, e2) -> Set.union (getLstigVars e1) (getLstigVars e2)
     | Const(_) -> Set.empty
 

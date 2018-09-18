@@ -83,25 +83,35 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
     and toVarRef finder r = 
         {var= finder r.var; offset=Option.map (toVarExpr finder) r.offset}
     let rec toVarBExpr finder = function
-    | BExpr.True -> BExpr.True
-    | BExpr.False -> False
-    | BExpr.Compare(e1, bop, e2) ->
-        BExpr.Compare(toVarExpr finder e1, bop, toVarExpr finder e2)
-    | BExpr.Neg b -> toVarBExpr finder b |> BExpr.Neg
-    | BExpr.Conj(b1, b2) ->
-        BExpr.Conj(toVarBExpr finder b1, toVarBExpr finder b2)
+    | True -> True
+    | False -> False
+    | Compare(e1, bop, e2) ->
+        Compare(toVarExpr finder e1, bop, toVarExpr finder e2)
+    | Neg b -> toVarBExpr finder b |> Neg
+    | Conj(b1, b2) ->
+        Conj(toVarBExpr finder b1, toVarBExpr finder b2)
 
     let resolveAction action =
-        let r, expr, expectedLoc, actionType = 
+        let locationCheck expectedLoc var =
+            expectedLoc = var.location
+        let lstigCheck var =
+            match var.location with
+            | L(name) -> true
+            | _ -> false
+
+        let r, expr, check, actionType, failMsg = 
             match action with
-            | AttrUpdate(r, expr) -> r, expr, I, AttrUpdate
-            | LStigUpdate(r, expr) -> r, expr, L, LStigUpdate
-            | EnvWrite(r, expr) -> r, expr, E, EnvWrite
+            | AttrUpdate(r, expr) ->
+                r, expr, locationCheck I, AttrUpdate, "attribute"
+            | LStigUpdate(r, expr) ->
+                r, expr, lstigCheck, LStigUpdate, "stigmergy"
+            | EnvWrite(r, expr) ->
+                r, expr, locationCheck E, EnvWrite, "environment"
         let info = findString r.var
-        if info.location <> expectedLoc then 
+        if not (check info) then 
             sprintf
                 "%A variable %s, treated as %A"
-                info.location r.var expectedLoc
+                info.location r.var failMsg
             |> failwith
         else
             actionType(toVarRef findString r, toVarExpr findString expr)
@@ -123,6 +133,13 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         processes = c.processes |> Map.mapValues resolveProcess
     }
 
+    let resolveStigmergy lstig =
+        {
+            name = lstig.name
+            link = lstig.link |> (toVarBExpr resolveLinkTerm)
+            vars = lstig.vars
+        }
+
     let resolveProp (pr:Property<string>) = 
         let find (name, otherStuff) = 
             findString name, otherStuff
@@ -135,11 +152,12 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
 
     ({
         components = sys.components |> Map.mapValues resolveComponent
+        stigmergies = sys.stigmergies |> Map.mapValues resolveStigmergy
         environment = sys.environment 
         processes = sys.processes |> Map.mapValues resolveProcess
         spawn = sys.spawn
         properties = sys.properties |> Map.mapValues resolveProp
-        link = sys.link |> (toVarBExpr resolveLinkTerm)
+        //link = sys.link |> (toVarBExpr resolveLinkTerm)
     }, mapping) |> Result.Ok
 
 let analyzeKeys sys = 
@@ -163,7 +181,7 @@ let analyzeKeys sys =
 
     /// Makes a dictionary with information about each 
     /// variable in setOfVars.
-    let makeInfo location startFrom setOfVars = 
+    let makeInfo startFrom setOfVars = 
         let update (mapping, nextIndex) (var:Var) =
             let newMapping = 
                 Map.add 
@@ -184,24 +202,26 @@ let analyzeKeys sys =
         |> Seq.map (fun c -> Map.keys c.iface)
         |> Set.unionMany
         |> conflicts
-        |> (makeInfo I 0)
+        |> (makeInfo 0)
         |> fst
 
-    let lstigkeys = 
-        comps
-        |> Seq.map (fun c -> List.map Map.keys c.lstig)
+    let lstigkeys =
+        sys.stigmergies
+        |> Map.values
+        |> Seq.map (fun s -> s.vars)
+        |> Seq.map (List.map Map.keys)
         |> Seq.map Set.unionMany //FIXME duplicate lstig keys may go unnoticed
         |> Seq.fold 
             (fun (map, i) vars -> 
-                let newInfo, newI = makeInfo L i vars
+                let newInfo, newI = makeInfo i vars
                 (Map.merge map newInfo, newI)
             )
             (Map.empty, 0)
-        |> fst
+        |> fst 
 
     let envKeys = 
         Map.keys sys.environment
-        |> makeInfo E 0
+        |> makeInfo 0
         |> fst 
 
     attrKeys
