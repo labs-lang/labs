@@ -37,7 +37,7 @@ let sepbycommas p = sepBy p (ws (skipChar ','))
 /// Helper for tracing parsers
 // http://www.quanttec.com/fparsec/users-guide/debugging-a-parser.html
 let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
-        #if DEBUG
+    #if DEBUG
     fun stream ->
         eprintfn "%A: Entering %s" stream.Position label
         let reply = p stream
@@ -92,7 +92,7 @@ let pinit loc =
     pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle]))
 
 let pkeys loc = 
-    let lbl = function I -> "interface" | L -> "stigmergy" | E -> "environment"
+    let lbl = function I -> "interface" | L(_) -> "stigmergy" | E -> "environment"
     ws (sepbycommas (ws (pinit loc)))
     >>= toMapF (fun x -> x.name) <??> lbl loc
 

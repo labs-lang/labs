@@ -29,9 +29,9 @@ do pprocTermRef :=
     let pSkip = stringReturn "Skip" Skip
     let pGuarded = (ws pguard) .>>. (ws (skipString "->") >>. pproc)
     choice [
-        attempt pNil; 
-        attempt pSkip;
-        followedBy pguard >>. pGuarded |>> Await;
+        attempt pNil <!> "Nil"; 
+        attempt pSkip <!> "Skip";
+        attempt pGuarded <!> "Guarded" |>> Await;
         IDENTIFIER |>> Name; 
         paction |>> Base;
         betweenParen pproc
@@ -47,8 +47,11 @@ do pprocRef :=
         ]
     // Either returns a single term, or creates a choice/par/seq
     // from two processes
-    maybeTuple2 (ws pprocTerm) ((ws OP) .>>. (ws pproc)) (fun (a, (b, c)) -> b a c)
+    maybeTuple2 
+        (ws pprocTerm)
+        ((ws OP) .>>. (ws pproc))
+        (fun (a, (b, c)) -> b a c)
     
 let processes = 
-    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc))
+    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc <!> "PPROC"))
     ws (many pdef) >>= toMap

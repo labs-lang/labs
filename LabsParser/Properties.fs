@@ -1,7 +1,7 @@
 ﻿module internal Properties
+open FParsec
 open Types
 open Expressions
-open FParsec
 
 let propertyRef p =
     pipe3

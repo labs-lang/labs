@@ -4,12 +4,6 @@ open Types
 open Processes
 open Common
 
-let plstigkeys = 
-    choice [
-        (betweenAng (pkeys L));
-        (pinit L |>> List.singleton) >>= toMap
-    ] |> sepbycommas |> ws
-
 let pcomp = 
     pipe2
         ((ws (skipString "agent")) >>. ws IDENTIFIER)
@@ -17,8 +11,8 @@ let pcomp =
             spaces
             >>. tuple3
                 (opt (pstringEq "interface" (pkeys I)))
-                (opt (pstringEq "stigmergy" plstigkeys))
-                processes))
+                (opt (pstringEq "stigmergies" (ws IDENTIFIER |> sepbycommas)))
+                processes <!> "PROCESSES"))
         (fun n (i, l, procs) ->
             (n, {
                 name = n

@@ -5,28 +5,18 @@ open Common
 open Components
 open System
 open Properties
-
-let makeRanges (mp: Map<'a, int>) =
-    mp 
-    |> Map.fold 
-        (fun (c, m) name num -> 
-            let newC = c + num
-            (newC, (Map.add name (c, newC) m) )) (0, Map.empty) 
-    |> snd
-    
+ 
 let parse = 
-    spaces >>. pipe3
+    spaces >>. pipe4
         psys 
+        (ws ((plstig |> ws |> many) >>= toMap))
         (ws ((pcomp |> ws |> many) >>= toMap))
         pproperties
-        (fun (_, env, spawn, link, procs) comps props -> 
-            {
-            processes = procs;
-            components = comps;
-            environment = (env |> Option.defaultValue Map.empty);
-            spawn = (makeRanges spawn);
-            properties = props;
-            link = link;
+        (fun sys lstigs comps props -> 
+            {sys with
+                components = comps
+                properties = props
+                stigmergies = lstigs
             })
 
 let stripComments = 

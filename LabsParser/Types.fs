@@ -22,15 +22,15 @@ type Property<'a> = {
 type ComponentDef<'a> = { 
     name: string
     iface: Map<Var, Init>
-    lstig: Map<Var, Init> list
+    lstig: string list
     processes: Map<string, Process<'a>>
 }
 
 type SystemDef<'a> = {
     environment: Map<Var, Init>
+    stigmergies: Map<string,Stigmergy<'a>>
     components: Map<string, ComponentDef<'a>>
     processes: Map<string, Process<'a>>
     spawn: Map<string, int*int>
     properties: Map<string, Property<'a>>
-    link: Link<'a>
 }
