@@ -137,7 +137,7 @@ def get_functions(c_program):
 def main(file: "path to LABS file",
          backend: backend_descr = "cbmc",
          steps: "number of system evolutions" = 1,
-         fair: "enforce fair interleaving of components" = True,
+         fair: "enforce fair interleaving of components" = False,
          simulate: "run in simulation mode" = False,
          show: "print C encoding and exit" = False,
          debug: "enable additional checks in the backend" = False,
