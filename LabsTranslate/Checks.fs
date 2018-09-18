@@ -1,21 +1,21 @@
-﻿module Checks
+﻿module internal Checks
 open Types
 open Link
 open Base
 
 /// Verifies that all process names in the program have been defined.
 let checkNames sys =
-    let globalNames = Map.keys sys.processes
 
     let rec usedNames = function
-        | Name(n) -> Set.singleton n
+        | Name n -> Set.singleton n
         | Await(_, p) -> usedNames p
         | Seq(p, q)
         | Par(p, q)
         | Choice(p, q) -> Set.union (usedNames p) (usedNames q)
         | _ -> Set.empty
 
-    let undefinedNames processes defNames = 
+    let undefinedNames processes = 
+        let defNames = Map.keys processes |> Set.union (Map.keys sys.processes)
         processes
         |> Map.values
         |> Seq.map usedNames
@@ -24,25 +24,25 @@ let checkNames sys =
 
     let checkComps = 
         sys.components
-        |> Map.map (fun _ x -> 
-            undefinedNames x.processes (Set.union globalNames (Map.keys x.processes)))
+        |> Map.mapValues (fun x -> undefinedNames x.processes)
         |> Map.filter (fun _ undef -> undef.Count > 0)
-    let globalUndef = undefinedNames sys.processes globalNames    
 
-    let rec makeMsg globalCount localCount = 
-        match globalCount, localCount with
-        | (true,true) -> ""
-        | (_,true) -> sprintf "global: the following processes are undefined: %s" (withcommas globalUndef)
-        | (true,_) -> 
-            checkComps
-            |> Map.map (fun name undefs ->
-                sprintf "%s: the following processes are undefined: %s" name (withcommas undefs))
-            |> Map.values
-            |> String.concat "\n"
-        | (_,_) -> (makeMsg  true false) + "\n" + (makeMsg false true)
+    let localResult initialmsg =
+        checkComps
+        |> Map.fold (fun msg name undefs ->
+            if undefs.IsEmpty then msg else 
+                sprintf 
+                    "%s\n%s: the following processes are undefined: %s"
+                    msg name (withcommas undefs)
+        ) initialmsg
+        |> fun msg -> if msg.Length = 0 then Ok sys else Error msg
 
-    let msg = makeMsg globalUndef.IsEmpty checkComps.IsEmpty
-    if msg = "" then Result.Ok sys else Result.Error msg
+    undefinedNames sys.processes
+    |> fun x -> 
+        if x.IsEmpty
+        then ""
+        else sprintf "global: the following processes are undefined: %s" (withcommas x)
+    |> localResult
 
 let checkComponents sys =
     let isDefined (def:ComponentDef<'a>) name  =
