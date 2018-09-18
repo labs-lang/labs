@@ -1,4 +1,4 @@
-﻿module Properties
+﻿module internal Properties
 open Types
 open Templates
 open Expressions

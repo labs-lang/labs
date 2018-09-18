@@ -1,4 +1,4 @@
-﻿module ArgParse
+﻿module internal ArgParse
 open Argu
 
 type Arguments =

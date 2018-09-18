@@ -1,4 +1,4 @@
-﻿module Base 
+﻿module internal Base 
 open FParsec
 open Types
 open System.IO
