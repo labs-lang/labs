@@ -20,7 +20,7 @@ let initVarSim (mapping:KeyMapping) (var:Var) init =
 
 let initVar (mapping:KeyMapping) (var:Var) init =
     let baseIndex = snd mapping.[var.name]
-    let cVarName = sprintf "guess%i%A" baseIndex var.location
+    let cVarName = sprintf "guess%i%O" baseIndex var.location
     let cVarDef = def cVarName init
 
     let cVarAssume =
@@ -66,8 +66,10 @@ let translateInit initFn (sys, trees, mapping) =
         |> Map.map (fun x range -> 
             let ifaceinit = sys.components.[x].iface |> initMap
             let lstigsinit = 
-                sys.components.[x].lstig
-                |> Seq.map (initMap)
+                sys.stigmergies
+                |> Map.mapValues (fun s -> Seq.map initMap s.vars)
+                |> Map.values
+                |> Seq.concat
                 |> String.concat "\n"
             (range, ifaceinit + "\n" + lstigsinit))
         |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
@@ -91,11 +93,10 @@ let translateInit initFn (sys, trees, mapping) =
                 ])
             |> Map.values
 
-        comps
-        |> Seq.map (fun c -> c.lstig)
-        |> Seq.map (List.map doLiquid)
-        |> Seq.map Seq.concat
-        |> Seq.concat
+        sys.stigmergies
+        |> Map.values
+        |> Seq.map (fun s -> s.vars)
+        |> Seq.collect (Seq.collect doLiquid)
         
     [
         "initenv", sys.environment |> initMap |> indent 4 |> Str;
