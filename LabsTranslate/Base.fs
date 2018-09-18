@@ -115,10 +115,16 @@ let makeCounter (start: int) =
         !x
     incr
 
-let findIndex comparison typeofkey (mapping:KeyMapping) =
+let private findVar comparison mapping =
     mapping
-    |> Map.filter (fun _ (v, _) -> v.location = typeofkey)
-    |> Map.fold (fun state k (_, n) -> comparison state n) 0
+    |> Map.values
+    |> Seq.reduce (fun (v1, i1) (v2, i2) -> 
+        if (comparison i1 i2) then v1, i1 else v2, i2)
 
-let findMaxIndex mapping = findIndex max mapping
-let findMinIndex mapping = findIndex min mapping
+let findMaxIndex (mapping:KeyMapping) = 
+    if mapping.IsEmpty then 0 else
+    findVar (>) mapping
+    |> fun (v,i) -> match v.vartype with Scalar -> i | Array(s) -> i+s-1 
+let findMinIndex mapping = 
+    findVar (<) mapping
+    |> snd
