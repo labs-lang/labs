@@ -4,8 +4,8 @@ open FParsec
 
 let parithmop : Parser<_> =
     choice [
-        (charReturn '+' Plus);
-        (charReturn '-' Minus);
+        (charReturn '+' Plus <!> "Plus");
+        (notFollowedBy (skipString "->") >>. charReturn '-' Minus <!> "Minus");
         (charReturn '*' Times);
         (charReturn '%' Mod)
     ]
@@ -34,26 +34,26 @@ let rec makeExprParser pref =
 let makeBExprParser pexpr =
     /// Parser for comparison operators
     let pcompareop : Parser<_> =
-        let plessleq = (attempt (stringReturn "<=" Leq)) <|> (charReturn '<' Less);
-        let pgreatgeq = (attempt (stringReturn ">=" Geq)) <|> (charReturn '>' Greater);
+        let plessleq = skipChar '<' >>. ((charReturn '=' Leq) <|>% Less) 
+        let pgreatgeq = skipChar '>' >>. ((charReturn '=' Geq) <|>% Greater)
         choice [
-            plessleq;
-            pgreatgeq;
-            (stringReturn "!=" Neq);
-            (charReturn '=' Equal);
+            (charReturn '=' Equal) <!> "Eq"
+            (stringReturn "!=" Neq)
+            plessleq <!> "Lessleq"
+            pgreatgeq
         ]
 
     let pbexpr, pbexprRef = createParserForwardedToRef()
     let pbexprTerm : Parser<_> = 
         let pbexprNeg = NEG >>. pbexpr |>> Neg
         let pbexprCompare =
-            tuple3 pexpr (ws pcompareop) pexpr |>> Compare
+            tuple3 pexpr (ws pcompareop <!> "compare") pexpr |>> Compare
         choice [
-            attempt pbexprNeg <!> "bneg";
-            attempt pbexprCompare <!> "bcompare";
-            betweenParen pbexpr <!> "bparen";
-            stringReturn "true" True;
-            stringReturn "false" False;
+            attempt pbexprNeg <!> "bneg"
+            attempt pbexprCompare <!> "bcompare"
+            betweenParen pbexpr <!> "bparen"
+            stringReturn "true" True
+            stringReturn "false" False
         ]
     do pbexprRef := 
         maybeTuple2 pbexprTerm ((ws CONJ)  >>. pbexpr) Conj
