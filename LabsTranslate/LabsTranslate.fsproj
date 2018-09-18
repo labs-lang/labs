@@ -16,19 +16,9 @@
     <StartArguments>--file ../examples/flock.labs --values birds=3 delta=21 grid=16 --bound 16</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Voter' ">
-    <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/voter.labs --bound 10</StartArguments>
-    <ExternalConsole>false</ExternalConsole>
-  </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2sim' ">
     <StartAction>Project</StartAction>
     <StartArguments>--file ../examples/flock2.labs --values birds=3 delta=21 grid=16 --bound 16 --simulation</StartArguments>
-    <ExternalConsole>false</ExternalConsole>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Example2info' ">
-    <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/example.labs --bound 12 --fair --info</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2info' ">
@@ -36,24 +26,34 @@
     <StartArguments>--file ../examples/flock.labs --values birds=3 delta=21 grid=16 --bound 16 --info</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'PhilosophersInfo' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/philosophers.labs --bound 2 --values n=3 --info</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Philosophers' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/philosophers.labs --bound 2 --values n=3</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.NETCore.App" Version="2.1.4" />
-    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
   </ItemGroup>
   <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="Base.fs" />
     <Compile Include="Liquid.fs" />
     <Compile Include="Templates.fs" />
     <Compile Include="ArgParse.fs" />
-    <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
-    <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
-    <PackageReference Include="Argu" Version="4.2.1" />
-    <PackageReference Include="DotLiquid" Version="2.0.266" />
     <Compile Include="Checks.fs" />
     <Compile Include="Expressions.fs" />
     <Compile Include="Properties.fs" />
     <Compile Include="EncodeInit.fs" />
     <Compile Include="Encode.fs" />
     <Compile Include="Program.fs" />
+    <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
+    <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
+    <PackageReference Include="Argu" Version="4.2.1" />
+    <PackageReference Include="DotLiquid" Version="2.0.298" />
   </ItemGroup>
 </Project>

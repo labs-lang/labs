@@ -1,0 +1,26 @@
+system {
+    extern = _n
+    environment = fork[_n]: [0]
+    spawn = Phil: _n
+}
+
+agent Phil {
+    interface = think: [0], eat: [0], id: 0.._n
+
+    Behavior =
+        think <- think + 1;
+        
+        fork[id] = 0 -> fork[id] <-- 1;
+        fork[(id + 1) % _n] = 0 -> fork[(id + 1) % _n] <-- 1;
+        
+        # "Critical section"
+        eat <- eat + 1;
+
+        fork[(id + 1) % _n] <-- 0;
+        fork[id] <-- 0;
+        Behavior
+}
+
+check {
+    P1 = always forall Phil p, eat of p < 3
+}
