@@ -22,7 +22,7 @@ for (i=%i; i<%i; i++) {
 
 let translateLocation = function
     | I -> sprintf "I[%s][%O]"
-    | L -> sprintf "Lvalue[%s][%O]"
+    | L(_) -> sprintf "Lvalue[%s][%O]"
     | E -> (fun _ -> sprintf "E[%O]")
 
 let def name = 
@@ -40,19 +40,22 @@ let def name =
 let assign var cVarName index =
     sprintf "%s = %s;" (translateLocation var.location "i" index) cVarName
     + (match var.location with 
-        | L -> sprintf "\nLtstamp[%s][%i] = j++;" "i" index
+        | L(_) -> sprintf "\nLtstamp[%s][%i] = j++;" "i" index
         | _ -> "")
 
 let serializeInfo (sys, mapping:KeyMapping) =
-    let serializeKeys (m:KeyMapping) =
-        if m.Count = 0 then 
-            ""
-        else
-            m
-            |> Map.toSeq
-            |> Seq.sortBy (fun (name,_) -> snd mapping.[name])
-            |> Seq.map fst
-            |> String.concat ","
+    let serializeKeys (m:seq<Var*int>) =
+        m
+        |> Seq.sortBy (fun (v, i) -> i)
+        |> Seq.map (fun (v, _) ->
+            match v.vartype with
+            | Scalar -> v.name
+            | Array(s) -> 
+                seq [0..s-1] 
+                |> Seq.map (sprintf "%s[%i]" v.name)
+                |> String.concat ",")
+        |> String.concat ","
+        |> fun x -> if x.Length = 0 then "\n" else x
 
     let ranges = 
         sys.spawn
@@ -60,12 +63,18 @@ let serializeInfo (sys, mapping:KeyMapping) =
         |> Map.values
         |> fun x -> if Seq.isEmpty x then "" else String.concat ";" x
 
-    [|I;L;E|]
-    |> Seq.map (fun t -> 
-        mapping
-        |> Map.filter (fun _ (var, _) -> var.location = t) 
-        |> serializeKeys)
-    |> fun x -> if Seq.isEmpty x then "" else String.concat "\n" x
+    let empty = [|0, ""; 1, ""; 2, ""|] |> Map.ofArray
+    
+    mapping 
+    |> Map.values
+    |> Seq.groupBy (fun (v,_) -> match v.location with I -> 0 | E -> 1 | _ -> 2)
+    |> Seq.map ( fun (i, x) -> i, serializeKeys x)
+    |> Map.ofSeq
+    |> (fun x -> Map.merge x empty)
+    |> Map.toSeq
+    |> Seq.sortBy fst
+    |> Seq.map snd
+    |> String.concat "\n"
     |> fun s -> printfn "%s\n%s" s ranges
 
     Result.Ok 0
