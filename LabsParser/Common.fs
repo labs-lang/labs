@@ -37,15 +37,15 @@ let sepbycommas p = sepBy p (ws (skipChar ','))
 /// Helper for tracing parsers
 // http://www.quanttec.com/fparsec/users-guide/debugging-a-parser.html
 let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
+        #if DEBUG
     fun stream ->
-        #if DEBUG
         eprintfn "%A: Entering %s" stream.Position label
-        #endif
         let reply = p stream
-        #if DEBUG
         eprintfn "%A: Leaving %s (%A)" stream.Position label reply.Status
-        #endif
         reply
+    #else
+    p
+    #endif
 
 /// Apply parser p1, then apply optional parser p2.
 /// If p2 succeeds, pass both results to if2.
@@ -53,7 +53,7 @@ let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
 let maybeTuple2 p1 p2 if2 =
     p1 .>>. (opt p2 <!> "p2") |>> 
     function
-    | a, Some(b) -> if2(a, b)
+    | a, Some b -> if2(a, b)
     | a, None -> a
 
 let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
