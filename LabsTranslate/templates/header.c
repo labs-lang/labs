@@ -30,8 +30,18 @@ int pc[MAXCOMPONENTS][MAXPC];
 int E[MAXKEYE];
 int __LABS_t;
 
-int link(int __LABS_link1, int __LABS_link2) {
-    int __LABS_link = {{link}};
+int link(int __LABS_link1, int __LABS_link2, int key) {
+    int __LABS_link = 0;
+    {%- for l in links -%}
+        {%- if forloop.first -%}
+    if (key >= {{l.start}} && key <= {{l.end}}){
+        {%- else -%}
+    else if (key >= {{l.start}} && key <= {{l.end}}){
+        {%- endif -%}
+        __LABS_link = {{l.link}};
+    }
+    {%- endfor -%}
+
     return __LABS_link;
 }
 
@@ -118,7 +128,7 @@ void confirm(void) {
     ////printf(">>>[%d] start Hin (%d)\n", guessedcomp, guessedkey);    
     
     for (i=0; i<MAXCOMPONENTS; i++) {
-        if ( (guessedcomp!=i) && link(guessedcomp,i) && differentLstig(guessedcomp, i, guessedkey) ) {
+        if ( (guessedcomp!=i) && link(guessedcomp,i,guessedkey) && differentLstig(guessedcomp, i, guessedkey) ) {
             setHout(i, guessedkey);
             for (k = 0; k < MAXKEYL; k++) {
                 if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
@@ -150,7 +160,7 @@ void propagate(void) {
 
     for (i=0; i<MAXCOMPONENTS; i++) {
 
-        if ((guessedcomp!=i) && (link(guessedcomp,i)) && (Ltstamp[i][guessedkey]<t)) {
+        if ((guessedcomp!=i) && (link(guessedcomp,i,guessedkey)) && (Ltstamp[i][guessedkey]<t)) {
             for (k = 0; k < MAXKEYL; k++) {
                 if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
                     Lvalue[i][k] = Lvalue[guessedcomp][k];

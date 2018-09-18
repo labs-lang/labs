@@ -1,16 +1,15 @@
 void {{label}}(int tid) {
-    // {{labs}}
+    //{{labs}}
 
-    {%- for guard in guards -%}{{guard}}
-    {%- endfor -%}
     {%- for item in entrypoints -%}
     __VERIFIER_assume(pc[tid][{{item.pc}}] == {{item.value}});
     {%- endfor -%}
+    {{guards}}
 
     int val = {{expr}};
     {%- if size != 0 -%}
     int offset = {{offset}};
-    assert(offset >= 0 && offset < size);
+    assert(offset >= 0 && offset < {{size}});
     {{type}}(tid, {{key}} + offset, val);
     {%- else -%}
     {{type}}(tid, {{key}}, val);
