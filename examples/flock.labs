@@ -1,8 +1,6 @@
 system {
     extern = _birds, _grid, _delta
     spawn = Bird: _birds
-    link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
-        ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta * _delta
 
     # "Global" processes
     Movex = x <- (x + dirx) % _grid
@@ -10,9 +8,24 @@ system {
 
 }
 
+stigmergy Dir {
+    link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+        ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta * _delta
+
+    <dirx: [-1, 1], diry: [-1,1]>
+
+}
+
+stigmergy S {
+    link = x of c1 > 5
+
+    prova: [1]
+    
+}
+
 agent Bird {
     interface = x: 0.._grid, y: 0.._grid
-    stigmergy = <dirx: [-1, 1], diry: [-1,1]>
+    stigmergies = Dir, S
     
     # "Local" processes (can only be used by component Bird)
     Behavior = (Movex & Movey); Behavior
