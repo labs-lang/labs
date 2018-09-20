@@ -48,7 +48,7 @@ let log msg r =
 
 let logErr result = 
     match result with
-    | Result.Ok(_) -> result
+    | Result.Ok _ -> result
     | Result.Error(s) -> 
         eprintfn "\n%s" (s)
         Result.Error ""

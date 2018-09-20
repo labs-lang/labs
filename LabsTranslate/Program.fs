@@ -53,9 +53,8 @@ let main argv =
 
     parsedCli
     |> logErr
-    |> Result.map (fun args -> args.Contains <@ Info @>)
-    |> Result.map (
-        function 
-        | true -> doInfo parsedCli
-        | _ -> doTranslate parsedCli)
-    |> function Ok(i) -> i | Error(_) -> 10
+    |> Result.map (fun args -> 
+        if args.Contains <@ Info @>
+        then doInfo parsedCli
+        else doTranslate parsedCli)
+    |> function Ok i -> i | Error _ -> 10

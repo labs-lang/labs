@@ -17,7 +17,6 @@ type Node =
     Action<Var> * 
     exit:pcCondition * 
     lbl:string
-//| Guarded of string * Node
 | Goto of guards:Set<BExpr<Var>> * parent:Set<pcCondition> * entry:pcCondition * exit:pcCondition * lbl:string
 | Stop of guards:Set<BExpr<Var>> * parent:Set<pcCondition> * entry:pcCondition
 with 
@@ -80,7 +79,8 @@ let encode (sys, mapping) =
     let spawnedComps = 
         sys.components
         |> Map.filter (fun n _ -> sys.spawn.ContainsKey n)
-    let counter = makeCounter(-1)
+    if spawnedComps.IsEmpty then failwith "No components have been spawned!"
+    let counter = makeCounter -1
 
     let trees = 
         spawnedComps
