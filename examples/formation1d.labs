@@ -1,0 +1,49 @@
+system {
+    extern = _range, _n, _max
+    spawn = Robot: _n
+}
+
+stigmergy Left {
+    link =
+        pos of c1 - pos of c2 > 0 and
+        pos of c1 - pos of c2 <= _range
+
+    idLeft: Undef
+
+}
+
+stigmergy Right {
+    link =
+        pos of c2 - pos of c1 > 0 and
+        pos of c2 - pos of c1 <= _range
+
+    idRight: Undef
+
+}
+
+agent Robot {
+    interface = pos: 0.._max
+    stigmergies = Left, Right
+
+    Behavior =
+        idLeft <~ id;
+        idRight <~ id;
+        (
+            (idLeft != id and pos > 0 ->
+                pos <- pos - 1)
+            &
+            (idRight != id and pos < _max ->
+                pos <- pos + 1
+            )
+        ); Behavior
+
+}
+
+check {
+    P1 = 
+        finally forall Robot a, forall Robot b,
+            id of a = id of b
+            or
+            abs(pos of a - pos of b) >= _range
+
+}

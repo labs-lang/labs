@@ -11,16 +11,6 @@
     <StartArguments>--file ../examples/flock.labs --values birds=10 delta=21 grid=16 --bound 10 --fair</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2' ">
-    <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/flock.labs --values birds=3 delta=21 grid=16 --bound 16</StartArguments>
-    <ExternalConsole>false</ExternalConsole>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2sim' ">
-    <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/flock2.labs --values birds=3 delta=21 grid=16 --bound 16 --simulation</StartArguments>
-    <ExternalConsole>false</ExternalConsole>
-  </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2info' ">
     <StartAction>Project</StartAction>
     <StartArguments>--file ../examples/flock.labs --values birds=3 delta=21 grid=16 --bound 16 --info</StartArguments>
@@ -34,6 +24,16 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Philosophers' ">
     <StartAction>Project</StartAction>
     <StartArguments>--file ../examples/philosophers.labs --bound 2 --values n=3</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Formation1d' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/formation1d.labs --values n=5 max=30 range=4 --bound 16</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Formation1dInfo' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/formation1d.labs --values n=5 max=30 range=4 --bound 16 --info</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
