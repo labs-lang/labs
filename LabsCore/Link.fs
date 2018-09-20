@@ -5,7 +5,9 @@ type LinkTerm<'a> =
     | RefC1 of k:'a
     | RefC2 of k:'a
 
-type Link<'a> = BExpr<LinkTerm<'a>>
+type LinkId = Id1 | Id2
+
+type Link<'a> = BExpr<LinkTerm<'a>, LinkId>
 
 type Stigmergy<'a> = {
     name:string

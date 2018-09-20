@@ -27,18 +27,22 @@ type ArithmOp =
         match this with
         | Plus -> "+" | Minus -> "-" | Times -> "*" | Mod -> "%"
 
-type Expr<'a> =
+type Expr<'a, 'b> =
+    | Id of 'b
     | Const of int
-    | Ref of Ref<'a>
-    | Arithm of Expr<'a> * ArithmOp * Expr<'a>
+    | Ref of Ref<'a, 'b>
+    | Abs of Expr<'a, 'b>
+    | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
     override this.ToString() = 
         match this with
+        | Id _ -> "id"
         | Const v -> string v
-        | Ref(r) -> string r
+        | Ref r -> string r
+        | Abs e -> sprintf "abs(%O)" e
         | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
 
-and Ref<'a> = 
-    {var:'a; offset: Expr<'a> option}
+and Ref<'a, 'b> = 
+    {var:'a; offset: Expr<'a, 'b> option}
     override this.ToString() = 
         match this.offset with
         | Some e -> sprintf "%O[%O]" this.var e
@@ -52,18 +56,22 @@ type CmpOp =
     | Geq
     | Neq
 
+type Bop =
+    | Conj
+    | Disj
+
 ///<summmary>Boolean expressions.</summary>
-type BExpr<'a> =
+type BExpr<'a, 'b> =
     | True
     | False
-    | Compare of Expr<'a> * CmpOp * Expr<'a>
-    | Neg of BExpr<'a>
-    | Conj of BExpr<'a> * BExpr<'a>
+    | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
+    | Neg of BExpr<'a, 'b>
+    | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
 
 type Action<'a> =
-    | AttrUpdate of target:Ref<'a> * expr:Expr<'a>
-    | LStigUpdate of target:Ref<'a> * expr:Expr<'a>
-    | EnvWrite of target:Ref<'a> * expr:Expr<'a>
+    | AttrUpdate of target:Ref<'a, unit> * expr:Expr<'a, unit>
+    | LStigUpdate of target:Ref<'a, unit> * expr:Expr<'a, unit>
+    | EnvWrite of target:Ref<'a, unit> * expr:Expr<'a, unit>
     override this.ToString() = 
         match this with
         | AttrUpdate(r, e) -> sprintf "%O <- %O" r e
@@ -77,7 +85,7 @@ type Process<'a> =
     | Seq of Process<'a> * Process<'a>
     | Choice of Process<'a> * Process<'a>
     | Par of Process<'a> * Process<'a>
-    | Await of BExpr<'a> * Process<'a>
+    | Await of BExpr<'a, unit> * Process<'a>
     | Name of string
     static member private monoid left right op = 
         match left,right with
