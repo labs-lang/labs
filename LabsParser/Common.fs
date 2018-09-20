@@ -18,8 +18,9 @@ let isAlphanum x = isAsciiLetter x || isDigit x
 let isAlphanumlower x = isAsciiLower x || isDigit x
 
 let KEYNAME : Parser<_> =
-    pipe2 asciiLower (manySatisfy isAlphanumlower)
+    pipe2 asciiLower (manySatisfy isAlphanum)
         (fun x y -> sprintf "%O%s" x y)
+    >>= fun x -> if x = "id" then pzero else preturn x
 
 let IDENTIFIER : Parser<_> = 
     pipe2 asciiUpper (manySatisfy isAlphanum) (fun x y -> sprintf "%O%s" x y)
