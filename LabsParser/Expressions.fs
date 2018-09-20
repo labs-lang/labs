@@ -15,14 +15,17 @@ let simpleRef p =
     |>> fun (str, offset) -> {var=str; offset=offset}
 
 /// Creates a parser for arithmetic expressions.
-let rec makeExprParser pref =
+let rec makeExprParser pref pid =
     let pexpr, pexprRef = createParserForwardedToRef()
 
     let pexprTerm = 
         choice [
-            betweenParen pexpr <!> "paren";
-            followedBy pint32 >>. pint32 |>> Const <!> "const";
-            pref pexpr |>> Ref <!> "ref" ;
+            betweenParen pexpr <!> "paren"
+            followedBy (skipString "abs(") >>.
+                (skipString "abs") >>. betweenParen pexpr |>> Abs
+            followedBy pint32 >>. pint32 |>> Const <!> "const"
+            attempt (pref pexpr) |>> Ref <!> "ref"
+            pid |>> Id <!> "id"
         ]
     do pexprRef :=
         maybeTuple2 (ws pexprTerm <!> "term") 
