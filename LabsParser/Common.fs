@@ -80,6 +80,7 @@ let pinit loc =
         >>. ((ws pint32) .>>. ((skipString "..") >>. (ws pint32)) 
         |>> Range)
     let pSingle = (ws pint32) |>> (Choose << List.singleton)
+    let pUndef = stringReturn "Undef" Undef
 
     let pvar = 
         pipe2
@@ -89,7 +90,7 @@ let pinit loc =
             | Some(b) -> {vartype=Array(int b); name=name; location=loc}
             | None -> {vartype=Scalar; name=name; location=loc})
 
-    pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle]))
+    pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle; pUndef]))
 
 let pkeys loc = 
     let lbl = function I -> "interface" | L(_) -> "stigmergy" | E -> "environment"

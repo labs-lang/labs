@@ -8,9 +8,9 @@ let initVarSim (mapping:KeyMapping) (var:Var) init =
     let baseIndex = snd mapping.[var.name]
     let initValue = 
         match init with
-        | Choose(l) -> l.Item (rng.Next l.Length)
-        | Range(minI, maxI) -> rng.Next(minI, maxI)
-        |> string
+        | Choose(l) -> l.Item (rng.Next l.Length) |> string
+        | Range(minI, maxI) -> rng.Next(minI, maxI) |> string
+        | Undef -> "undef_value"
     match var.vartype with
     | Scalar -> assign var initValue baseIndex
     | Array s ->
@@ -25,6 +25,7 @@ let initVar (mapping:KeyMapping) (var:Var) init =
 
     let cVarAssume =
         match init with
+        | Undef -> ""
         | Choose l when l.Length = 1 -> 
             sprintf "%s = %i;\n" cVarName l.Head
         | Choose l ->
@@ -57,6 +58,7 @@ let translateInit initFn (sys, trees, mapping) =
 
     let initMap m = 
         m
+        |> Map.filter (fun _ init -> init <> Undef)
         |> Map.map (initFn mapping)
         |> Map.values
         |> String.concat "\n"

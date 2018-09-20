@@ -105,3 +105,4 @@ type Process<'a> =
  type Init =
      | Choose of int list
      | Range of int * int
+     | Undef

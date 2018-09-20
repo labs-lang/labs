@@ -25,17 +25,19 @@ let translateLocation = function
     | L(_) -> sprintf "Lvalue[%s][%O]"
     | E -> (fun _ -> sprintf "E[%O]")
 
-let def name = 
+let def name init = 
     let typeofVar = function
-        | a, b when a >= 0     && b < 256      -> "unsigned char "
-        | a, b when a > -128   && b < 128      -> "char "
-        | a, b when a >= 0     && b < 65536    -> "unsigned short "
-        | a, b when a > -32768 && b < 32768    -> "short "
-        | a, b when a >=0                      -> "unsigned int "
+        | a, b when a >= 0     && b < 256      -> "unsigned char"
+        | a, b when a > -128   && b < 128      -> "char"
+        | a, b when a >= 0     && b < 65536    -> "unsigned short"
+        | a, b when a > -32768 && b < 32768    -> "short"
+        | a, b when a >=0                      -> "unsigned int"
         | _ -> "int "
-    function
-    | Choose l -> (typeofVar (List.min l, List.max l)) + name + ";\n"
-    | Range(minI, maxI) -> (typeofVar (minI, maxI)) + name + ";\n"
+    match init with
+        | Undef -> "int"
+        | Choose l -> (typeofVar (List.min l, List.max l))
+        | Range(minI, maxI) -> (typeofVar (minI, maxI))
+    |> fun v -> sprintf "%s %s;\n" v name
 
 let assign var cVarName index =
     sprintf "%s = %s;" (translateLocation var.location "i" index) cVarName
