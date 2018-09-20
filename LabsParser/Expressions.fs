@@ -35,6 +35,11 @@ let rec makeExprParser pref pid =
 
 /// Creates a parser for boolean expressions.
 let makeBExprParser pexpr =
+    let pbop : Parser<_> =
+        choice [
+            (stringReturn "and" Conj <!> "Conj");
+            (stringReturn "or" Disj <!> "Disj");
+        ]
     /// Parser for comparison operators
     let pcompareop : Parser<_> =
         let plessleq = skipChar '<' >>. ((charReturn '=' Leq) <|>% Less) 
@@ -59,5 +64,6 @@ let makeBExprParser pexpr =
             stringReturn "false" False
         ]
     do pbexprRef := 
-        maybeTuple2 pbexprTerm ((ws CONJ)  >>. pbexpr) Conj
+        maybeTuple2 (ws pbexprTerm) ((ws pbop)  .>>. pbexpr)
+            (fun (a,(b,c)) -> Compound(a,b,c))
     pbexpr
