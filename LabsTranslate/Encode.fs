@@ -11,14 +11,14 @@ open Liquid
 /// "parent" set. Nodes can be augmented by guards.
 type Node = 
 | Basic of 
-    guards:Set<BExpr<Var>> *
+    guards:Set<BExpr<Var, unit>> *
     parent:Set<pcCondition> * 
     entry:pcCondition *
     Action<Var> * 
     exit:pcCondition * 
     lbl:string
-| Goto of guards:Set<BExpr<Var>> * parent:Set<pcCondition> * entry:pcCondition * exit:pcCondition * lbl:string
-| Stop of guards:Set<BExpr<Var>> * parent:Set<pcCondition> * entry:pcCondition
+| Goto of guards:Set<BExpr<Var, unit>> * parent:Set<pcCondition> * entry:pcCondition * exit:pcCondition * lbl:string
+| Stop of guards:Set<BExpr<Var, unit>> * parent:Set<pcCondition> * entry:pcCondition
 with 
     member this.lbl = 
         match this with
@@ -164,7 +164,7 @@ let translateAll (sys, trees, mapping:KeyMapping) =
         | None -> Int 0
         
     let liquid a =
-        let template, (k:Ref<Var>), e =
+        let template, (k:Ref<Var, unit>), e =
             match a with
             | AttrUpdate(k, e) -> "attr", k, e
             | LStigUpdate(k, e) -> "lstig", k, e

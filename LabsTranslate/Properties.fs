@@ -26,6 +26,11 @@ let translateProp sys mapping (p:Property<Var>) =
         | All -> 
             (trref mapping (cmp+p.name) v offset)
         | Exists -> (trref mapping (sprintf "%i" sub.[cmp]) v offset)
+    let trId (sub:Map<string, int>) name = 
+        match snd p.quantifiers.[name] with 
+        | All -> name+p.name
+        | Exists -> (sprintf "%i" sub.[name])
+
 
     let subs =
         exists
@@ -52,7 +57,7 @@ let translateProp sys mapping (p:Property<Var>) =
         |> String.concat ""
 
     subs
-    |> List.map (fun s -> translateBExpr (translate (tr s)) p.predicate)
+    |> List.map (fun s -> translateBExpr (translate (tr s) (trId s)) p.predicate)
     |> String.concat " || "
     |> inlineassertion
     |> fun x -> sprintf "%s; //%s\n" x p.name

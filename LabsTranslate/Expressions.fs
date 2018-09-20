@@ -11,19 +11,20 @@ let refTypeCheck v (offset:'a option) =
         | Array(_) -> offset.IsNone, (sprintf "Array %s treated as Scalar")
     if test then failwith (msg v.name) else ()
 
-let rec translate trRef =
+let rec translate trRef trId =
     let translateAOp = function
         | Plus -> sprintf "( %s + %s )"
         | Minus -> sprintf "( %s - %s )"
         | Times -> sprintf "( %s * %s )"
         | Mod -> sprintf "mod( %s, %s )"
     function
+    | Id i -> trId i
     | Const i -> sprintf "%i" i
-    | Ref r ->  
-        //do refTypeCheck r
-        (trRef r.var (r.offset |> Option.map (translate trRef)))
+    | Abs e -> sprintf "abs(%s)" (translate trRef trId e)
+    | Ref r ->
+        (trRef r.var (r.offset |> Option.map (translate trRef trId)))
     | Arithm(e1, op, e2) -> 
-        ((translateAOp op) (translate trRef e1) (translate trRef e2))
+        ((translateAOp op) (translate trRef trId e1) (translate trRef trId e2))
 
 /// Translates a variable reference.
 let trref (mapping:KeyMapping) cmp (v:Var) offset =
@@ -35,10 +36,13 @@ let trref (mapping:KeyMapping) cmp (v:Var) offset =
         | Some off -> sprintf "%i + %s" i off
     (translateLocation v.location) cmp index
 
-let translateExpr mapping = translate (trref mapping "tid")
+let translateExpr mapping = translate (trref mapping "tid") (fun () -> "tid")
 
 let rec translateBExpr trExpr =
     let translateBOp = function
+    | Conj -> sprintf "((%s) && (%s))"
+    | Disj -> sprintf "((%s) || (%s))"
+    let translateCOp = function
         | Less -> "<"
         | Equal -> "=="
         | Greater -> ">"
@@ -49,32 +53,38 @@ let rec translateBExpr trExpr =
     | True -> "1"
     | False -> "0"
     | Neg(b) -> sprintf "!(%s)" (translateBExpr trExpr b)
-    | Conj(b1, b2) -> 
-        sprintf "((%s) && (%s))" 
+    | Compound(b1, op, b2) -> 
+        (translateBOp op)
             (translateBExpr trExpr b1) (translateBExpr trExpr b2)
     | Compare(e1, op, e2) ->
         sprintf "(%s) %s (%s)"
             (trExpr e1)
-            (translateBOp op)
+            (translateCOp op)
             (trExpr e2)
 
 let translateGuard mapping = translateBExpr (translateExpr mapping)
 
 let translateLink mapping = 
+    let trLinkId = function
+    | Id1 -> "__LABS_link1"
+    | Id2 -> "__LABS_link2"
     let trLinkRef (l:LinkTerm<Var>) (offset:string option) =
         match l with
         | RefC1 v -> trref mapping "__LABS_link1" v offset 
         | RefC2 v -> trref mapping "__LABS_link2" v offset
-    translateBExpr (translate trLinkRef)
+    translateBExpr (translate trLinkRef trLinkId)
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let rec getLstigVars = function
+    | Id _
+    | Const _ -> Set.empty
+    | Abs e -> getLstigVars e
     | Ref r -> 
         match r.offset with
         | Some e -> getLstigVars e
         | None -> Set.empty
-        |> match r.var.location with | L(_) -> Set.add r.var | _ -> id
+        |> match r.var.location with | L _ -> Set.add r.var | _ -> id
     | Arithm(e1, _, e2) -> Set.union (getLstigVars e1) (getLstigVars e2)
-    | Const(_) -> Set.empty
+
 
 

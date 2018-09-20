@@ -74,9 +74,11 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
     let resolveLinkTerm = function
         | RefC1 k -> findString k |> RefC1
         | RefC2 k -> findString k |> RefC2
-        
+
     let rec toVarExpr finder = function
+        | Id i -> Id i
         | Const i -> Const i
+        | Abs e -> Abs (toVarExpr finder e)
         | Ref r -> Ref (toVarRef finder r)
         | Arithm(e1, op, e2) ->
             Expr.Arithm(toVarExpr finder e1, op, toVarExpr finder e2)
@@ -88,8 +90,8 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
     | Compare(e1, bop, e2) ->
         Compare(toVarExpr finder e1, bop, toVarExpr finder e2)
     | Neg b -> toVarBExpr finder b |> Neg
-    | Conj(b1, b2) ->
-        Conj(toVarBExpr finder b1, toVarBExpr finder b2)
+    | Compound(b1, op, b2) ->
+        Compound(toVarBExpr finder b1, op, toVarBExpr finder b2)
 
     let resolveAction action =
         let locationCheck expectedLoc var =
