@@ -21,7 +21,12 @@ let pquantifier =
             (fun a b c -> c, (b, a))
 
 let pproperty = 
-    let pbaseprop = makeBExprParser (makeExprParser propertyRef)
+    let propertyLink = 
+        (ws (skipString "id")) >>.
+        (ws (skipString "of")) >>.
+        (ws KEYNAME)
+
+    let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink)
     let pmodality = 
         choice [
             stringReturn "finally" Finally;

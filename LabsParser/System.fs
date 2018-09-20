@@ -18,7 +18,11 @@ let plink =
             (ws (skipString "of c") >>. 
                 choice [charReturn '1' RefC1; charReturn '2' RefC2])
             (fun a b c -> {var=c(a); offset=b})
-    makeBExprParser (makeExprParser linkref)
+    let linkId = 
+        (ws (skipString "id")) >>. 
+        (ws (skipString "of c") >>. 
+            choice [charReturn '1' Id1; charReturn '2' Id2])
+    makeBExprParser (makeExprParser linkref linkId)
 
 let plstig =
 

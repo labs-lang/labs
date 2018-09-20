@@ -4,7 +4,7 @@ open FParsec
 open Types
 open Expressions    
 
-let pexpr = makeExprParser simpleRef
+let pexpr = makeExprParser simpleRef (skipString "id" |> ws)
 
 /// Parses elementary processes ("actions")
 let paction =
