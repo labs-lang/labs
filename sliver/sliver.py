@@ -89,7 +89,7 @@ def gather_info(call):
     call_info = call + ["--info"]
     info = check_output(call_info, env=env)
     # Deserialize system info
-    i_names, l_names, e_names, comps, *_ = info.decode().split("\n")
+    i_names, e_names, l_names, comps, *_ = info.decode().split("\n")
     info = {
         "I": i_names.split(","),
         "L": l_names.split(","),
@@ -191,6 +191,10 @@ def main(file: "path to LABS file",
         finally:
             out = out.decode("utf-8")
             remove(fname)
+            if backend == "cseq":
+                for suffix in ("", ".map", ".cbmc-assumptions.log"):
+                    remove("_cs_" + fname + suffix)
+
             if ("VERIFICATION SUCCESSFUL" in out):
                 print("No properties violated!", end="", file=sys.stderr)
                 if simulate:
