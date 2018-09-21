@@ -20,7 +20,7 @@ let parse =
             })
 
 let stripComments = 
-    stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>. preturn "")
+    stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>% "")
 
 let pre =
     attempt (skipMany1Till skipAnyChar (eof <|> followedBy (pstring "extern"))

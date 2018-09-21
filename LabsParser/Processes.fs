@@ -10,7 +10,7 @@ let pexpr = makeExprParser simpleRef (skipString "id" |> ws)
 let paction =
     let parseArrow =
         skipChar '<' >>. choice [
-            followedBy (pstring "--") >>. stringReturn "--" EnvWrite; 
+            followedBy (skipString "--") >>. stringReturn "--" EnvWrite; 
             charReturn '-' AttrUpdate;
             charReturn '~' LStigUpdate
         ]
