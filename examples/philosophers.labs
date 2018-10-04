@@ -1,11 +1,11 @@
 system {
     extern = _n
-    environment = fork[_n]: [0]
+    environment = fork[_n]: 0
     spawn = Phil: _n
 }
 
 agent Phil {
-    interface = think: [0], eat: [0], id: 0.._n
+    interface = think: 0, eat: 0
 
     Behavior =
         think <- think + 1;
