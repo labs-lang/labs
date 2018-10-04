@@ -3,13 +3,14 @@ system {
     spawn = Robot: _n
 }
 
+# left and right stigmergies model distance sensors
+
 stigmergy Left {
     link =
         pos of c1 - pos of c2 > 0 and
         pos of c1 - pos of c2 <= _range
 
-    idLeft: Undef
-
+    idLeft: undef
 }
 
 stigmergy Right {
@@ -17,11 +18,12 @@ stigmergy Right {
         pos of c2 - pos of c1 > 0 and
         pos of c2 - pos of c1 <= _range
 
-    idRight: Undef
+    idRight: undef
 
 }
 
 agent Robot {
+
     interface = pos: 0.._max
     stigmergies = Left, Right
 

@@ -19,7 +19,7 @@ stigmergy Dir {
 stigmergy S {
     link = x of c1 > 5
 
-    prova: Undef
+    prova: undef
     
 }
 

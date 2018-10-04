@@ -81,7 +81,7 @@ let pinit loc =
         >>. ((ws pint32) .>>. ((skipString "..") >>. (ws pint32)) 
         |>> Range)
     let pSingle = (ws pint32) |>> (Choose << List.singleton)
-    let pUndef = stringReturn "Undef" Undef
+    let pUndef = stringReturn "undef" Undef
 
     let pvar = 
         pipe2
@@ -94,7 +94,7 @@ let pinit loc =
     pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle; pUndef]))
 
 let pkeys loc = 
-    let lbl = function I -> "interface" | L(_) -> "stigmergy" | E -> "environment"
+    let lbl = function I -> "interface" | L _ -> "stigmergy" | E -> "environment"
     ws (sepbycommas (ws (pinit loc)))
     >>= toMapF (fun x -> x.name) <??> lbl loc
 

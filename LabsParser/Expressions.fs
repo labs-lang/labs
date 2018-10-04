@@ -14,7 +14,9 @@ let simpleRef p =
     KEYNAME .>>. (opt (betweenBrackets p))
     |>> fun (str, offset) -> {var=str; offset=offset}
 
-/// Creates a parser for arithmetic expressions.
+/// Creates a parser for arithmetic expressions, given
+/// a parser for referencss "pref" and a parser for 
+/// ids "pid".
 let rec makeExprParser pref pid =
     let pexpr, pexprRef = createParserForwardedToRef()
 
