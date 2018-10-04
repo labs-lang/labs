@@ -1,0 +1,151 @@
+%YAML 1.2
+---
+# See http://www.sublimetext.com/docs/3/syntax.html
+# © 2018 Luca Di Stefano, Gran Sasso Science Institute
+name: LAbS
+file_extensions:
+  - labs
+scope: source.labs
+
+variables:
+  identifier: \b([A-Z]\w*)\b
+  def: ^\s*\b{{identifier}}\b\s*=
+
+contexts:
+  # The prototype context is prepended to all contexts but those setting
+  # meta_include_prototype: false.
+  prototype:
+    - include: specials
+    - include: comments
+
+  main:
+    # The main context is the initial starting point of our syntax.
+    # Include other contexts from here (or specify them directly).
+    - include: sysdef
+    - include: lstigdef
+    - include: agentdef
+    - include: checkdef
+
+  identifier:
+    - match: '{{identifier}}'
+      scope: entity.name.class.labs
+      pop: true
+
+  eq:
+    - match: =
+      scope: source.labs
+      pop: true
+
+  operators:
+    - match: \babs\b
+      scope: entity.name.function.labs
+    - match: =|!=|>|<|\b(and|or|not|of)\b
+      scope: keyword.operator.logical.labs
+    - match: \+|-|\*|/|%
+      scope: keyword.operator.arithmetic.labs
+
+  procDef:
+    - match: ^\s*\b{{identifier}}\b\s*=
+      captures:
+        1: support.function.labs
+      push: proc
+
+  proc:
+    - match: \b{{identifier}}(?!\s*=)\b
+      scope: constant.other.labs
+    - include: procDef
+    - match: <--|<~|<-
+      scope: keyword.operator.assignment.labs
+    - match: (->|\||&)
+      captures:
+        1: keyword.operator.labs
+    - include: operators
+    - match: \b(Skip|Nil)\b
+      scope: constant.other.labs
+    - match: '\}'
+      set: main
+
+  sysdef:
+    - match: \bsystem\b
+      scope: keyword.declaration.labs
+      set: [system, braces]
+
+
+  braces:
+    - match: \{
+      pop: true
+    - match: \}
+      scope: invalid.illegal.stray-brace.labs
+
+  system:
+
+    - match: \b(spawn|extern|environment)\b
+      scope: keyword.declaration.labs
+      push: eq
+    - include: procDef
+    # - include: identifier
+    - match: \}
+      set: main
+
+
+  agentdef: 
+    - match: \bagent\b
+      scope: keyword.declaration.extends.labs
+      set: [agent, braces, identifier]
+
+  agent:
+    - match: \b(interface|stigmergies)\b
+      captures:
+        1: entity.other.attribute-name.labs
+    - include: procDef
+    - match: \}
+      set: main
+
+  lstigdef: 
+    - match: \bstigmergy\b
+      scope: keyword.control.labs
+      set: [lstig, braces, identifier]
+
+  lstig:
+    - match: \blink\b
+      scope: entity.other.attribute-name.labs
+    - include: operators
+    - match: '\}'
+      set: main
+
+  checkdef:
+    - match: \bcheck\b
+      scope: keyword.control.labs
+      set: [check, braces]
+
+  check:
+    - match: '{{def}}'
+      captures:
+        1: support.function.labs
+    # - include: identifier
+    - include: operators
+
+    - match: \b(finally|always|forall|exists)\b
+      captures:
+        1: keyword.control.labs
+
+  specials:
+    - match: \b_\S+\b
+      scope: string.labs
+    - match: \b(c1|c2|id)\b
+      captures:
+        1: support.constant.labs
+    - match: \bundef\b
+      scope: constant.numeric.labs
+    - match: \b[0-9.]+\b
+      scope: constant.numeric.labs
+
+  comments:
+    # Comments begin with a '#' and finish at the end of the line.
+    - match: '#'
+      scope: punctuation.definition.comment.labs
+      push:
+        # This is an anonymous context push for brevity.
+        - meta_scope: comment.line.double-slash.labs
+        - match: $\n?
+          pop: true
