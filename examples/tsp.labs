@@ -1,0 +1,81 @@
+system {
+    extern = _n
+    # ...
+
+    Prova = Skip; Nil
+}
+
+stigmergy AB {
+    # "conditional broadcast" (people can write on it only if they are in
+    # A or B, but anybody can receive)
+    link = pos of c1 = 0 or pos of c1 = 1
+
+    ab: 0
+}
+
+# .... (one stigmergy per edge)
+
+agent Ant {
+    interface = 
+        pos: 0..4,
+        total: 0,
+        next[4]: -1
+    stigmergies = AB, AC, AD, BC, BD
+  
+    Behavior = (FirstLoop | OtherLoops)
+
+    # Perform a random tour and track total length traveled.
+    FirstLoop = 
+        next[pos] = -1 ->
+            (pos = 0 -> 
+                (total <- total + 20; pos <- 1; next[0] = 1)
+                &
+                (total <- total + 42; pos <- 2; next[0] = 2)
+                & 
+                (total <- total + 35; pos <- 3; next[0] = 3))
+            &
+            pos = 1 -> # ...
+        ; FirstLoop
+
+    # If there is a clear pheromone trail, follow it.
+    # Else repeat first tour.
+    # When walking on an edge, increase pheromones by 100/total.
+    OtherLoops = 
+        next[pos] != -1 ->
+            pos = 0 ->
+                next[pos] = 1 or (ab > 2*ac and ab > 2*ad) ->
+                    pos <- 1;
+                    ab <~ ab + (100/total)
+                &
+                next[pos] = 2 or (ac > 2*ab and ac > 2*ad) ->
+                    pos <- 2;
+                    ac <~ ac + (100/total)
+                &
+                next[pos] = 3 or (ad > 2*ab and ad > 2*ac) ->
+                    pos <- 3;
+                    ac <~ ac + (100/total)
+            &
+            pos = 1 -> # ...
+        ; OtherLoops
+
+}
+
+agent Pheromone {
+    interface = pos: 0
+    stigmergies = AB, AC, AD, BC, BD
+
+    # Simulate evaporation of pheromones by decreasing an arbitrary counter
+    Behavior = 
+        (ab > 0 -> pos <- 0; ab <~ ab - 1)
+        &
+        (ac > 0 -> pos <- 0; ac <~ ac - 1)
+        &
+        # ...
+        ); Behavior
+
+
+}
+
+check {
+    
+}

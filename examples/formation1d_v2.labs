@@ -1,0 +1,56 @@
+system {
+    extern = _range, _n, _max
+    spawn = Robot: _n
+}
+
+# left and right stigmergies model distance sensors
+
+stigmergy Left {
+    link =
+        pos of c1 - pos of c2 >= 0 and
+        pos of c1 - pos of c2 <= _range
+
+    idLeft: undef
+}
+
+stigmergy Right {
+    link =
+        pos of c2 - pos of c1 > 0 and
+        pos of c2 - pos of c1 <= _range
+
+    idRight: undef
+
+}
+
+agent Robot {
+
+    interface = pos: 1.._max
+    stigmergies = Left, Right
+
+    Behavior =
+        idLeft <~ id;
+        idRight <~ id;
+        (
+            (idLeft != id -> 
+                (pos > 0 -> pos <- pos - 1)
+                &
+                (pos = 0 -> pos <- pos + 1))
+            &
+            (idRight != id ->
+                (pos < _max -> pos <- pos + 1)
+                &
+                (pos = _max -> pos <- pos - 1))
+        ); Behavior
+
+}
+
+check {
+    Ppos = always forall Robot a, pos of a >= 0 and pos of a <= _max
+
+    P1 = 
+        finally forall Robot a, forall Robot b,
+            id of a = id of b
+            or
+            abs(pos of a - pos of b) >= _range
+
+}
