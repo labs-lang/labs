@@ -2,13 +2,17 @@ void monitor() {
 {{alwaysasserts}}
 }
 
+void finally() {
+    {{finallyasserts}}
+}
+
 int main(void) {
     init();
     unsigned char choice[BOUND];
     int __LABS_step;
     {% if fair -%}unsigned char last;{% endif %}
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
-        if (all_term()) break;
+        if (terminalState()) break;
     
         __VERIFIER_assume(choice[__LABS_step] < MAXCOMPONENTS + 2);
     
@@ -38,7 +42,6 @@ int main(void) {
         monitor();
     }
     
-{{finallyasserts}}
-    
+    finally();
 }
 
