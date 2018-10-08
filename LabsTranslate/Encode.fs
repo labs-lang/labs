@@ -75,15 +75,12 @@ let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
         rootName entry counter Set.empty Set.empty entry 
         {pc=pc;value=counter()} (procs.[rootName] ^. Nil) rootName), entry.value
 
-let encode (sys, mapping) = 
-    let spawnedComps = 
-        sys.components
-        |> Map.filter (fun n _ -> sys.spawn.ContainsKey n)
-    if spawnedComps.IsEmpty then failwith "No components have been spawned!"
+let encode (sys:SystemDef<Var>, mapping) = 
+    if sys.SpawnedComps.IsEmpty then failwith "No components have been spawned!"
     let counter = makeCounter -1
 
     let trees = 
-        spawnedComps
+        sys.SpawnedComps
         |> Map.map (fun _ def -> (def, Map.merge sys.processes def.processes))
         |> Map.map (fun _ (def, procs) -> baseVisit procs counter mapping "Behavior")
         //|> Map.mapValues fst
