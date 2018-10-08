@@ -12,44 +12,44 @@ let inline (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
     
 let setReturnCode r =
     match r with 
-    | Result.Ok(_) -> 0
-    | Result.Error(_) -> 10
+    | Result.Ok _ -> 0
+    | Result.Error _ -> 10
 
 // Binds the first element and keeps the second
 let (.>>=) r f =
     match r with
-    | Result.Ok(a,b) -> 
-        f a >>= fun x -> Result.Ok (x,b)
-    | Result.Error(_) -> r  
+    | Result.Ok(a, b) -> 
+        f a >>= fun x -> Result.Ok (x, b)
+    | Result.Error _ -> r  
 
 // Keeps the first element and binds the second
 let (>>=.) r f =
     match r with
-    | Result.Ok(a,b) -> 
-        f b >>= fun x -> Result.Ok(a,x)
-    | Result.Error(_) -> r
+    | Result.Ok(a, b) -> 
+        f b >>= fun x -> Result.Ok(a, x)
+    | Result.Error _ -> r
 
 /// Puts the results of r2 and r1 in a new Result
 let (>+>) r2 r1 =
     match r2, r1 with
-    | Result.Ok(a), Result.Ok(b) -> Result.Ok (a, b)
-    | Result.Error(err), _
-    | _, Result.Error(err) -> Result.Error err
+    | Result.Ok a, Result.Ok b -> Result.Ok (a, b)
+    | Result.Error err, _
+    | _, Result.Error err -> Result.Error err
 
 let (<&>) f g a =
     (f a) >+> (g a)
     
 let log msg r = 
     match r with
-    | Result.Ok(_) -> 
+    | Result.Ok _ -> 
         eprintfn "\n%s" msg
         r
-    | Result.Error(_) -> r
+    | Result.Error _ -> r
 
 let logErr result = 
     match result with
     | Result.Ok _ -> result
-    | Result.Error(s) -> 
+    | Result.Error s -> 
         eprintfn "\n%s" (s)
         Result.Error ""
 
@@ -104,7 +104,7 @@ let parse (text, (placeholders:Map<string, string>)) =
 
 let enumerate s = 
     s
-    |> Seq.mapi (fun i x -> x,i)
+    |> Seq.mapi (fun i x -> x, i)
     |> Map.ofSeq
 
 
