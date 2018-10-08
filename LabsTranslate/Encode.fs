@@ -6,34 +6,26 @@ open Expressions
 open Properties
 open Liquid
 
+type NodeType = Basic of Action<Var> * exit:pcCondition | Goto of exit:pcCondition | Stop
+
 /// A Node is composed by a label, an entry/exit point,
 /// and an action. Additional entry conditions are specified in the
 /// "parent" set. Nodes can be augmented by guards.
-type Node = 
-| Basic of 
-    guards:Set<BExpr<Var, unit>> *
-    parent:Set<pcCondition> * 
-    entry:pcCondition *
-    Action<Var> * 
-    exit:pcCondition * 
-    lbl:string
-| Goto of guards:Set<BExpr<Var, unit>> * parent:Set<pcCondition> * entry:pcCondition * exit:pcCondition * lbl:string
-| Stop of guards:Set<BExpr<Var, unit>> * parent:Set<pcCondition> * entry:pcCondition
-with 
+type Node = {
+    nodeType:NodeType
+    label:string
+    guards:Set<BExpr<Var, unit>>
+    parent:Set<pcCondition>
+    entry:pcCondition
+} with 
     member this.lbl = 
-        match this with
-        | Basic(lbl=l;entry=e)
-        | Goto(lbl=l;entry=e) -> sprintf "%s_%i" l e.value
-        | Stop(entry=e) -> sprintf "Stop_%i" e.value
-        //| Guarded(_,n) -> n.lbl
+        match this.nodeType with
+        | Basic _
+        | Goto _ -> sprintf "%s_%i" this.label this.entry.value
+        | Stop _ -> sprintf "Stop_%i" this.entry.value
     member this.entrypoints = 
-        match this with
-        //| Guarded(_,n) -> n.entrypoints
-        | Basic(parent=par;entry=e)
-        | Goto(parent=par;entry=e)
-        | Stop(parent=par;entry=e) ->
-            let x = Set.filter (fun p -> p.pc = e.pc) par
-            if x.IsEmpty then Set.add e par else par
+        let x = Set.filter (fun p -> p.pc = this.entry.pc) this.parent
+        if x.IsEmpty then (Set.add this.entry this.parent) else this.parent
 
 let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
     let pccount = makeCounter -1
@@ -42,11 +34,13 @@ let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
         let parentUnion = Set.union parent
 
         match p with
-        | Base(a) -> 
-            Set.singleton <| Basic(guards, parent, entry, a, exit, lbl)
-        | Name(s) when s = name ->
-            Set.singleton <| Goto(guards, parent, entry, rootEntry, lbl)
-        | Name(s) -> visit name rootEntry cnt guards parent entry exit procs.[s] (lbl)
+        | Base a -> 
+            {guards=guards; parent=parent; entry=entry; nodeType=Basic(a, exit); label=lbl}
+            |> Set.singleton
+        | Name s when s = name ->
+            {guards=guards; parent=parent; entry=entry; nodeType=Goto rootEntry; label=lbl}
+            |> Set.singleton
+        | Name s -> visit name rootEntry cnt guards parent entry exit procs.[s] (lbl)
         | Await(b, p) -> 
             visit name rootEntry cnt (guards.Add b) parent entry exit p lbl
         | Choice(p, q) -> 
@@ -66,8 +60,12 @@ let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
             let pnodes = visit name rootEntry lCount guards newPar {pc=leftPc;value=lCount()} {pc=leftPc;value=lCount()} p (lbl + "_L")
             let qnodes = visit name rootEntry rCount guards newPar {pc=rightPc;value=rCount()} {pc=rightPc;value=rCount()} q (lbl + "_R")
             (Set.union pnodes qnodes)//, (Set.union pexits qexits).Add(entry)
-        | Skip -> Set.singleton <| Goto(guards, parent, entry, exit, lbl)
-        | Nil -> Set.singleton <| Stop(guards, parent, entry)
+        | Skip -> 
+            {guards=guards; parent=parent; entry=entry; nodeType=Goto exit; label=lbl}
+            |> Set.singleton
+        | Nil -> 
+            {guards=guards; parent=parent; entry=entry; nodeType=Stop; label=lbl}
+            |> Set.singleton
 
     let pc = pccount()
     let entry = {pc=pc;value=counter()}
@@ -83,22 +81,17 @@ let encode (sys:SystemDef<Var>, mapping) =
         sys.SpawnedComps
         |> Map.map (fun _ def -> (def, Map.merge sys.processes def.processes))
         |> Map.map (fun _ (def, procs) -> baseVisit procs counter mapping "Behavior")
-        //|> Map.mapValues fst
 
     Result.Ok(sys, trees, mapping)
     
 let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     // Find the number of PCs used in the program
     let maxPc =
-        let rec getPc = function
-            | Goto(entry=e; parent=p)
-            | Stop(entry=e; parent=p)
-            | Basic(entry=e; parent=p) -> 
-                if p.IsEmpty then
-                    e.pc
+        let getPc node = 
+            if node.parent.IsEmpty then node.entry.pc
                 else
-                    (p |> Set.map (fun x -> x.pc) |> Set.maxElement)
-                    |> max e.pc
+                (node.parent |> Set.map (fun x -> x.pc) |> Set.maxElement)
+                |> max node.entry.pc
         trees
         |> Map.values
         |> Seq.map fst
@@ -155,7 +148,7 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
 
 
 
-let translateAll (sys, trees, mapping:KeyMapping) =
+let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
     let doOffset  = function
         | Some e -> translateExpr mapping e |> Str
         | None -> Int 0
@@ -183,9 +176,10 @@ let translateAll (sys, trees, mapping:KeyMapping) =
                 |> Lst
         ]
 
-    let rec newTranslate n = 
-        let entries (node:Node) =
-            node.entrypoints
+    let newTranslate (n:Node) = 
+
+        let entries =
+            n.entrypoints
             |> Seq.map (fun x -> Dict ["pc", Int x.pc; "value", Int x.value]) 
 
         let exitHash e = 
@@ -194,37 +188,33 @@ let translateAll (sys, trees, mapping:KeyMapping) =
                 "exitvalue", Int e.value;
             ]
 
-        let template, guards, list = 
-            match n with
-            //| Guarded(s, node) -> newTranslate (s+guards) node
-            | Basic(guards, parent, entry, a, exit, lbl) ->
-                transition, guards, Seq.append (exitHash exit) (liquid a)
-            | Goto(guards, parent, entry, exit, lbl) ->
-                goto, guards, (exitHash exit)
-            | Stop(guards, parent, entry) ->
-                stop, guards, Seq.empty
-        
-        template,
+        let template, list = 
+            match n.nodeType with
+            | Basic(a, ex) -> transition, Seq.append (exitHash ex) (liquid a)
+            | Goto ex -> goto, (exitHash ex)
+            | Stop -> stop, Seq.empty
+
         [
-            "label", Str n.lbl;
-            "entrypoints", (entries n) |> Lst ;
+            "label", Str n.lbl
+            "entrypoints", Lst entries
             "guards",
-                guards
+                n.guards
                 |> Set.map (assume << translateGuard mapping)
                 |> Seq.map Str
                 |> Lst
-        ] |> Seq.append list
+        ]
+        |> Seq.append list
+        |> render
+        |> fun x -> Result.bind x template
 
     trees
     |> Map.values
-    |> Seq.map fst
-    |> Set.unionMany
-    |> Seq.map newTranslate
-    |> Seq.map (fun (t, list) -> t |> Result.bind (render list))
+    |> Seq.collect fst
+    |> Set.ofSeq
+    |> Set.map newTranslate
     /// This will be a Result.Ok iff. all results in the sequence are Ok
-    |> Seq.fold (fun state y -> Result.bind (fun () -> y) state) (Result.Ok ())
+    |> Seq.reduce (fun r1 r2 -> r1 |> Result.bind (fun _ -> r2))
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
-
 
 let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
     let nodes = 
