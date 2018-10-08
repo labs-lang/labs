@@ -19,6 +19,13 @@ let translateProp sys mapping (p:Property<Var>) =
         Map.partition
             (fun _ (_, q) -> match q with Exists -> true | _ -> false)
             p.quantifiers
+
+    
+    if not (exists.IsEmpty || forall.IsEmpty) then 
+        p.name
+        |> sprintf "Property %s: alternating quantifiers are currently not supported"
+        |> failwith
+
     //Given a substitution table, resolves references to quantified
     //component names.
     let tr (sub:Map<string, int>) (v, cmp) offset =
@@ -37,8 +44,7 @@ let translateProp sys mapping (p:Property<Var>) =
         |> Map.map (fun id (cmpType, _) -> sys.spawn.[cmpType])
         |> Map.toList
         |> List.map (fun (id, (starts, ends)) ->
-            [starts..ends-1]
-            |> List.map (fun i -> id,i))
+            [starts..ends-1] |> List.map (fun i -> id,i))
         |> cart
         |> List.map Map.ofList
         |> fun x -> if x.IsEmpty then [Map.empty] else x
