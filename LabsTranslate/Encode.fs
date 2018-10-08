@@ -89,7 +89,7 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     let maxPc =
         let getPc node = 
             if node.parent.IsEmpty then node.entry.pc
-                else
+            else
                 (node.parent |> Set.map (fun x -> x.pc) |> Set.maxElement)
                 |> max node.entry.pc
         trees
@@ -146,7 +146,24 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
     |> renderFile "templates/header.c"
     |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
+let translateCanProceed (sys:SystemDef<Var>, trees, mapping:KeyMapping) =
+    let translatePc p = sprintf "(pc[tid][%i] == %i)" p.pc p.value
 
+    trees
+    |> Map.values
+    |> Seq.collect fst
+    |> Seq.map (fun n -> 
+        n.guards 
+        |> Set.map (translateGuard mapping)
+        |> Set.union (n.parent |> Set.map (sprintf "(%s)" << translatePc))
+        |> Set.add (translatePc n.entry)
+        |> String.concat " && "
+        |> Str
+    )
+    |> Seq.distinct
+    |> fun x -> seq ["guards", Lst x]
+    |> renderFile "templates/canProceed.c"
+    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
 let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
     let doOffset  = function

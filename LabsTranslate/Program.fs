@@ -14,14 +14,14 @@ let main argv =
         let isFair = 
             parsedCli
             |> Result.map (fun args -> args.Contains <@ Fair @>)
-            |> function Ok(true) -> true | _ -> false
+            |> function Ok true -> true | _ -> false
 
         let chosenInit =
             parsedCli
             |> Result.map (fun args -> args.Contains <@ Simulation @>)
             |> function Ok(true) -> initVarSim | _ -> initVar
             |> translateInit
-
+        
         (filenameOf cli)
         >>= readFile
         >+> (placeholders cli)
@@ -35,10 +35,11 @@ let main argv =
         >>= translateHeader
         >>= chosenInit
         >>= translateAll 
+        >>= translateCanProceed
         >>= (translateMain isFair)
         |> logErr // Log any error at the end
         |> setReturnCode
-
+         
     let doInfo cli = 
         (filenameOf cli)
         >>= readFile
