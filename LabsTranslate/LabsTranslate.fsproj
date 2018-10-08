@@ -37,7 +37,7 @@
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Update="Microsoft.NETCore.App" Version="2.1.4" />
+    <PackageReference Update="Microsoft.NETCore.App" Version="2.1.*" />
   </ItemGroup>
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
@@ -53,7 +53,7 @@
     <Compile Include="Program.fs" />
     <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
     <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
-    <PackageReference Include="Argu" Version="4.2.1" />
+    <PackageReference Include="Argu" Version="5.1.0" />
     <PackageReference Include="DotLiquid" Version="2.0.298" />
   </ItemGroup>
 </Project>
