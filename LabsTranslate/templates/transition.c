@@ -2,9 +2,9 @@ void {{label}}(int tid) {
     //{{labs}}
 
     {%- for item in entrypoints -%}
-    __VERIFIER_assume(pc[tid][{{item.pc}}] == {{item.value}});
-    {%- endfor -%}
-    {{guards}}
+    LABSassume(pc[tid][{{item.pc}}] == {{item.value}});{%- endfor -%}
+    {%- for guard in guards -%}
+    LABSassume({{guard}});{%- endfor -%}
 
     int val = {{expr}};
     {%- if size != 0 -%}

@@ -8,9 +8,9 @@ let indent num (s:string) =
     s.Split "\n"
     |> Seq.map (sprintf "%s%s" (String.replicate num " "))
     |> String.concat "\n"
-    
-let assume = sprintf "__VERIFIER_assume(%s);\n"
-let inlineassertion = sprintf "assert(%s);"
+
+let assume = sprintf "LABSassume(%s);\n"
+let inlineassertion = sprintf "LABSassert(%s, %s);"
 
 let forLoop i j s = 
     (indent 4 s) |>

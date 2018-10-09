@@ -1,9 +1,9 @@
 void {{label}}(int tid) {
-    {%- for guard in guards -%}{{guard}}
-    {%- endfor -%}
     {%- for item in entrypoints -%}
-    __VERIFIER_assume(pc[tid][{{item.pc}}] == {{item.value}});
-    {%- endfor -%}
+    LABSassume(pc[tid][{{item.pc}}] == {{item.value}});{%- endfor -%}
+    {%- for guard in guards -%}
+    LABSassume({{guard}});{%- endfor -%}
+
     {%- if resetpcs -%}
     int i;
     for (i=1; i<MAXPC; i++) {
