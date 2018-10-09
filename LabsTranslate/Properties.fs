@@ -65,6 +65,6 @@ let translateProp sys mapping (p:Property<Var>) =
     subs
     |> List.map (fun s -> translateBExpr (translate (tr s) (trId s)) p.predicate)
     |> String.concat " || "
-    |> inlineassertion
-    |> fun x -> sprintf "%s; //%s\n" x p.name
+    |> fun pstring -> inlineassertion pstring p.name
+    |> fun x -> sprintf "%s //%s\n" x p.name
     |> (+) assumptions
