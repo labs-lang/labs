@@ -9,25 +9,14 @@ type KeyMapping = Map<string, Var * int>
 
 /// Bind operator for Result.
 let inline (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
-    
+
+// Returns r2 if r1 is Ok, else returns r1
+let inline (<&&>) r1 r2 = r1 |> Result.bind (fun _ -> r2)
+
 let setReturnCode r =
     match r with 
     | Result.Ok _ -> 0
     | Result.Error _ -> 10
-
-// Binds the first element and keeps the second
-let (.>>=) r f =
-    match r with
-    | Result.Ok(a, b) -> 
-        f a >>= fun x -> Result.Ok (x, b)
-    | Result.Error _ -> r  
-
-// Keeps the first element and binds the second
-let (>>=.) r f =
-    match r with
-    | Result.Ok(a, b) -> 
-        f b >>= fun x -> Result.Ok(a, x)
-    | Result.Error _ -> r
 
 /// Puts the results of r2 and r1 in a new Result
 let (>+>) r2 r1 =

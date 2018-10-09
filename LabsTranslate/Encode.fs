@@ -86,7 +86,7 @@ let encode (sys:SystemDef<Var>, mapping) =
 
     Result.Ok(sys, trees, mapping)
 
-let translateHeader isSimulation ((sys,trees, mapping:KeyMapping), bound) =
+let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
     // Find the number of PCs used in the program
     let maxPc =
         let getPc node = 
@@ -147,7 +147,6 @@ let translateHeader isSimulation ((sys,trees, mapping:KeyMapping), bound) =
         "links", Lst links
     ]
     |> renderFile "templates/header.c"
-    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
 let translateCanProceed (sys:SystemDef<Var>, trees, mapping:KeyMapping) =
     let translatePc p = sprintf "(pc[tid][%i] == %i)" p.pc p.value
@@ -166,7 +165,6 @@ let translateCanProceed (sys:SystemDef<Var>, trees, mapping:KeyMapping) =
     |> Seq.distinct
     |> fun x -> seq ["guards", Lst x]
     |> renderFile "templates/canProceed.c"
-    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
 
 let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
     let doOffset  = function
@@ -201,13 +199,7 @@ let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
         let entries =
             n.entrypoints
             |> Seq.map (fun x -> Dict ["pc", Int x.pc; "value", Int x.value]) 
-
-        let exitHash e = 
-            seq [
-                "exitpc", Int e.pc;
-                "exitvalue", Int e.value;
-            ]
-
+            
         let template, list = 
             match n.nodeType with
             | Basic a -> transition, liquid a
@@ -227,17 +219,15 @@ let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
                 |> Lst
         ]
         |> Seq.append list
-        |> render
+        |> strRender
         |> fun x -> Result.bind x template
 
     trees
     |> Map.values
     |> Seq.collect fst
     |> Set.ofSeq
-    |> Set.map newTranslate
-    /// This will be a Result.Ok iff. all results in the sequence are Ok
-    |> Seq.reduce (fun r1 r2 -> r1 |> Result.bind (fun _ -> r2))
-    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
+    |> Seq.map (fun n -> async { return newTranslate n })
+    |> Async.Parallel
 
 let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
     let nodes = 
@@ -269,4 +259,3 @@ let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
             |> indent 4 |> Str
     ]
     |> renderFile "templates/main.c"
-    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))

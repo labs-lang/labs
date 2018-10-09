@@ -35,7 +35,7 @@ let checkNames sys =
                     "%s\n%s: the following processes are undefined: %s"
                     msg name (withcommas undefs)
         ) initialmsg
-        |> fun msg -> if msg.Length = 0 then Ok sys else Error msg
+        |> fun msg -> if msg.Length = 0 then Ok () else Error msg
 
     undefinedNames sys.processes
     |> fun x -> 
@@ -57,7 +57,7 @@ let checkComponents sys =
         Result.Error "No components defined"
     else
         if undefBehaviors.IsEmpty then
-            Result.Ok sys
+            Result.Ok ()
         else
             undefBehaviors
             |> Map.map (fun name _ -> sprintf "%s: Behavior is undefined" name)
@@ -230,4 +230,4 @@ let analyzeKeys sys =
     attrKeys
     |> Map.mergeIfDisjoint lstigkeys
     |> Map.mergeIfDisjoint envKeys
-    |> (fun m -> Result.Ok (sys, m))
+    |> Result.Ok

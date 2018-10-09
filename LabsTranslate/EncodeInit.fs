@@ -93,4 +93,3 @@ let translateInit (sys, trees, mapping) =
         "tuples", Lst (makeTuples (Map.values sys.components) mapping)
     ]
     |> renderFile "templates/init.c"    
-    |> Result.bind (fun () -> Result.Ok(sys, trees, mapping))
