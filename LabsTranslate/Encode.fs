@@ -83,8 +83,8 @@ let encode (sys:SystemDef<Var>, mapping) =
         |> Map.map (fun _ (def, procs) -> baseVisit procs counter mapping "Behavior")
 
     Result.Ok(sys, trees, mapping)
-    
-let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
+
+let translateHeader isSimulation ((sys,trees, mapping:KeyMapping), bound) =
     // Find the number of PCs used in the program
     let maxPc =
         let getPc node = 
@@ -113,11 +113,12 @@ let translateHeader ((sys,trees, mapping:KeyMapping), bound) =
         [
             "BOUND", bound; 
             "MAXCOMPONENTS", maxcomps;
-            "MAXPC", maxPc; 
+            "MAXPC", maxPc;
             "MAXKEYI", ((findMaxIndex ifaces) + 1)
             "MAXKEYL", ((findMaxIndex lstig) + 1)
             "MAXKEYE", ((findMaxIndex env) + 1)
         ]
+        |> (if isSimulation then fun l -> ("SIMULATION", 1)::l else id)
         |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Int b])
 
     let links =

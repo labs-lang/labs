@@ -3,6 +3,14 @@
 {% endfor -%}
 #define undef_value 0x7FFFFFFF // MaxInt
 
+#ifdef SIMULATION
+    #define LABSassert(COND, LABEL)     if(!(COND)) { printf(#LABEL " violated"); } else { printf(#LABEL " satisfied"); } 
+    #define LABSassume(COND)            if(!(COND)) { exit(); }
+#else 
+    #define LABSassert(COND, LABEL)     assert(COND)
+    #define LABSassume(COND)            __VERIFIER_assume(COND)   
+#endif
+
 int abs(int x) {
   int result = (x>0)?x:-x;
   return result;
