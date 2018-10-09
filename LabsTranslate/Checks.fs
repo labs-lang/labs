@@ -44,6 +44,7 @@ let checkNames sys =
         else sprintf "global: the following processes are undefined: %s" (withcommas x)
     |> localResult
 
+/// Performs several checks related to components
 let checkComponents sys =
     let isDefined (def:ComponentDef<'a>) name  =
         sys.processes.ContainsKey name || def.processes.ContainsKey name

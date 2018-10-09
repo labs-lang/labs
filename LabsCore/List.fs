@@ -1,5 +1,6 @@
 ﻿module List
-    /// Returns a list of elements that appear more than once in lst.
+
+/// Returns a list of elements that appear more than once in lst.
 let duplicates lst = 
     lst
     |> List.groupBy id

@@ -22,7 +22,7 @@ for (i=%i; i<%i; i++) {
 
 let translateLocation = function
     | I -> sprintf "I[%s][%O]"
-    | L(_) -> sprintf "Lvalue[%s][%O]"
+    | L _ -> sprintf "Lvalue[%s][%O]"
     | E -> (fun _ -> sprintf "E[%O]")
 
 let def name init = 
