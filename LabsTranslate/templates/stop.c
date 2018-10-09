@@ -1,9 +1,6 @@
 void {{label}}(int tid) {
 
-    {%- for item in entrypoints -%}
-    LABSassume(pc[tid][{{item.pc}}] == {{item.value}});{%- endfor -%}
-    {%- for guard in guards -%}
-    LABSassume({{guard}});{%- endfor -%}
+    {% include "templates/entry" with entrypoints %}
 
     term[tid] = 1;
     pc[tid][{{exitpc}}] = {{exitvalue}};

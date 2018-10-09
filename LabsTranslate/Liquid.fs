@@ -12,6 +12,8 @@ and LiquidVal =
     | Lst of LiquidVal seq
     | Dict of LiquidDict
 
+let fs = new FileSystems.LocalFileSystem("")
+
 let render vals (template:Template) =
     let rec hashval = function
         | Int i -> box i
@@ -34,6 +36,7 @@ let render vals (template:Template) =
         |> Result.Error
 
 let parse path =
+    Template.FileSystem <- fs
     readFile path
     |> Result.map Template.Parse
 

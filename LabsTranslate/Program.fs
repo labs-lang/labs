@@ -11,6 +11,7 @@ let main argv =
     let parsedCli = argv |> parseCLI
 
     let doTranslate cli =
+
         let isFair = 
             parsedCli
             |> Result.map (fun args -> args.Contains <@ Fair @>)

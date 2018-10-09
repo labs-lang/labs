@@ -1,0 +1,6 @@
+    {%- for item in entrypoints -%}
+    LABSassume(pc[tid][{{ item.pc }}] == {{ item.value }});
+    {%- endfor -%}
+    {%- for guard in guards -%}
+    LABSassume({{ guard }});
+    {%- endfor -%}
