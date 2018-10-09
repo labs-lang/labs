@@ -16,11 +16,10 @@ let main argv =
             |> Result.map (fun args -> args.Contains <@ Fair @>)
             |> function Ok true -> true | _ -> false
 
-        let chosenInit =
+        let isSimulation =
             parsedCli
             |> Result.map (fun args -> args.Contains <@ Simulation @>)
-            |> function Ok(true) -> initVarSim | _ -> initVar
-            |> translateInit
+            |> function Ok true -> true | _ -> false
         
         (filenameOf cli)
         >>= readFile
@@ -32,8 +31,8 @@ let main argv =
         >>= resolveSystem
         >>= encode
         >+> (bound cli)
-        >>= translateHeader
-        >>= chosenInit
+        >>= (translateHeader isSimulation)
+        >>= translateInit
         >>= translateAll 
         >>= translateCanProceed
         >>= (translateMain isFair)
