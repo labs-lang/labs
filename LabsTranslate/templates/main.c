@@ -1,9 +1,12 @@
 void monitor() {
-{{alwaysasserts}}
+    {{alwaysasserts}}
 }
 
 void finally() {
     {{finallyasserts}}
+    #ifdef SIMULATION
+    assert(0);
+    #endif
 }
 
 int main(void) {
@@ -14,11 +17,11 @@ int main(void) {
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
         if (terminalState()) break;
     
-        __VERIFIER_assume(choice[__LABS_step] < MAXCOMPONENTS + 2);
+        LABSassume(choice[__LABS_step] < MAXCOMPONENTS + 2);
     
         if (choice[__LABS_step] < MAXCOMPONENTS) {
             {%- if fair -%}
-            __VERIFIER_assume(choice[__LABS_step] == last+1 || (last == MAXCOMPONENTS - 1 && choice[__LABS_step] == 0));
+            LABSassume(choice[__LABS_step] == last+1 || (last == MAXCOMPONENTS - 1 && choice[__LABS_step] == 0));
             {%- endif -%}
 
             {%- for item in schedule -%}
