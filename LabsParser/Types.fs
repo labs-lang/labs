@@ -34,6 +34,6 @@ type SystemDef<'a> = {
     spawn: Map<string, int*int>
     properties: Map<string, Property<'a>>
 } with
-    member this.spawnedComps = 
+    member this.SpawnedComps = 
         this.components
         |> Map.filter (fun n _ -> this.spawn.ContainsKey n)
