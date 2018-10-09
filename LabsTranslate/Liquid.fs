@@ -14,7 +14,7 @@ and LiquidVal =
 
 let fs = new FileSystems.LocalFileSystem("")
 
-let render vals (template:Template) =
+let private internalRender strfun vals (template:Template) =
     let rec hashval = function
         | Int i -> box i
         | Bool b -> box b
@@ -27,13 +27,19 @@ let render vals (template:Template) =
             |> Hash.FromDictionary
     let render = template.Render (hashdict vals)
     if template.Errors.Count = 0 then 
-        Result.Ok (printfn "%s" render)
+        Result.Ok (strfun render)
     else 
         template.Errors
         |> Seq.map (fun x -> x.Message)
         |> String.concat "\n"
         |> sprintf "Code generation failed with the following message:\n%s"
         |> Result.Error
+
+/// Renders a given template to standard output
+let render v t = internalRender (printfn "%s") v t
+
+/// Renders a given template to string
+let strRender v t = internalRender id v t
 
 let parse path =
     Template.FileSystem <- fs
@@ -44,7 +50,7 @@ let parse path =
 ///local variables.</summary>
 let renderFile path (vals:LiquidDict) =
     parse path
-    |> Result.bind (render vals)
+    |> Result.bind (strRender vals)
 
 // Reusable templates, we only parse them once
 let goto = parse "templates/goto.c"
