@@ -9,5 +9,6 @@ void {{label}}(int tid) {
     {%- endfor -%}
 
     term[tid] = 1;
+    pc[tid][{{exitpc}}] = {{exitvalue}};
     
 }

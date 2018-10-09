@@ -6,7 +6,7 @@ open Expressions
 open Properties
 open Liquid
 
-type NodeType = Basic of Action<Var> * exit:pcCondition | Goto of exit:pcCondition | Stop
+type NodeType = Basic of Action<Var> | Skip | Goto | Stop
 
 /// A Node is composed by a label, an entry/exit point,
 /// and an action. Additional entry conditions are specified in the
@@ -17,10 +17,12 @@ type Node = {
     guards:Set<BExpr<Var, unit>>
     parent:Set<pcCondition>
     entry:pcCondition
+    exit:pcCondition
 } with 
     member this.lbl = 
         match this.nodeType with
         | Basic _
+        | Skip _
         | Goto _ -> sprintf "%s_%i" this.label this.entry.value
         | Stop _ -> sprintf "Stop_%i" this.entry.value
     member this.entrypoints = 
@@ -35,12 +37,12 @@ let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
 
         match p with
         | Base a -> 
-            {guards=guards; parent=parent; entry=entry; nodeType=Basic(a, exit); label=lbl}
+            {guards=guards; parent=parent; entry=entry; nodeType=Basic a; exit=exit; label=lbl}
             |> Set.singleton
         | Name s when s = name ->
-            {guards=guards; parent=parent; entry=entry; nodeType=Goto rootEntry; label=lbl}
+            {guards=guards; parent=parent; entry=entry; nodeType=Goto; exit=rootEntry; label=lbl}
             |> Set.singleton
-        | Name s -> visit name rootEntry cnt guards parent entry exit procs.[s] (lbl)
+        | Name s -> visit s entry cnt guards parent entry exit procs.[s] (lbl)
         | Await(b, p) -> 
             visit name rootEntry cnt (guards.Add b) parent entry exit p lbl
         | Choice(p, q) -> 
@@ -60,11 +62,11 @@ let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
             let pnodes = visit name rootEntry lCount guards newPar {pc=leftPc;value=lCount()} {pc=leftPc;value=lCount()} p (lbl + "_L")
             let qnodes = visit name rootEntry rCount guards newPar {pc=rightPc;value=rCount()} {pc=rightPc;value=rCount()} q (lbl + "_R")
             (Set.union pnodes qnodes)//, (Set.union pexits qexits).Add(entry)
-        | Skip -> 
-            {guards=guards; parent=parent; entry=entry; nodeType=Goto exit; label=lbl}
+        | Process.Skip -> 
+            {guards=guards; parent=parent; entry=entry; nodeType=Skip; exit=exit; label=lbl}
             |> Set.singleton
         | Nil -> 
-            {guards=guards; parent=parent; entry=entry; nodeType=Stop; label=lbl}
+            {guards=guards; parent=parent; entry=entry; nodeType=Stop; exit=exit; label=lbl}
             |> Set.singleton
 
     let pc = pccount()
@@ -208,16 +210,19 @@ let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
 
         let template, list = 
             match n.nodeType with
-            | Basic(a, ex) -> transition, Seq.append (exitHash ex) (liquid a)
-            | Goto ex -> goto, (exitHash ex)
-            | Stop -> stop, Seq.empty
+            | Basic a -> transition, liquid a
+            | Skip -> goto, ["resetpcs", Bool false]
+            | Goto -> goto, ["resetpcs", Bool true]
+            | Stop -> stop, List.empty
 
         [
+            "exitpc", Int n.exit.pc
+            "exitvalue", Int n.exit.value;
             "label", Str n.lbl
             "entrypoints", Lst entries
             "guards",
                 n.guards
-                |> Set.map (assume << translateGuard mapping)
+                |> Set.map (translateGuard mapping)
                 |> Seq.map Str
                 |> Lst
         ]
@@ -250,6 +255,7 @@ let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
         |> Map.mapValues (translateProp sys mapping)
         |> Map.values
         |> String.concat "\n"
+
     [
         "fair", Bool fair;
         "schedule", nodes |> Seq.map (fun n -> Str n.lbl) |> Lst
