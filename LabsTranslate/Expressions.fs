@@ -11,20 +11,29 @@ let refTypeCheck v (offset:'a option) =
         | Array(_) -> offset.IsNone, (sprintf "Array %s treated as Scalar")
     if test then failwith (msg v.name) else ()
 
-let rec translate trRef trId =
+let rec translate trRef trId location =
     let translateAOp = function
         | Plus -> sprintf "( %s + %s )"
         | Minus -> sprintf "( %s - %s )"
         | Times -> sprintf "( %s * %s )"
         | Mod -> sprintf "mod( %s, %s )"
     function
-    | Id i -> trId i
+    | Id i -> 
+        try (trId i) with
+        | :? System.Collections.Generic.KeyNotFoundException ->
+            sprintf "%s: Undefined component %s" location (i.ToString())
+            |> failwith 
     | Const i -> sprintf "%i" i
-    | Abs e -> sprintf "abs(%s)" (translate trRef trId e)
+    | Abs e -> sprintf "abs(%s)" (translate trRef trId location e)
     | Ref r ->
-        (trRef r.var (r.offset |> Option.map (translate trRef trId)))
+        try
+            (trRef r.var (r.offset |> Option.map (translate trRef trId location)))
+        with
+        | :? System.Collections.Generic.KeyNotFoundException ->
+            sprintf "%s: Undefined name %s" location (string r)
+            |> failwith
     | Arithm(e1, op, e2) -> 
-        ((translateAOp op) (translate trRef trId e1) (translate trRef trId e2))
+        ((translateAOp op) (translate trRef trId location e1) (translate trRef trId location e2))
 
 /// Translates a variable reference.
 let trref (mapping:KeyMapping) cmp (v:Var) offset =
@@ -52,7 +61,7 @@ let rec translateBExpr trExpr =
     function
     | True -> "1"
     | False -> "0"
-    | Neg(b) -> sprintf "!(%s)" (translateBExpr trExpr b)
+    | Neg b -> sprintf "!(%s)" (translateBExpr trExpr b)
     | Compound(b1, op, b2) -> 
         (translateBOp op)
             (translateBExpr trExpr b1) (translateBExpr trExpr b2)
@@ -62,9 +71,9 @@ let rec translateBExpr trExpr =
             (translateCOp op)
             (trExpr e2)
 
-let translateGuard mapping = translateBExpr (translateExpr mapping)
+let translateGuard mapping l = translateBExpr (translateExpr mapping l)
 
-let translateLink mapping = 
+let translateLink mapping l = 
     let trLinkId = function
     | Id1 -> "__LABS_link1"
     | Id2 -> "__LABS_link2"
@@ -72,7 +81,7 @@ let translateLink mapping =
         match l with
         | RefC1 v -> trref mapping "__LABS_link1" v offset 
         | RefC2 v -> trref mapping "__LABS_link2" v offset
-    translateBExpr (translate trLinkRef trLinkId)
+    translateBExpr (translate trLinkRef trLinkId l)
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let rec getLstigVars = function
