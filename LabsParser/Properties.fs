@@ -38,7 +38,7 @@ let pproperty =
     pipe4 
         (ws IDENTIFIER .>> (ws EQ))
         pmodality
-        ((sepEndBy1 pquantifier (ws (skipChar ','))) >>= toMap)
+        ((sepEndBy pquantifier (ws (skipChar ','))) >>= toMap)
         pbaseprop
         (fun n m qs pred -> n, {
             name=n;
