@@ -46,8 +46,6 @@ let checkNames sys =
 
 /// Performs several checks related to components
 let checkComponents sys =
-    let isDefined (def:ComponentDef<'a>) name  =
-        sys.processes.ContainsKey name || def.processes.ContainsKey name
 
     let undefBehaviors = 
         sys.components
@@ -99,7 +97,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
             expectedLoc = var.location
         let lstigCheck var =
             match var.location with
-            | L(name) -> true
+            | L _ -> true
             | _ -> false
 
         let r, expr, check, actionType, failMsg = 
@@ -171,7 +169,7 @@ let analyzeKeys sys =
             v1.name = v2.name
         setOfVars
         |> Set.map (fun x -> (x.name, Set.filter (hasSameName x) setOfVars))
-        |> Set.filter (fun (name, vars) -> vars.Count > 1)
+        |> Set.filter (fun (_, vars) -> vars.Count > 1)
         |> fun x -> 
             if x.IsEmpty
             then setOfVars
