@@ -8,7 +8,11 @@ type pcCondition = {pc:int; value:int}
 type KeyMapping = Map<string, Var * int>
 
 /// Bind operator for Result.
-let inline (>>=) r f = try Result.bind f r with ex -> Result.Error ex.Message
+#if DEBUG
+let inline (>>=) r f = try Result.bind f r with ex -> Result.Error (ex.Message + ex.StackTrace)
+#else
+let inline (>>=) r f = try Result.bind f r with ex -> Result.Error (ex.Message)
+#endif
 
 // Returns r2 if r1 is Ok, else returns r1
 let inline (<&&>) r1 r2 = r1 |> Result.bind (fun _ -> r2)
@@ -39,7 +43,7 @@ let logErr result =
     match result with
     | Result.Ok _ -> result
     | Result.Error s -> 
-        eprintfn "\n%s" (s)
+        eprintfn "%s" s
         Result.Error ""
 
 let readFile filepath =
