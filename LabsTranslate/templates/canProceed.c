@@ -2,7 +2,7 @@ char canProceed(int tid) {
     // Returns 1 if agent tid can perform at least one transition
     if (term[tid]) return 0;
     {%- for g in guards -%}
-    if ({{ g }}) return 1;
+    if ({{ g | join: " && " }}) return 1;
     {%- endfor -%}
     return 0;
 }
