@@ -13,7 +13,7 @@ type Quantifier =
 
 type Property<'a> = {
         name:string
-        predicate:BExpr<'a * string, string>
+        predicate:BExpr<'a * string option, string>
         modality:Modality
         quantifiers: Map<string, string * Quantifier>
     }

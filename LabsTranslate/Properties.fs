@@ -28,11 +28,19 @@ let translateProp sys mapping (p:Property<Var>) =
 
     //Given a substitution table, resolves references to quantified
     //component names.
-    let tr (sub:Map<string, int>) (v, cmp) offset =
-        match snd p.quantifiers.[cmp] with
-        | All -> 
-            (trref mapping (cmp+p.name) v offset)
-        | Exists -> (trref mapping (sprintf "%i" sub.[cmp]) v offset)
+    let tr (sub:Map<string, int>) (v, c) offset =
+        match c with
+        | None -> 
+            if v.location <> E then
+                v.name
+                |> sprintf "Property %s: %s is not an environment variable" p.name
+                |> failwith 
+            trref mapping "" v offset
+        | Some c ->
+            match snd p.quantifiers.[c] with
+            | All -> 
+                (trref mapping (c+p.name) v offset)
+            | Exists -> (trref mapping (sprintf "%i" sub.[c]) v offset)
     let trId (sub:Map<string, int>) name = 
         match snd p.quantifiers.[name] with 
         | All -> name+p.name

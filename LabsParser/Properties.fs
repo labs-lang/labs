@@ -7,7 +7,10 @@ let propertyRef p =
     pipe3
         (ws KEYNAME)
         (opt (betweenBrackets p))
-        (ws (skipString "of") >>. (ws KEYNAME))
+        (choice [
+            followedBy (skipString "of") >>. (ws (skipString "of") >>. (ws KEYNAME)) |>> Some
+            preturn None
+        ])
         (fun k offset y -> {var=(k, y); offset=offset})
 
 let pquantifier =
