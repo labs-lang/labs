@@ -62,7 +62,7 @@ let translateInit (sys, trees, mapping) =
             (range, ifaceinit + "\n" + lstigsinit))
         |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
             (str + (forLoop rangeStart rangeEnd inits))) "" //FIXME
-    let makeTuples comps (mapping:KeyMapping) =
+    let makeTuples (mapping:KeyMapping) =
         /// Finds the min and max indexes of the given tuple.
         let extrema (tup:Map<Var,Init>) =
             let indexes = 
@@ -90,6 +90,6 @@ let translateInit (sys, trees, mapping) =
         "initenv", sys.environment |> initMap |> indent 4 |> Str;
         "initvars", initAll |> indent 4 |> Str;
         "initpcs", (initPc sys trees) |> indent 4 |> Str;
-        "tuples", Lst (makeTuples (Map.values sys.components) mapping)
+        "tuples", Lst (makeTuples mapping)
     ]
     |> renderFile "templates/init.c"    

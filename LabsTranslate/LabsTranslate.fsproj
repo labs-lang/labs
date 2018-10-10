@@ -36,6 +36,12 @@
     <StartArguments>--file ../examples/formation1d.labs --values n=5 max=30 range=4 --bound 16 --info</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OtherFlags> --simpleresolution --nocopyfsharpcore --warnon:1182</OtherFlags>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.NETCore.App" Version="2.1.*" />
   </ItemGroup>

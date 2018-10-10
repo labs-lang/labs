@@ -31,7 +31,7 @@ let def name init =
         | a, b when a > -128   && b < 128      -> "char"
         | a, b when a >= 0     && b < 65536    -> "unsigned short"
         | a, b when a > -32768 && b < 32768    -> "short"
-        | a, b when a >=0                      -> "unsigned int"
+        | a, _ when a >=0                      -> "unsigned int"
         | _ -> "int "
     match init with
         | Undef -> "int"

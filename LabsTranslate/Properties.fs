@@ -49,7 +49,7 @@ let translateProp sys mapping (p:Property<Var>) =
 
     let subs =
         exists
-        |> Map.map (fun id (cmpType, _) -> sys.spawn.[cmpType])
+        |> Map.mapValues (fun (cmpType, _) -> sys.spawn.[cmpType])
         |> Map.toList
         |> List.map (fun (id, (starts, ends)) ->
             [starts..ends-1] |> List.map (fun i -> id,i))
@@ -70,8 +70,12 @@ let translateProp sys mapping (p:Property<Var>) =
         |> Map.values
         |> String.concat ""
 
+    let translateProp subs =
+        sprintf "Property %s" p.name
+        |> translate (tr subs) (trId subs)
+        |> translateBExpr
     subs
-    |> List.map (fun s -> translateBExpr (translate (tr s) (trId s)) p.predicate)
+    |> List.map (fun s -> translateProp s p.predicate)
     |> String.concat " || "
     |> fun pstring -> inlineassertion pstring p.name
     |> fun x -> sprintf "%s //%s\n" x p.name

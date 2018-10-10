@@ -29,45 +29,42 @@ type Node = {
         let x = Set.filter (fun p -> p.pc = this.entry.pc) this.parent
         if x.IsEmpty then (Set.add this.entry this.parent) else this.parent
 
-let baseVisit (procs:Map<string, Process<Var>>) counter mapping rootName =
+let baseVisit (procs:Map<string, Process<Var>>) counter rootName =
     let pccount = makeCounter -1
     let rec visit name rootEntry cnt guards parent entry exit p lbl =
         let vs = visit name rootEntry cnt guards
-        let parentUnion = Set.union parent
+
+        let node = {guards=guards; parent=parent; entry=entry; nodeType=Skip; exit=exit; label=lbl}
 
         match p with
         | Base a -> 
-            {guards=guards; parent=parent; entry=entry; nodeType=Basic a; exit=exit; label=lbl}
-            |> Set.singleton
+            Set.singleton {node with nodeType=Basic a}
         | Name s when s = name ->
-            {guards=guards; parent=parent; entry=entry; nodeType=Goto; exit=rootEntry; label=lbl}
-            |> Set.singleton
+            Set.singleton {node with nodeType=Goto; exit=rootEntry}
         | Name s -> visit s entry cnt guards parent entry exit procs.[s] (lbl)
         | Await(b, p) -> 
             visit name rootEntry cnt (guards.Add b) parent entry exit p lbl
         | Choice(p, q) -> 
-            let pnodes = (vs parent entry exit p (lbl+"_L"))
-            let qnodes = (vs parent entry exit q (lbl+"_R"))
-            (Set.union pnodes qnodes)
+            let pnodes = vs parent entry exit p (lbl+"_L")
+            let qnodes = vs parent entry exit q (lbl+"_R")
+            Set.union pnodes qnodes
         | Seq(p, q) ->
             let k = {pc=entry.pc;value=cnt()}
             let pnodes = vs parent entry k p lbl
             let qnodes =
                 visit name rootEntry cnt Set.empty Set.empty k exit q lbl
-            (Set.union pnodes qnodes)
+            Set.union pnodes qnodes
         | Par(p, q) ->
             let leftPc, rightPc = pccount(), pccount()
             let lCount, rCount = makeCounter -1, makeCounter -1
             let newPar = parent.Add entry
             let pnodes = visit name rootEntry lCount guards newPar {pc=leftPc;value=lCount()} {pc=leftPc;value=lCount()} p (lbl + "_L")
             let qnodes = visit name rootEntry rCount guards newPar {pc=rightPc;value=rCount()} {pc=rightPc;value=rCount()} q (lbl + "_R")
-            (Set.union pnodes qnodes)//, (Set.union pexits qexits).Add(entry)
+            Set.union pnodes qnodes
         | Process.Skip -> 
-            {guards=guards; parent=parent; entry=entry; nodeType=Skip; exit=exit; label=lbl}
-            |> Set.singleton
+            Set.singleton {node with nodeType=Skip}
         | Nil -> 
-            {guards=guards; parent=parent; entry=entry; nodeType=Stop; exit=exit; label=lbl}
-            |> Set.singleton
+            Set.singleton {node with nodeType=Stop}
 
     let pc = pccount()
     let entry = {pc=pc;value=counter()}
@@ -81,8 +78,8 @@ let encode (sys:SystemDef<Var>, mapping) =
 
     let trees = 
         sys.SpawnedComps
-        |> Map.map (fun _ def -> (def, Map.merge sys.processes def.processes))
-        |> Map.map (fun _ (def, procs) -> baseVisit procs counter mapping "Behavior")
+        |> Map.mapValues (fun def -> (def, Map.merge sys.processes def.processes))
+        |> Map.mapValues (fun (_, procs) -> baseVisit procs counter "Behavior")
 
     Result.Ok(sys, trees, mapping)
 
@@ -103,13 +100,13 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
         |> (+) 1
 
     let maxcomps = 
-        Map.fold (fun state k (_, cmax) -> max state cmax) 0 sys.spawn
+        Map.fold (fun state _ (_, cmax) -> max state cmax) 0 sys.spawn
 
     let ifaces = mapping |> Map.filter (fun _ (v, _) -> v.location = I)
     let env = mapping |> Map.filter (fun _ (v, _) -> v.location = E)
     let lstig =
         mapping
-        |> Map.filter (fun _ (v, _) -> match v.location with L(_) -> true | _ -> false)
+        |> Map.filter (fun _ (v, _) -> match v.location with L _ -> true | _ -> false)
 
     let defines = 
         [
@@ -135,7 +132,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
             Dict [
                 "start", Int (findMinIndex m)
                 "end", Int (findMaxIndex m)
-                "link", Str (translateLink mapping s.link)
+                "link", Str (translateLink mapping (sprintf "Stigmergy %s" s.name) s.link)
             ] |> Some
 
         sys.stigmergies
@@ -148,7 +145,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
     ]
     |> renderFile "templates/header.c"
 
-let translateCanProceed (sys:SystemDef<Var>, trees, mapping:KeyMapping) =
+let translateCanProceed (trees, mapping:KeyMapping) =
     let translatePc p = sprintf "(pc[tid][%i] == %i)" p.pc p.value
 
     trees
@@ -156,19 +153,19 @@ let translateCanProceed (sys:SystemDef<Var>, trees, mapping:KeyMapping) =
     |> Seq.collect fst
     |> Seq.map (fun n -> 
         n.guards 
-        |> Set.map (translateGuard mapping)
-        |> Set.union (n.parent |> Set.map (sprintf "(%s)" << translatePc))
+        |> Set.map (translateGuard mapping n.label)
+        |> Set.union (n.parent |> Set.map translatePc)
         |> Set.add (translatePc n.entry)
-        |> String.concat " && "
-        |> Str
+        |> Seq.map Str
+        |> Lst
     )
     |> Seq.distinct
     |> fun x -> seq ["guards", Lst x]
     |> renderFile "templates/canProceed.c"
 
-let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
-    let doOffset  = function
-        | Some e -> translateExpr mapping e |> Str
+let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
+    let doOffset = function
+        | Some e -> translateExpr mapping "" e |> Str
         | None -> Int 0
         
     let liquid a =
@@ -187,7 +184,7 @@ let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
             "key",  Int index
             "offset", doOffset k.offset
             "size", Int size
-            "expr", translateExpr mapping e |> Str
+            "expr", translateExpr mapping (string a) e |> Str
             "qrykeys",
                 getLstigVars e 
                 |> Seq.map (fun v -> snd mapping.[v.name] |> Int)
@@ -214,7 +211,7 @@ let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
             "entrypoints", Lst entries
             "guards",
                 n.guards
-                |> Set.map (translateGuard mapping)
+                |> Set.map (translateGuard mapping n.label)
                 |> Seq.map Str
                 |> Lst
         ]
@@ -226,8 +223,8 @@ let translateAll (sys, trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
     |> Map.values
     |> Seq.collect fst
     |> Set.ofSeq
-    |> Seq.map (fun n -> async { return newTranslate n })
-    |> Async.Parallel
+    |> Seq.map newTranslate
+    |> Seq.reduce (fun r1 r2 -> r1 >+> r2 |> Result.map (fun (s1:string, s2) -> s1 + s2) )
 
 let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
     let nodes = 

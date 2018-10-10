@@ -33,10 +33,7 @@ let parseCLI argv =
         Result.Ok parsed
     with e ->
         Result.Error e.Message
-
-let bound result = 
-    Result.map (fun (args:ParseResults<_>) -> args.GetResult <@ Bound @>) result
-
+        
 let placeholders args = 
     try
         args
