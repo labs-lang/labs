@@ -10,7 +10,7 @@ for (i=0; i<MAXKEYE; i++) {
         E[i] = undef_value;
     }
 for (i=0; i<MAXCOMPONENTS; i++) {
-    term[i] = 0;
+    terminated[i] = 0;
     for (j=0; j<MAXKEYI; j++) {
         I[i][j] = undef_value;
     }
@@ -35,7 +35,7 @@ j=0;
 
 {{- initvars -}}
 
-    __LABS_t = j;
+    __LABS_time = j;
 
     {% comment %}
     We set all items in a tuple to the timestamp of the last one

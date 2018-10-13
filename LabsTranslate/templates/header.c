@@ -1,7 +1,7 @@
 {% for item in defines -%}
 #define {{item.name}} {{item.value}}
 {% endfor -%}
-#define undef_value 0x7FFFFFFF // MaxInt
+#define undef_value 1000000 // MaxInt
 
 #ifdef SIMULATION
     #define LABSassert(COND, LABEL)     if(!(COND)) { printf(#LABEL " violated"); } else { printf(#LABEL " satisfied"); } 
@@ -21,9 +21,10 @@ int mod(int n, int m) {
   return n;
 }
 
-int I[MAXCOMPONENTS][MAXKEYI];
-int Lvalue[MAXCOMPONENTS][MAXKEYL];
-int Ltstamp[MAXCOMPONENTS][MAXKEYL];
+unsigned short I[MAXCOMPONENTS][MAXKEYI];
+unsigned short Lvalue[MAXCOMPONENTS][MAXKEYL];
+unsigned short Ltstamp[MAXCOMPONENTS][MAXKEYL];
+unsigned short E[MAXKEYE];
 
 unsigned char isTuple[MAXKEYL];
 unsigned char tupleStart[MAXKEYL];
@@ -33,12 +34,12 @@ unsigned int Hin[MAXCOMPONENTS][MAXKEYL];
 unsigned int Hout[MAXCOMPONENTS][MAXKEYL]; 
 unsigned char HinCnt[MAXCOMPONENTS];
 unsigned char HoutCnt[MAXCOMPONENTS];
-unsigned char term[MAXCOMPONENTS];
-int pc[MAXCOMPONENTS][MAXPC];
-int E[MAXKEYE];
-int __LABS_t;
+unsigned char terminated[MAXCOMPONENTS];
+unsigned int pc[MAXCOMPONENTS][MAXPC];
+unsigned int __LABS_time;
 
-int link(int __LABS_link1, int __LABS_link2, int key) {
+
+_Bool link(int __LABS_link1, int __LABS_link2, int key) {
     int __LABS_link = 0;
     {%- for l in links -%}
         {%- if forloop.first -%}
@@ -53,9 +54,9 @@ int link(int __LABS_link1, int __LABS_link2, int key) {
     return __LABS_link;
 }
 
-int now(void) {
-    __LABS_t = __LABS_t+1;
-    return __LABS_t;
+unsigned int now(void) {
+    __LABS_time = __LABS_time+1;
+    return __LABS_time;
 }
 
 void setHin(int id, int key) {
@@ -109,7 +110,7 @@ void env(int component_id, int key, int value) {
     now(); // local step
 }
 
-unsigned char differentLstig(int comp1, int comp2, int key) {
+_Bool differentLstig(int comp1, int comp2, int key) {
     unsigned char k;
     for (k = 0; k < MAXKEYL; k++) {
         if (k >= tupleStart[key] && k <= tupleEnd[key]) {
@@ -181,12 +182,4 @@ void propagate(void) {
 
     Hout[guessedcomp][guessedkey] = 0;
     HoutCnt[guessedcomp] = HoutCnt[guessedcomp] - 1;
-}
-
-char all_term() {
-    int i;
-    for (i=0; i<MAXCOMPONENTS; i++) {
-        if (term[i] == 0) return 0;
-    }
-    return 1;
 }
