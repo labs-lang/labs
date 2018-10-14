@@ -4,7 +4,6 @@ open Types
 open System.IO
 open Parser
 
-type pcCondition = {pc:int; value:int}
 type KeyMapping = Map<string, Var * int>
 
 /// Bind operator for Result.

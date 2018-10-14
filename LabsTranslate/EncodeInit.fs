@@ -61,7 +61,7 @@ let translateInit (sys, trees, mapping) =
                 |> String.concat "\n"
             (range, ifaceinit + "\n" + lstigsinit))
         |> Map.fold (fun str _ ((rangeStart, rangeEnd), inits) -> 
-            (str + (forLoop rangeStart rangeEnd inits))) "" //FIXME
+            (str + (forLoop rangeStart rangeEnd inits))) ""
     let makeTuples (mapping:KeyMapping) =
         /// Finds the min and max indexes of the given tuple.
         let extrema (tup:Map<Var,Init>) =
