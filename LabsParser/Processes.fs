@@ -41,8 +41,8 @@ do pprocRef :=
     // Returns a Process type from the corresponding char
     let OP : Parser<_> = 
         choice [
-            (charReturn '&' (^+));
-            (charReturn '|' (^|));
+            (stringReturn "++" (^+));
+            (stringReturn "||" (^|));
             (charReturn ';' (^.));
         ]
     // Either returns a single term, or creates a choice/par/seq
