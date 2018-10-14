@@ -1,7 +1,7 @@
 void {{label}}(int tid) {
     //{{labs}}
 
-{%- include "templates/entry" with entrypoints -%}
+{%- include "templates/entry" -%}
 
     int val = {{expr}};
     {%- if size != 0 -%}
@@ -22,5 +22,7 @@ void {{label}}(int tid) {
     }
     {%- endif -%}
 
-    pc[tid][{{exitpc}}] = {{exitvalue}};  
+    {%- for item in exitpoints -%}
+    pc[tid][{{ item.pc }}] = {{ item.value }};
+    {%- endfor -%}
 }

@@ -1,8 +1,10 @@
 void {{label}}(int tid) {
 
-    {% include "templates/entry" with entrypoints %}
+    {% include "templates/entry" %}
 
     terminated[tid] = 1;
-    pc[tid][{{exitpc}}] = {{exitvalue}};
-    
+
+    {%- for item in exitpoints -%}
+    pc[tid][{{ item.pc }}] = {{ item.value }};
+    {%- endfor -%} 
 }
