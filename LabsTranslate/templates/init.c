@@ -23,12 +23,12 @@ for (i=0; i<MAXCOMPONENTS; i++) {
         Hin[i][j] = 0;
         Hout[i][j] = 0;
     }
-    for (j=0; j<MAXPC; j++) {
-        pc[i][j] = 0;
-    } 
     HinCnt[i] = 0;
     HoutCnt[i] = 0;
 }
+
+{{- initpcs -}}
+
 j=0;
     
 {{- initenv -}}
