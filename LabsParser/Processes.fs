@@ -14,13 +14,14 @@ let paction =
             charReturn '-' AttrUpdate;
             charReturn '~' LStigUpdate
         ]
-    (pipe3 
+    tuple3 
         (ws (simpleRef pexpr) |> sepbycommas)
         (ws parseArrow) 
         (ws pexpr |> sepbycommas)
-        // TODO customize error if length of r != length of e
-        // (need try/with System.ArgumentException)
-        (fun r action e -> action(List.zip r e)))
+    >>= (fun (refs, action, exprs) -> 
+        try List.zip refs exprs |> action |> preturn with
+        | :? System.ArgumentException -> 
+            fail "A multiple assignment should contain the same number of variables and expressions.")
 
 let pproc, pprocRef = createParserForwardedToRef()
 let pprocTerm, pprocTermRef = createParserForwardedToRef()
