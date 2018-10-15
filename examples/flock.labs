@@ -10,7 +10,7 @@ stigmergy Alignment {
         ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
         ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta * _delta
 
-    <dirx: [-1, 1], diry: [-1, 1]>
+    dirx, diry: [-1, 1], [-1, 1]
 
 }
 
@@ -19,12 +19,12 @@ stigmergy Cohesion {
         ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
         ((y of c1 - y of c2) * (y of c1 - y of c2)) > _delta * _delta
 
-    <posx: undef, posy: undef>
+    posx, posy: undef, undef
 }
 
 agent Bird {
-    interface = x: 0.._grid, y: 0.._grid
-    stigmergies = Alignment, Cohesion
+    interface = x: 0.._grid; y: 0.._grid
+    stigmergies = Alignment; Cohesion
     
     # "Local" processes (can only be used by component Bird)
     Behavior = (Move || Attract); Behavior
@@ -32,7 +32,7 @@ agent Bird {
     Move = x <- (x + dirx) % _grid ++ y <- (y + diry) % _grid
 
     Attract = 
-        posx, posy <~ x;
+        posx, posy <~ x, y;
         ((posx != x -> dirx <~ (x - posx) / abs(x-posx))
         ++
         (posy != y -> diry <~ (y - posy) / abs(y-posy))
