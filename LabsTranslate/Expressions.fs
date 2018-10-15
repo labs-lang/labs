@@ -16,6 +16,7 @@ let rec translate trRef trId location =
         | Plus -> sprintf "( %s + %s )"
         | Minus -> sprintf "( %s - %s )"
         | Times -> sprintf "( %s * %s )"
+        | Div -> sprintf "( %s / %s )"
         | Mod -> sprintf "mod( %s, %s )"
     function
     | Id i -> 

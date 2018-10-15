@@ -4,9 +4,10 @@ open FParsec
 
 let parithmop : Parser<_> =
     choice [
-        (charReturn '+' Plus <!> "Plus");
+        (notFollowedBy (skipString "++") >>. charReturn '+' Plus <!> "Plus");
         (notFollowedBy (skipString "->") >>. charReturn '-' Minus <!> "Minus");
         (charReturn '*' Times);
+        (charReturn '/' Div);
         (charReturn '%' Mod)
     ]
 

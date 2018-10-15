@@ -22,10 +22,11 @@ type ArithmOp =
     | Plus
     | Minus
     | Times
+    | Div
     | Mod
     override this.ToString() = 
         match this with
-        | Plus -> "+" | Minus -> "-" | Times -> "*" | Mod -> "%"
+        | Plus -> "+" | Minus -> "-" | Times -> "*" | Div -> "/" | Mod -> "%" 
 
 type Expr<'a, 'b> =
     | Id of 'b
