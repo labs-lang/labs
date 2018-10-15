@@ -33,7 +33,7 @@ let betweenBrackets p = between (ws (skipChar '[')) (skipChar ']') p
 let betweenBraces p = between (ws (skipChar '{')) (skipChar '}') p
 let betweenParen p = between (ws (skipChar '(')) (skipChar ')') p
 let betweenAng p = between (ws (skipChar '<')) (skipChar '>') p
-let sepbycommas p = sepBy p (ws (skipChar ','))
+let sepbycommas p = sepBy1 p (ws (skipChar ','))
 
 /// Helper for tracing parsers
 // http://www.quanttec.com/fparsec/users-guide/debugging-a-parser.html
