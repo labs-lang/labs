@@ -26,7 +26,9 @@ let plstig =
             (sepbycommas (pvar loc))
             ((ws COLON) >>. sepbycommas pinit)
         >>= (fun (vars, inits) -> 
-                List.zip vars inits |> Map.ofList |> preturn)
+                try List.zip vars inits |> Map.ofList |> preturn
+                with | :? System.ArgumentException ->
+                    fail "Tuples must contain the same numbers of variables and initializers.")
 
     let plstigkeys name = 
         let loc = L name
