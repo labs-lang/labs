@@ -7,7 +7,7 @@ from subprocess import check_output, DEVNULL, CalledProcessError
 from enum import Enum
 from os import remove
 import uuid
-from cex import translateCPROVER
+from cex import translateCPROVER, translateCSEQ
 
 SYS = platform.system()
 
@@ -71,7 +71,7 @@ class Components:
 
     def __getitem__(self, key):
         for (a, b), v in self._dict.items():
-            if a <= key <= b:
+            if a <= key < b:
                 return v
         raise KeyError
 
@@ -122,15 +122,15 @@ def parse_linux(file, values, bound, fair, simulate):
         return None, None, None
 
 
-def get_functions(c_program):
-    isFunc = re.compile(r"^void (\w+)\(int tid\)")
+# def get_functions(c_program):
+#     isFunc = re.compile(r"^void (\w+)\(int tid\)")
 
-    lines = c_program.split("\n")
-    lines = (
-        (isFunc.match(l1).group(1), l2.split("// ")[1])
-        for l1, l2 in zip(lines, lines[1:])
-        if isFunc.match(l1))
-    return dict(lines)
+#     lines = c_program.split("\n")
+#     lines = (
+#         (isFunc.match(l1).group(1), l2.split("// ")[1])
+#         for l1, l2 in zip(lines, lines[1:])
+#         if isFunc.match(l1))
+#     return dict(lines)
 
 
 @begin.start(auto_convert=True)
@@ -160,7 +160,6 @@ def main(file: "path to LABS file",
             backend_call.extend(["--steps", str(steps), "-i"])
 
         backend_call.append(fname)
-        # backend_call.extend(unwind(backend, info["unwind"]))
         if timeout > 0:
             backend_call = [TIMEOUT_CMD, str(timeout)] + backend_call
         try:
@@ -190,10 +189,6 @@ def main(file: "path to LABS file",
                 print(err.output.decode())
         finally:
             out = out.decode("utf-8")
-            remove(fname)
-            if backend == "cseq":
-                for suffix in ("", ".map", ".cbmc-assumptions.log"):
-                    remove("_cs_" + fname + suffix)
 
             if ("VERIFICATION SUCCESSFUL" in out):
                 print("No properties violated!", end="", file=sys.stderr)
@@ -202,4 +197,13 @@ def main(file: "path to LABS file",
                 else:
                     print("", file=sys.stderr)
             else:
-                print(translateCPROVER(out, c_program, info, backend))
+                if backend == "cbmc":
+                    print(translateCPROVER(out, fname, info))
+                elif backend == "cseq":
+                    print(translateCSEQ(out, fname, info))
+                else:
+                    print(out)
+            remove(fname)
+            if backend == "cseq":
+                for suffix in ("", ".map", ".cbmc-assumptions.log"):
+                    remove("_cs_" + fname + suffix)
