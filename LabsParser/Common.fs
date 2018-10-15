@@ -34,6 +34,7 @@ let betweenBraces p = between (ws (skipChar '{')) (skipChar '}') p
 let betweenParen p = between (ws (skipChar '(')) (skipChar ')') p
 let betweenAng p = between (ws (skipChar '<')) (skipChar '>') p
 let sepbycommas p = sepBy1 p (ws (skipChar ','))
+let sepbysemis p = sepBy1 p (ws (skipChar ';'))
 
 /// Helper for tracing parsers
 // http://www.quanttec.com/fparsec/users-guide/debugging-a-parser.html
@@ -72,8 +73,14 @@ let toMapF formatonFail lst =
 
 let toMap lst = toMapF id lst
 
-/// Parses a single init definition.
-let pinit loc =
+let pvar loc = 
+    pipe2 KEYNAME (opt (betweenBrackets puint32))
+        (fun name -> 
+            function
+            | Some(b) -> {vartype=Array(int b); name=name; location=loc}
+            | None -> {vartype=Scalar; name=name; location=loc})
+
+let pinit = 
     let pChoose = 
         (sepbycommas pint32) |> betweenBrackets |>> Choose
     let pRange = 
@@ -83,19 +90,15 @@ let pinit loc =
     let pSingle = (ws pint32) |>> (Choose << List.singleton)
     let pUndef = stringReturn "undef" Undef
 
-    let pvar = 
-        pipe2
-            KEYNAME
-            (opt (betweenBrackets puint32))
-            (fun name -> function
-            | Some(b) -> {vartype=Array(int b); name=name; location=loc}
-            | None -> {vartype=Scalar; name=name; location=loc})
+    choice [pChoose; pRange; pSingle; pUndef] |> ws
 
-    pvar .>>. ((ws COLON) >>. ws (choice [pChoose; pRange; pSingle; pUndef]))
+/// Parses a single init definition.
+let pinitdef loc =
+    (pvar loc) .>>. ((ws COLON) >>. pinit)
 
 let pkeys loc = 
     let lbl = function I -> "interface" | L _ -> "stigmergy" | E -> "environment"
-    ws (sepbycommas (ws (pinit loc)))
+    ws (sepbysemis (ws (pinitdef loc)))
     >>= toMapF (fun x -> x.name) <??> lbl loc
 
 let pstringEq str p = 

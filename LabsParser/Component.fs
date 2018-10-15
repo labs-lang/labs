@@ -11,7 +11,7 @@ let pcomp =
             spaces
             >>. tuple3
                 (opt (pstringEq "interface" (pkeys I)))
-                (opt (pstringEq "stigmergies" (ws IDENTIFIER |> sepbycommas)))
+                (opt (pstringEq "stigmergies" (ws IDENTIFIER |> sepbysemis)))
                 processes <!> "PROCESSES"))
         (fun n (i, l, procs) ->
             (n, {

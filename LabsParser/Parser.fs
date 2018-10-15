@@ -4,6 +4,7 @@ open FParsec
 open Common
 open Components
 open System
+open Stigmergies
 open Properties
  
 let parse = 
