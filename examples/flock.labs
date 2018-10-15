@@ -2,36 +2,48 @@ system {
     extern = _birds, _grid, _delta
     spawn = Bird: _birds
 
-    # "Global" processes
-    Movex = x <- (x + dirx) % _grid
-    Movey = y <- (y + diry) % _grid
-
+    
 }
 
-stigmergy Dir {
-    link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+stigmergy Alignment {
+    link =
+        ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
         ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta * _delta
 
-    <dirx: [-1, 1], diry: [-1,1]>
+    <dirx: [-1, 1], diry: [-1, 1]>
 
 }
 
-stigmergy S {
-    link = x of c1 > 5
+stigmergy Cohesion {
+    link =
+        ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+        ((y of c1 - y of c2) * (y of c1 - y of c2)) > _delta * _delta
 
-    prova: undef
-    
+    <posx: undef, posy: undef>
 }
 
 agent Bird {
     interface = x: 0.._grid, y: 0.._grid
-    stigmergies = Dir, S
+    stigmergies = Alignment, Cohesion
     
     # "Local" processes (can only be used by component Bird)
-    Behavior = (Movex & Movey); Behavior
+    Behavior = (Move || Attract); Behavior
+
+    Move = x <- (x + dirx) % _grid ++ y <- (y + diry) % _grid
+
+    Attract = 
+        posx, posy <~ x;
+        ((posx != x -> dirx <~ (x - posx) / abs(x-posx))
+        ++
+        (posy != y -> diry <~ (y - posy) / abs(y-posy))
+        ++
+        (posx = x and posy = y -> Skip)
+        )
 }
 
 check {
-    Px = finally forall Bird b1, forall Bird b2, dirx of b1 = dirx of b2
-    Py = finally forall Bird b1, forall Bird b2, diry of b1 = diry of b2
+    Consensus = finally forall Bird b1, forall Bird b2, 
+        dirx of b1 = dirx of b2
+        and
+        diry of b1 = diry of b2
 }

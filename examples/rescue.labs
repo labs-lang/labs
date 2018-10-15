@@ -1,0 +1,79 @@
+system {
+    extern = _n, _grid, _delta
+    spawn = Victim: 1, Searcher: _n
+
+    # "Global" processes
+    MoveUpDown = 
+        x % 2 = 0 -> (
+            y < _grid - 1 -> y <- y + 1 
+            ++ 
+            y = _grid - 1 and x < _grid - 1 -> x <- x + 1
+        )
+        ++
+        x % 2 != 0 -> (
+            y > 0 -> y <- y - 1
+            ++
+            y = 0 and x < _grid - 1 -> x <- x + 1
+        )
+        ++
+        (_grid % 2 = 0 and y = _grid - 1 and x = 0) or
+        (_grid % 2 != 0 and y = _grid - 1 and x = _grid -1) -> (
+            x <- 0; y <- 0
+        )
+    StepHome =
+        (x > 0 -> x <- x -1) || (y > 0 -> y <- y - 1)
+}
+
+stigmergy Search {
+    link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+        ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta
+
+    <posx: undef, posy: undef>
+
+}
+
+stigmergy Pickup {
+    link = x of c1 = x of c2 and y of c1 = y of c2
+
+    found: 0
+}
+
+agent Searcher {
+    interface = x: 0.._grid, y: 0.._grid
+    stigmergies = Search, Pickup
+    
+    Behavior = (
+        (found = 0 -> (
+            x != posx or y != posy -> MoveUpDown)
+            ++
+            x = posx and y = posy -> found <~ 1)
+        ++
+        (found = 2 -> StepHome)
+    ); Behavior
+        
+    
+}
+
+agent Victim {
+    interface = x: 0.._grid, y: 0.._grid
+    stigmergies = Search, Pickup
+
+    Behavior = (
+        (found = 0 -> posx <~ x; posy <~ y)
+        ++
+        (found = 1 -> found <~ 2)
+    ); Behavior
+    
+}
+
+check {
+    CorrectPosition = always forall Searcher s,
+        x of s >= 0 and x of s < _grid
+        and
+        y of s >= 0 and y of s < _grid
+
+    ReachedVictim = finally exists Searcher s, exists Victim v,
+        x of s = x of v and y of s = y of v
+
+    VictimFound = finally exists Victim v, found of v = 2
+}

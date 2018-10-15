@@ -42,6 +42,11 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Rescue' ">
+    <StartAction>Project</StartAction>
+    <StartArguments>--file ../examples/rescue.labs --values n=1 delta=21 grid=16 --bound 16</StartArguments>
+    <ExternalConsole>false</ExternalConsole>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.NETCore.App" Version="2.1.*" />
   </ItemGroup>

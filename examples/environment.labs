@@ -1,0 +1,20 @@
+system {
+    environment = a: 0, b: 0
+    spawn = Proc1: 1, Proc2: 1
+}
+
+agent Proc1 {
+
+    Behavior = a <-- a+1 ; Behavior
+
+}
+
+agent Proc2 {
+
+    Behavior = b <-- a % 2 ; Behavior
+
+}
+
+check {
+    P1 = always b < 2
+}
