@@ -167,28 +167,37 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
     let doOffset = function
         | Some e -> translateExpr mapping "" e |> Str
         | None -> Int 0
-        
-    let liquid a =
-        let template, (k:Ref<Var, unit>), e =
-            match a with
-            | AttrUpdate(k, e) -> "attr", k, e
-            | LStigUpdate(k, e) -> "lstig", k, e
-            | EnvWrite(k, e) -> "env", k, e
 
-        let _, index = mapping.[k.var.name]
-        let size = match k.var.vartype with Array s -> s | _ -> 0
+    let liquid a =
+        let template, l =
+            match a with
+            | AttrUpdate l -> "attr", l
+            | LStigUpdate l -> "lstig", l
+            | EnvWrite l -> "env", l
+
+        let qrykeys =
+            l
+            |> List.map (getLstigVars << snd)
+            |> Set.unionMany
+            |> Seq.map (fun v -> snd mapping.[v.name] |> Int)
+            |> Lst
+
+        let liquidAssignment (k:Ref<Var, unit>, expr) =
+            let _, index = mapping.[k.var.name]
+            let size = match k.var.vartype with Array s -> s | _ -> 0
+            seq [
+                "key",  Int index
+                "offset", doOffset k.offset
+                "size", Int size
+                "expr", translateExpr mapping (string a) expr |> Str
+            ]
+            |> Dict
 
         [
             "labs", Str (string a)
             "type", Str template
-            "key",  Int index
-            "offset", doOffset k.offset
-            "size", Int size
-            "expr", translateExpr mapping (string a) e |> Str
-            "qrykeys",
-                getLstigVars e 
-                |> Seq.map (fun v -> snd mapping.[v.name] |> Int)
-                |> Lst
+            "qrykeys", qrykeys
+            "assignments", l |> Seq.map liquidAssignment |> Lst
         ]
 
     let newTranslate (n:Node) = 

@@ -93,29 +93,39 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         Compound(toVarBExpr finder b1, op, toVarBExpr finder b2)
 
     let resolveAction action =
-        let locationCheck expectedLoc var =
-            expectedLoc = var.location
-        let lstigCheck var =
-            match var.location with
-            | L _ -> true
+        let locationCheck expectedLoc r =
+            let info = findString r.var
+            expectedLoc = info.location
+        let lstigCheck r =
+            let info = findString r.var
+            match info.location with
+            | L _ -> true   
             | _ -> false
 
-        let r, expr, check, actionType, failMsg = 
+        let l, check, actionType, failMsg = 
             match action with
-            | AttrUpdate(r, expr) ->
-                r, expr, locationCheck I, AttrUpdate, "attribute"
-            | LStigUpdate(r, expr) ->
-                r, expr, lstigCheck, LStigUpdate, "stigmergy"
-            | EnvWrite(r, expr) ->
-                r, expr, locationCheck E, EnvWrite, "environment"
-        let info = findString r.var
-        if not (check info) then 
-            sprintf
-                "%A variable %s, treated as %A"
-                info.location r.var failMsg
-            |> failwith
-        else
-            actionType(toVarRef findString r, toVarExpr findString expr)
+            | AttrUpdate l ->
+                l, locationCheck I, AttrUpdate, "attribute"
+            | LStigUpdate l ->
+                l, lstigCheck, LStigUpdate, "stigmergy"
+            | EnvWrite l ->
+                l, locationCheck E, EnvWrite, "environment"
+
+        l
+        |> List.map fst
+        |> List.filter (not << check)
+        |> List.map (fun r ->
+            let info = findString r.var
+            sprintf "%A variable %s, treated as %A" info.location r.var failMsg
+        )
+        |> fun x -> 
+            if not x.IsEmpty then 
+                x |> String.concat "\n" |> failwith
+            else
+                l
+                |> List.map (fun (r, e) ->
+                        toVarRef findString r, toVarExpr findString e)
+                |> actionType
 
     let rec resolveProcess = function
     | Nil -> Nil

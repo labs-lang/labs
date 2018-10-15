@@ -70,14 +70,18 @@ type BExpr<'a, 'b> =
     | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
 
 type Action<'a> =
-    | AttrUpdate of target:Ref<'a, unit> * expr:Expr<'a, unit>
-    | LStigUpdate of target:Ref<'a, unit> * expr:Expr<'a, unit>
-    | EnvWrite of target:Ref<'a, unit> * expr:Expr<'a, unit>
+    | AttrUpdate of (Ref<'a, unit> * Expr<'a, unit>) list
+    | LStigUpdate of (Ref<'a, unit> * Expr<'a, unit>) list
+    | EnvWrite of (Ref<'a, unit> * Expr<'a, unit>) list
     override this.ToString() = 
-        match this with
-        | AttrUpdate(r, e) -> sprintf "%O <- %O" r e
-        | LStigUpdate(r, e) -> sprintf "%O <~ %O" r e
-        | EnvWrite(r, e) -> sprintf "%O <-- %O" r e
+        let format, l = 
+            match this with
+            | AttrUpdate l -> sprintf "%s <- %s", l
+            | LStigUpdate l -> sprintf "%O <~ %O", l
+            | EnvWrite l -> sprintf "%O <-- %O", l
+        format 
+            (l |> List.map (string << fst) |> String.concat ",")
+            (l |> List.map (string << snd) |> String.concat ",")
 
 type Process<'a> = 
     | Nil

@@ -7,7 +7,7 @@
     #define LABSassert(COND, LABEL)     if(!(COND)) { printf(#LABEL " violated"); } else { printf(#LABEL " satisfied"); } 
     #define LABSassume(COND)            if(!(COND)) { exit(); }
 #else 
-    #define LABSassert(COND, LABEL)     assert(COND)
+    #define LABSassert(COND, LABEL)     /*#LABEL*/ assert(COND)
     #define LABSassume(COND)            __VERIFIER_assume(COND)   
 #endif
 
@@ -93,9 +93,10 @@ void lstig(int component_id, int key, int value) {
 
     Lvalue[component_id][key] = value;
     int k;
+    int tstamp = now();
     for (k = 0; k < MAXKEYL; k++) {
         if (k >= tupleStart[key] && k <= tupleEnd[key]) {
-            Ltstamp[component_id][k] = now();
+            Ltstamp[component_id][k] = tstamp;
         }
     }
 

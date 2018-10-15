@@ -2,25 +2,22 @@ void {{label}}(int tid) {
     //{{labs}}
 
 {%- include "templates/entry" -%}
-
-    int val = {{expr}};
-    {%- if size != 0 -%}
-    int offset = {{offset}};
-    assert(offset >= 0 && offset < {{size}});
-    {{type}}(tid, {{key}} + offset, val);
+    
+    {%- for item in assignments -%}
+    int val{{forloop.index0}} = {{item.expr}};
+    {%- if item.size != 0 -%}
+    int offset{{forloop.index0}} = {{item.offset}};
+    assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}});
+    {%- endif -%}{%- endfor -%}
+    
+    {%- for item in assignments -%}
+    {%- if item.size != 0 -%}
+    {{type}}(tid, {{item.key}} + offset{{forloop.index0}}, val{{forloop.index0}});
     {%- else -%}
-    {{type}}(tid, {{key}}, val);
-    {%- endif -%}
-
+    {{type}}(tid, {{item.key}}, val{{forloop.index0}});
+    {%- endif -%}{%- endfor -%}
     {%- for k in qrykeys -%}
-    setHin(tid, {{k}});
-    {%- endfor -%}
-    {%- if resetpcs -%}
-    int i;
-    for (i=1; i<MAXPC; i++) {
-        pc[tid][i] = 0;
-    }
-    {%- endif -%}
+    setHin(tid, {{k}});{%- endfor -%}
 
     {%- for item in exitpoints -%}
     pc[tid][{{ item.pc }}] = {{ item.value }};

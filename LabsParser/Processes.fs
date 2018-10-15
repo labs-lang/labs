@@ -15,10 +15,12 @@ let paction =
             charReturn '~' LStigUpdate
         ]
     (pipe3 
-        (ws (simpleRef pexpr))
+        (ws (simpleRef pexpr) |> sepbycommas)
         (ws parseArrow) 
-        (ws pexpr) 
-        (fun r action e -> action(r, e)))
+        (ws pexpr |> sepbycommas)
+        // TODO customize error if length of r != length of e
+        // (need try/with System.ArgumentException)
+        (fun r action e -> action(List.zip r e)))
 
 let pproc, pprocRef = createParserForwardedToRef()
 let pprocTerm, pprocTermRef = createParserForwardedToRef()
