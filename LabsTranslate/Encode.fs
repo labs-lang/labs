@@ -70,7 +70,6 @@ let baseVisit (procs:Map<string, Process<Var>>) counter rootName =
             Set.singleton {node with nodeType=Stop}
 
     let pc = pccount()
-    //let entry = Set.singleton {pc=pc;value=counter()}
     let enM = Map.empty.Add(pc, counter())
     let exM = Map.empty.Add(pc, counter())
 
@@ -96,10 +95,9 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
 
         trees
         |> Map.values
-        |> Seq.map fst
-        |> Set.unionMany
-        |> Set.map (getPc)
-        |> Set.maxElement
+        |> Seq.collect fst
+        |> Seq.map getPc
+        |> Seq.max
         |> (+) 1
 
     let maxcomps = 
