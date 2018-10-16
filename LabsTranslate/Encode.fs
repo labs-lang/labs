@@ -169,14 +169,14 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
         | None -> Int 0
 
     let liquid a =
-        let template, l =
-            match a with
-            | AttrUpdate l -> "attr", l
-            | LStigUpdate l -> "lstig", l
-            | EnvWrite l -> "env", l
+        let template =
+            match a.actionType with
+            | I -> "attr"
+            | L _ -> "lstig"
+            | E -> "env"
 
         let qrykeys =
-            l
+            a.updates
             |> List.map (getLstigVars << snd)
             |> Set.unionMany
             |> Seq.map (fun v -> snd mapping.[v.name] |> Int)
@@ -197,7 +197,7 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
             "labs", Str (string a)
             "type", Str template
             "qrykeys", qrykeys
-            "assignments", l |> Seq.map liquidAssignment |> Lst
+            "assignments", a.updates |> Seq.map liquidAssignment |> Lst
         ]
 
     let newTranslate (n:Node) = 

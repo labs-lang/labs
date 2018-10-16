@@ -10,16 +10,16 @@ let pexpr = makeExprParser simpleRef (skipString "id" |> ws)
 let paction =
     let parseArrow =
         skipChar '<' >>. choice [
-            followedBy (skipString "--") >>. stringReturn "--" EnvWrite; 
-            charReturn '-' AttrUpdate;
-            charReturn '~' LStigUpdate
+            followedBy (skipString "--") >>. stringReturn "--" E; 
+            charReturn '-' I;
+            charReturn '~' (L "")
         ]
     tuple3 
         (ws (simpleRef pexpr) |> sepbycommas)
         (ws parseArrow) 
         (ws pexpr |> sepbycommas)
     >>= (fun (refs, action, exprs) -> 
-        try List.zip refs exprs |> action |> preturn with
+        try {actionType=action; updates=List.zip refs exprs} |> preturn with
         | :? System.ArgumentException -> 
             fail "A multiple assignment should contain the same number of variables and expressions.")
 

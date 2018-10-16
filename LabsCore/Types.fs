@@ -5,7 +5,7 @@ type Location =
     | L of name:string 
     | E
     override this.ToString() =
-        match this with L(n) -> n | I -> "I" | E -> "E"
+        match this with L n -> n | I -> "Interface" | E -> "Environment"
 
 type VarType = 
     | Scalar
@@ -69,19 +69,18 @@ type BExpr<'a, 'b> =
     | Neg of BExpr<'a, 'b>
     | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
 
-type Action<'a> =
-    | AttrUpdate of (Ref<'a, unit> * Expr<'a, unit>) list
-    | LStigUpdate of (Ref<'a, unit> * Expr<'a, unit>) list
-    | EnvWrite of (Ref<'a, unit> * Expr<'a, unit>) list
-    override this.ToString() = 
-        let format, l = 
-            match this with
-            | AttrUpdate l -> sprintf "%s <- %s", l
-            | LStigUpdate l -> sprintf "%O <~ %O", l
-            | EnvWrite l -> sprintf "%O <-- %O", l
-        format 
-            (l |> List.map (string << fst) |> String.concat ",")
-            (l |> List.map (string << snd) |> String.concat ",")
+type Action<'a> = {
+    actionType: Location
+    updates: (Ref<'a, unit> * Expr<'a, unit>) list
+    }
+    with 
+        override this.ToString() = 
+            (match this.actionType with
+            | I -> sprintf "%s <- %s"
+            | L _ -> sprintf "%O <~ %O"
+            | E -> sprintf "%O <-- %O")
+                (this.updates |> List.map (string << fst) |> String.concat ",")
+                (this.updates  |> List.map (string << snd) |> String.concat ",")
 
 type Process<'a> = 
     | Nil

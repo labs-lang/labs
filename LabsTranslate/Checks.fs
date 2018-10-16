@@ -102,30 +102,27 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
             | L _ -> true   
             | _ -> false
 
-        let l, check, actionType, failMsg = 
-            match action with
-            | AttrUpdate l ->
-                l, locationCheck I, AttrUpdate, "attribute"
-            | LStigUpdate l ->
-                l, lstigCheck, LStigUpdate, "stigmergy"
-            | EnvWrite l ->
-                l, locationCheck E, EnvWrite, "environment"
+        let check, failMsg = 
+            match action.actionType with
+            | I -> locationCheck I, "attribute"
+            | L _ -> lstigCheck, "stigmergy"
+            | E -> locationCheck E, "environment"
 
-        l
+        action.updates
         |> List.map fst
         |> List.filter (not << check)
         |> List.map (fun r ->
             let info = findString r.var
-            sprintf "%A variable %s, treated as %A" info.location r.var failMsg
+            sprintf "%O variable %s, treated as %s" info.location r.var failMsg
         )
         |> fun x -> 
             if not x.IsEmpty then 
                 x |> String.concat "\n" |> failwith
             else
-                l
+                action.updates
                 |> List.map (fun (r, e) ->
                         toVarRef findString r, toVarExpr findString e)
-                |> actionType
+                |> fun x -> {actionType=action.actionType; updates=x}
 
     let rec resolveProcess = function
     | Nil -> Nil
