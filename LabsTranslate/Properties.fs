@@ -12,19 +12,14 @@ let rec cart nll =
     match nll with
     | [] -> []
     | h::t -> List.collect (fun n->f0 n (cart t)) h
-    
+
 
 let translateProp sys mapping (p:Property<Var>) =
-    let exists, forall = 
-        Map.partition
-            (fun _ (_, q) -> match q with Exists -> true | _ -> false)
-            p.quantifiers
 
-    
-    if not (exists.IsEmpty || forall.IsEmpty) then 
-        p.name
-        |> sprintf "Property %s: alternating quantifiers are currently not supported"
-        |> failwith
+    let trId (sub:Map<string, int>) name = 
+        match snd p.quantifiers.[name] with 
+        | All -> name+p.name
+        | Exists -> (sprintf "%i" sub.[name])
 
     //Given a substitution table, resolves references to quantified
     //component names.
@@ -37,15 +32,22 @@ let translateProp sys mapping (p:Property<Var>) =
                 |> failwith 
             trref mapping "" v offset
         | Some c ->
-            match snd p.quantifiers.[c] with
-            | All -> 
-                (trref mapping (c+p.name) v offset)
-            | Exists -> (trref mapping (sprintf "%i" sub.[c]) v offset)
-    let trId (sub:Map<string, int>) name = 
-        match snd p.quantifiers.[name] with 
-        | All -> name+p.name
-        | Exists -> (sprintf "%i" sub.[name])
+            (trref mapping (trId sub c) v offset)
 
+    let predExpr sub = {
+        refTranslator = tr sub
+        idTranslator = trId sub
+        filterUndef = fun (v, _) -> v.init = Undef
+    }
+
+    let exists, forall = 
+        Map.partition
+            (fun _ (_, q) -> match q with Exists -> true | _ -> false)
+            p.quantifiers
+    if not (exists.IsEmpty || forall.IsEmpty) then 
+        p.name
+        |> sprintf "Property %s: alternating quantifiers are currently not supported"
+        |> failwith
 
     let subs =
         exists
@@ -56,6 +58,9 @@ let translateProp sys mapping (p:Property<Var>) =
         |> cart
         |> List.map Map.ofList
         |> fun x -> if x.IsEmpty then [Map.empty] else x
+        
+    let translateSub sub =
+        (predExpr sub).BExprTranslator ("Property " + p.name)
 
     let assumptions =
         forall
@@ -69,13 +74,8 @@ let translateProp sys mapping (p:Property<Var>) =
             )
         |> Map.values
         |> String.concat ""
-
-    let translateSubs subs =
-        translate (tr subs) (trId subs) ("Property " + p.name)
-        |> translateBExpr
-
     subs
-    |> List.map (fun s -> translateSubs s p.predicate)
+    |> List.map (fun s -> translateSub s p.predicate)
     |> String.concat " || "
     |> fun pstring -> inlineassertion pstring p.name
     |> fun x -> sprintf "%s //%s\n" x p.name

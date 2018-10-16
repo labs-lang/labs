@@ -88,6 +88,7 @@ let encode (sys:SystemDef<Var>, mapping) =
 
     Result.Ok(sys, trees, mapping)
 
+    
 let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
     // Find the number of PCs used in the program
     let maxPc =
@@ -133,7 +134,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
             Dict [
                 "start", Int (findMinIndex m)
                 "end", Int (findMaxIndex m)
-                "link", Str (translateLink mapping (sprintf "Stigmergy %s" s.name) s.link)
+                "link", s.link |> (linkExpr mapping).BExprTranslator (sprintf "Stigmergy %s" s.name) |> Str
             ] |> Some
 
         sys.stigmergies
@@ -146,9 +147,10 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
     ]
     |> renderFile "templates/header.c"
 
+let translateGuard mapping = (procExpr mapping).BExprTranslator
+
 let translateCanProceed (trees, mapping:KeyMapping) =
     let translatePc = sprintf "(pc[tid][%i] == %i)"
-
     trees
     |> Map.values
     |> Seq.collect fst
@@ -164,8 +166,9 @@ let translateCanProceed (trees, mapping:KeyMapping) =
     |> renderFile "templates/canProceed.c"
 
 let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
+    let translateExpr = (procExpr mapping).ExprTranslator
     let doOffset = function
-        | Some e -> translateExpr mapping "" e |> Str
+        | Some e -> translateExpr "" e |> Str
         | None -> Int 0
 
     let liquid a =
@@ -189,7 +192,7 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
                 "key",  Int index
                 "offset", doOffset k.offset
                 "size", Int size
-                "expr", translateExpr mapping (string a) expr |> Str
+                "expr", translateExpr (string a) expr |> Str
             ]
             |> Dict
 

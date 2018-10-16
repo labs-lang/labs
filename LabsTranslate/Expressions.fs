@@ -26,14 +26,11 @@ let rec getVars filter = function
 let rec getLstigVars expr =
     getVars (fun x -> match x.location with L _ -> true | _ -> false) expr
 
-
-let rec translate trRef trId location =
-    let translateAOp = function
-        | Plus -> sprintf "( %s + %s )"
-        | Minus -> sprintf "( %s - %s )"
-        | Times -> sprintf "( %s * %s )"
-        | Div -> sprintf "( %s / %s )"
-        | Mod -> sprintf "mod( %s, %s )"
+let rec private translate trRef trId location =
+    let translateAOp op e1 e2 = 
+        match op with
+        | Plus | Minus | Times | Div -> sprintf "( %s %O %s )" e1 op e2
+        | Mod -> sprintf "mod( %s, %s )" e1 e2
     function
     | Id i -> 
         try (trId i) with
@@ -62,16 +59,13 @@ let trref (mapping:KeyMapping) cmp (v:Var) offset =
         | Some off -> sprintf "%i + %s" i off
     (translateLocation v.location) cmp index
 
-let translateExpr mapping = translate (trref mapping "tid") (fun () -> "tid")
-
 let checkUndef filter trref expr =
     (getVars filter expr)
-    |> Seq.map trref
-    |> Seq.map (sprintf "(%O != undef_value)")
-    |> String.concat " && "
+    |> Seq.map (fun x -> trref x None)
+    |> Seq.map (sprintf "(%s != undef_value)")
+    |> fun s -> if Seq.isEmpty s then "" else String.concat " && " s
 
-
-let rec translateBExpr filter trref trExpr =
+let rec private translateBExpr filter trref trExpr bexpr =
     let translateBOp = function
     | Conj -> sprintf "((%s) && (%s))"
     | Disj -> sprintf "((%s) || (%s))"
@@ -83,7 +77,7 @@ let rec translateBExpr filter trref trExpr =
         | Geq -> ">="
         | Neq -> "!="
     let trB = translateBExpr filter trref trExpr
-    function
+    match bexpr with
     | True -> "1"
     | False -> "0"
     | Neg b -> sprintf "!(%s)" (trB b)
@@ -91,41 +85,35 @@ let rec translateBExpr filter trref trExpr =
         (translateBOp op)
             (trB b1) (trB b2)
     | Compare(e1, op, e2) ->
-        sprintf "(%s) %s (%s) && %s && %s"
+        let undef1, undef2 = (checkUndef filter trref e1), (checkUndef filter trref e2)
+        sprintf "(%s) %s (%s)"
             (trExpr e1)
             (translateCOp op)
             (trExpr e2)
-            (checkUndef filter trref e1)
-            (checkUndef filter trref e2)
+        |> (if undef1 <> "" then sprintf "%s && %s" undef1 else id)
+        |> (if undef2 <> "" then sprintf "%s && %s" undef2 else id)
 
-let translateGuard mapping l = translateBExpr (translateExpr mapping l)
-
-let translateLink mapping l = 
-    let trLinkId = function
-    | Id1 -> "__LABS_link1"
-    | Id2 -> "__LABS_link2"
-    let trLinkRef (v, cmp) (offset:string option) =
-        match cmp with
-        | C1 -> "__LABS_link1"
-        | C2 -> "__LABS_link2"
-        |> fun name -> trref mapping name v offset 
-    translateBExpr (translate trLinkRef trLinkId l)
-
-
-let prova mapping e = checkUndef (fun v -> v.init = Undef) (trref mapping "") e
-let prova2 mapping e = 
-    let trLinkRef (v, cmp) (offset:string option) =
-            match cmp with
-            | C1 -> "__LABS_link1"
-            | C2 -> "__LABS_link2"
-            |> fun name -> trref mapping name v offset 
-    checkUndef (fun (v, _) -> v.init = Undef) trLinkRef e
-    
-type Prova<'a, 'b when 'a:comparison> = {
+type TranslateFactory<'a, 'b> when 'a:comparison and 'b:comparison = {
     refTranslator: 'a -> (string option) -> string
     idTranslator: 'b -> string
     filterUndef: 'a -> bool
 }
 with
-    member this.BExprTranslator loc = translateBExpr (this.ExprTranslator loc)
+    member this.BExprTranslator loc = translateBExpr this.filterUndef this.refTranslator (this.ExprTranslator loc)
     member this.ExprTranslator l = translate this.refTranslator this.idTranslator l
+
+let procExpr mapping = {
+    refTranslator= trref mapping "tid"
+    idTranslator= fun () -> "tid"
+    filterUndef= fun v -> v.init = Undef
+}
+
+let linkExpr mapping = 
+    let trLinkId = function | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
+    let trLinkRef (v, cmp) (offset:string option) =
+        trref mapping (trLinkId cmp) v offset 
+    {
+        refTranslator= trLinkRef
+        idTranslator= trLinkId
+        filterUndef= fun (v, _) -> v.init = Undef
+    }
