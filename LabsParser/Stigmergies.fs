@@ -7,17 +7,15 @@ open Common
 open Expressions
 
 let plink =
+    let pc1orc2 = 
+        (ws (ws (skipString "of")) >>. skipChar 'c' >>. 
+            choice [charReturn '1' C1; charReturn '2' C2])
     let linkref p =
         pipe3
-            (ws KEYNAME)
-            (opt (betweenBrackets p))
-            (ws (skipString "of c") >>. 
-                choice [charReturn '1' C1; charReturn '2' C2])
+            (ws KEYNAME) (opt (betweenBrackets p)) pc1orc2
             (fun a b c -> {var=a,c; offset=b})
     let linkId = 
-        (ws (skipString "id")) >>. 
-        (ws (skipString "of c") >>. 
-            choice [charReturn '1' Id1; charReturn '2' Id2])
+        (ws (skipString "id")) >>. pc1orc2
     makeBExprParser (makeExprParser linkref linkId)
 
 let plstig =

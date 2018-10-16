@@ -70,10 +70,6 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         | Some(var, _) -> var
         | None -> failwith (sprintf "Undefined variable: %s" k)
 
-    let resolveLinkTerm = function
-        | RefC1 k -> findString k |> RefC1
-        | RefC2 k -> findString k |> RefC2
-
     let rec toVarExpr finder = function
         | Id i -> Id i
         | Const i -> Const i
@@ -144,16 +140,14 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
     let resolveStigmergy lstig =
         {
             name = lstig.name
-            link = lstig.link |> (toVarBExpr resolveLinkTerm)
+            link = lstig.link |> (toVarBExpr (fun (x, y) -> findString x, y))
             vars = lstig.vars
         }
 
     let resolveProp (pr:Property<string>) = 
-        let find (name, otherStuff) = 
-            findString name, otherStuff
         {
             name=pr.name
-            predicate=(toVarBExpr find pr.predicate)
+            predicate=pr.predicate |> (toVarBExpr (fun (x, y) -> findString x, y))
             modality=pr.modality
             quantifiers=pr.quantifiers
         }
