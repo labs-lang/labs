@@ -11,6 +11,7 @@
     <GenerateTailCalls>true</GenerateTailCalls>
   </PropertyGroup>
   <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="Types.fs" />
     <Compile Include="Common.fs" />
     <Compile Include="Expressions.fs" />
