@@ -7,23 +7,29 @@ type Parser<'t> = Parser<'t, unit>
 
 // Tokens
 //-----------------------------------------
-let NEG : Parser<_> =           (skipChar '!')
-let CONJ : Parser<_> =          (skipChar '&')
-let EQ : Parser<_> =            (skipChar '=')
 let COMMENT : Parser<_> =       (skipChar '#')
 let COLON : Parser<_> =         (skipChar ':')
+let COMMA : Parser<_> =         (skipChar ',')
+let EQ : Parser<_> =            (skipChar '=')
+let GUARD : Parser<_> =         (skipString "->")
+let NEG : Parser<_> =           (skipChar '!')
+let RANGE : Parser<_> =         (skipString "..")
+let strUNDEF =                  "undef"
 //-----------------------------------------
 
 let isAlphanum x = isAsciiLetter x || isDigit x
-let isAlphanumlower x = isAsciiLower x || isDigit x
 
 let KEYNAME : Parser<_> =
-    pipe2 asciiLower (manySatisfy isAlphanum)
-        (fun x y -> sprintf "%O%s" x y)
-    >>= fun x -> if x = "id" then pzero else preturn x
+    IdentifierOptions(
+        isAsciiIdStart=isAsciiLower,
+        isAsciiIdContinue=isAlphanum)
+    |> identifier
 
 let IDENTIFIER : Parser<_> = 
-    pipe2 asciiUpper (manySatisfy isAlphanum) (fun x y -> sprintf "%O%s" x y)
+    IdentifierOptions(
+        isAsciiIdStart=isAsciiUpper,
+        isAsciiIdContinue=isAlphanum)
+    |> identifier
 
 let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
@@ -33,7 +39,7 @@ let betweenBrackets p = between (ws (skipChar '[')) (skipChar ']') p
 let betweenBraces p = between (ws (skipChar '{')) (skipChar '}') p
 let betweenParen p = between (ws (skipChar '(')) (skipChar ')') p
 let betweenAng p = between (ws (skipChar '<')) (skipChar '>') p
-let sepbycommas p = sepBy1 p (ws (skipChar ','))
+let sepbycommas p = sepBy1 p (ws COMMA)
 let sepbysemis p = sepBy1 p (ws (skipChar ';'))
 
 /// Helper for tracing parsers
@@ -84,11 +90,11 @@ let pinit =
     let pChoose = 
         (sepbycommas pint32) |> betweenBrackets |>> Choose
     let pRange = 
-        followedBy (pint32 >>. (skipString ".."))
-        >>. ((ws pint32) .>>. ((skipString "..") >>. (ws pint32)) 
+        followedBy (pint32 >>. RANGE)
+        >>. ((ws pint32) .>>. (RANGE >>. (ws pint32)) 
         |>> Range)
     let pSingle = (ws pint32) |>> (Choose << List.singleton)
-    let pUndef = stringReturn "undef" Undef
+    let pUndef = stringReturn strUNDEF Undef
 
     choice [pChoose; pRange; pSingle; pUndef] |> ws
 

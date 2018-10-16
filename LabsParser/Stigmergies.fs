@@ -33,7 +33,7 @@ let plstig =
     let plstigkeys name = 
         let loc = L name
         choice [
-            followedBy ((ws KEYNAME) >>. skipChar ',') >>. ptuple loc
+            followedBy ((ws KEYNAME) >>. COMMA) >>. ptuple loc
             (pinitdef loc |>> List.singleton) >>= toMap
         ] |> sepbysemis |> ws
 

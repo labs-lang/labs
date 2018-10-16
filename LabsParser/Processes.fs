@@ -30,7 +30,7 @@ do pprocTermRef :=
     let pguard = makeBExprParser pexpr
     let pNil = stringReturn "Nil" Nil
     let pSkip = stringReturn "Skip" Skip
-    let pGuarded = (ws pguard) .>>. (ws (skipString "->") >>. pproc)
+    let pGuarded = (ws pguard) .>>. ((ws GUARD) >>. pproc)
     choice [
         attempt pNil <!> "Nil"; 
         attempt pSkip <!> "Skip";
@@ -41,15 +41,13 @@ do pprocTermRef :=
     ]
 
 do pprocRef := 
-    // Returns a Process type from the corresponding char
+    // Turns a syntactic operator into a process composition
     let OP : Parser<_> = 
         choice [
             (stringReturn "++" (^+));
             (stringReturn "||" (^|));
             (charReturn ';' (^.));
         ]
-    // Either returns a single term, or creates a choice/par/seq
-    // from two processes
     maybeTuple2 
         (ws pprocTerm)
         ((ws OP) .>>. (ws pproc))
