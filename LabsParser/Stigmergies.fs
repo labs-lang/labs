@@ -26,7 +26,10 @@ let plstig =
             (sepbycommas (pvar loc))
             ((ws COLON) >>. sepbycommas pinit)
         >>= (fun (vars, inits) -> 
-                try List.zip vars inits |> Map.ofList |> preturn
+                try
+                    List.zip vars inits
+                    |> List.map (fun (v,i) -> {v with init=i}) 
+                    |> toSet (fun x -> x.name) (fun x -> x.name)
                 with | :? System.ArgumentException ->
                     fail "Tuples must contain the same numbers of variables and initializers.")
 
@@ -34,7 +37,7 @@ let plstig =
         let loc = L name
         choice [
             followedBy ((ws KEYNAME) >>. COMMA) >>. ptuple loc
-            (pinitdef loc |>> List.singleton) >>= toMap
+            (pinitdef loc |>> Set.singleton)
         ] |> sepbysemis |> ws
 
     (ws (skipString "stigmergy" |> ws) >>. (ws IDENTIFIER))

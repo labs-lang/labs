@@ -1,5 +1,6 @@
 ﻿module internal Encode
 open Types
+open Link
 open Base
 open Templates
 open Expressions
@@ -122,11 +123,10 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
         |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Int b])
 
     let links =
-        let makeLink (s:Link.Stigmergy<Var>) = 
+        let makeLink (s:Stigmergy<Var>) = 
             let names =
                 s.vars
-                |> List.reduce Map.mergeIfDisjoint
-                |> Map.keys
+                |> Set.unionMany
                 |> Set.map (fun v -> v.name) 
             let m = mapping |> Map.filter (fun k _ -> names.Contains k)
             if m.IsEmpty then None else

@@ -207,7 +207,7 @@ let analyzeKeys sys =
         
     let attrKeys = 
         comps
-        |> Seq.map (fun c -> Map.keys c.iface)
+        |> Seq.map (fun c -> c.iface)
         |> Set.unionMany
         |> conflicts
         |> (makeInfo 0)
@@ -217,7 +217,6 @@ let analyzeKeys sys =
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
-        |> Seq.map (List.map Map.keys)
         |> Seq.map Set.unionMany //FIXME duplicate lstig keys may go unnoticed
         |> Seq.fold 
             (fun (map, i) vars -> 
@@ -228,7 +227,7 @@ let analyzeKeys sys =
         |> fst 
 
     let envKeys = 
-        Map.keys sys.environment
+        sys.environment
         |> makeInfo 0
         |> fst 
 

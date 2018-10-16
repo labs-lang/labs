@@ -27,7 +27,7 @@ let psys =
             (processes)
             (fun _ env spawn procs -> {
                 processes = procs;
-                environment = (env |> Option.defaultValue Map.empty);
+                environment = (env |> Option.defaultValue Set.empty);
                 spawn = (makeRanges spawn);
                 components = Map.empty;
                 properties = Map.empty;

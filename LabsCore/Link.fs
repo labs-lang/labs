@@ -11,6 +11,6 @@ type Link<'a> = BExpr<LinkTerm<'a>, LinkId>
 
 type Stigmergy<'a> = {
     name:string
-    vars:Map<Var,Init> list
+    vars:Set<Var> list
     link:Link<'a>
 }

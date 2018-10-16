@@ -4,13 +4,13 @@ open Base
 open Templates
 open Liquid
 
-let initVar (mapping:KeyMapping) (var:Var) init =
+let initVar (mapping:KeyMapping) (var:Var) =
     let baseIndex = snd mapping.[var.name]
     let cVarName = sprintf "guess%i%O" baseIndex var.location
-    let cVarDef = def cVarName init
+    let cVarDef = def cVarName var.init
 
     let cVarAssume =
-        match init with
+        match var.init with
         | Undef -> ""
         | Choose l when l.Length = 1 -> 
             sprintf "%s = %i;\n" cVarName l.Head
@@ -44,9 +44,8 @@ let translateInit (sys, trees, mapping) =
 
     let initMap m = 
         m
-        |> Map.filter (fun _ init -> init <> Undef)
-        |> Map.map (initVar mapping)
-        |> Map.values
+        |> Set.filter (fun v -> v.init <> Undef)
+        |> Set.map (initVar mapping)
         |> String.concat "\n"
 
     let initAll =
@@ -64,22 +63,20 @@ let translateInit (sys, trees, mapping) =
             (str + (forLoop rangeStart rangeEnd inits))) ""
     let makeTuples (mapping:KeyMapping) =
         /// Finds the min and max indexes of the given tuple.
-        let extrema (tup:Map<Var,Init>) =
+        let extrema (tup:Set<Var>) =
             let indexes = 
                 tup
-                |> Map.toSeq
-                |> Seq.map (fun (v, _) -> snd mapping.[v.name])
+                |> Seq.map (fun v -> snd mapping.[v.name])
             (Seq.min indexes, Seq.max indexes)
 
-        let doLiquid (tup: Map<Var,Init>) =
+        let doLiquid (tup: Set<Var>) =
             let extr = extrema tup
             tup 
-            |> Map.map (fun v _ -> Dict [
+            |> Seq.map (fun v -> Dict [
                 "index", Int (snd mapping.[v.name])
                 "start", Int (fst extr)
                 "end", Int (snd extr)
                 ])
-            |> Map.values
 
         sys.stigmergies
         |> Map.values

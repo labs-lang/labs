@@ -17,17 +17,16 @@ type Property<'a> = {
         modality:Modality
         quantifiers: Map<string, string * Quantifier>
     }
-
-
+    
 type ComponentDef<'a> = { 
     name: string
-    iface: Map<Var, Init>
+    iface: Set<Var>
     lstig: string list
     processes: Map<string, Process<'a>>
 }
 
 type SystemDef<'a> = {
-    environment: Map<Var, Init>
+    environment: Set<Var>
     stigmergies: Map<string,Stigmergy<'a>>
     components: Map<string, ComponentDef<'a>>
     processes: Map<string, Process<'a>>

@@ -10,11 +10,17 @@ type Location =
 type VarType = 
     | Scalar
     | Array of size:int
+ /// Initialization values
+ type Init =
+     | Choose of int list
+     | Range of int * int
+     | Undef
 
 type Var = {
     name:string
     vartype:VarType
     location:Location
+    init:Init
 }
 with override this.ToString() = this.name
 
@@ -112,9 +118,3 @@ type Process<'a> =
         | Par(p, q) -> sprintf "%O | %O" p q
         | Await(b, p) -> sprintf "%A -> %O" b p
         | Name s -> s
-
- /// Initialization values
- type Init =
-     | Choose of int list
-     | Range of int * int
-     | Undef

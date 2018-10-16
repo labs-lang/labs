@@ -16,6 +16,6 @@ let pcomp =
         (fun n (i, l, procs) ->
             (n, {
                 name = n
-                iface= (i |> Option.defaultValue Map.empty)
+                iface= (i |> Option.defaultValue Set.empty)
                 lstig= (l |> Option.defaultValue List.empty) 
                 processes = procs }))
