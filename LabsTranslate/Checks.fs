@@ -109,8 +109,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         |> List.filter (not << check)
         |> List.map (fun r ->
             let info = findString r.var
-            sprintf "%O variable %s, treated as %s" info.location r.var failMsg
-        )
+            sprintf "%O variable %s, treated as %s" info.location r.var failMsg)
         |> fun x -> 
             if not x.IsEmpty then 
                 x |> String.concat "\n" |> failwith
@@ -159,7 +158,6 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         processes = sys.processes |> Map.mapValues resolveProcess
         spawn = sys.spawn
         properties = sys.properties |> Map.mapValues resolveProp
-        //link = sys.link |> (toVarBExpr resolveLinkTerm)
     }, mapping) |> Result.Ok
 
 let analyzeKeys sys = 
