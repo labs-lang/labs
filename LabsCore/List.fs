@@ -4,5 +4,5 @@
 let duplicates lst = 
     lst
     |> List.groupBy id
-    |> List.filter (fun (x, y) -> y.Length > 1)
+    |> List.filter (fun (_, y) -> y.Length > 1)
     |> List.map fst
