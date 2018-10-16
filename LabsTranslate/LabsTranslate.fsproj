@@ -37,10 +37,12 @@
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <OtherFlags> --simpleresolution --nocopyfsharpcore --warnon:1182</OtherFlags>
+    <OtherFlags>--simpleresolution --nocopyfsharpcore --warnon:1182</OtherFlags>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>RELEASE;NETCOREAPP;NETCOREAPP2_1</DefineConstants>
+    <GenerateTailCalls>true</GenerateTailCalls>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Rescue' ">
     <StartAction>Project</StartAction>
