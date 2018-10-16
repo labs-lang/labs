@@ -11,6 +11,22 @@ let refTypeCheck v (offset:'a option) =
         | Array(_) -> offset.IsNone, (sprintf "Array %s treated as Scalar")
     if test then failwith (msg v.name) else ()
 
+let rec getVars filter = function
+    | Id _
+    | Const _ -> Set.empty
+    | Abs e -> getVars filter e
+    | Ref r -> 
+        match r.offset with
+        | Some e -> getVars filter e
+        | None -> Set.empty
+        |> if (filter r.var) then Set.add r.var else id
+    | Arithm(e1, _, e2) -> Set.union (getVars filter e1) (getVars filter e2)
+
+/// Returns the set of all stigmergy variables accessed by the expression.
+let rec getLstigVars expr =
+    getVars (fun x -> match x.location with L _ -> true | _ -> false) expr
+
+
 let rec translate trRef trId location =
     let translateAOp = function
         | Plus -> sprintf "( %s + %s )"
@@ -48,7 +64,14 @@ let trref (mapping:KeyMapping) cmp (v:Var) offset =
 
 let translateExpr mapping = translate (trref mapping "tid") (fun () -> "tid")
 
-let rec translateBExpr trExpr =
+let checkUndef filter trref expr =
+    (getVars filter expr)
+    |> Seq.map trref
+    |> Seq.map (sprintf "(%O != undef_value)")
+    |> String.concat " && "
+
+
+let rec translateBExpr filter trref trExpr =
     let translateBOp = function
     | Conj -> sprintf "((%s) && (%s))"
     | Disj -> sprintf "((%s) || (%s))"
@@ -59,18 +82,21 @@ let rec translateBExpr trExpr =
         | Leq -> "<="
         | Geq -> ">="
         | Neq -> "!="
+    let trB = translateBExpr filter trref trExpr
     function
     | True -> "1"
     | False -> "0"
-    | Neg b -> sprintf "!(%s)" (translateBExpr trExpr b)
+    | Neg b -> sprintf "!(%s)" (trB b)
     | Compound(b1, op, b2) -> 
         (translateBOp op)
-            (translateBExpr trExpr b1) (translateBExpr trExpr b2)
+            (trB b1) (trB b2)
     | Compare(e1, op, e2) ->
-        sprintf "(%s) %s (%s)"
+        sprintf "(%s) %s (%s) && %s && %s"
             (trExpr e1)
             (translateCOp op)
             (trExpr e2)
+            (checkUndef filter trref e1)
+            (checkUndef filter trref e2)
 
 let translateGuard mapping l = translateBExpr (translateExpr mapping l)
 
@@ -78,23 +104,28 @@ let translateLink mapping l =
     let trLinkId = function
     | Id1 -> "__LABS_link1"
     | Id2 -> "__LABS_link2"
-    let trLinkRef (l:LinkTerm<Var>) (offset:string option) =
-        match l with
-        | RefC1 v -> trref mapping "__LABS_link1" v offset 
-        | RefC2 v -> trref mapping "__LABS_link2" v offset
+    let trLinkRef (v, cmp) (offset:string option) =
+        match cmp with
+        | C1 -> "__LABS_link1"
+        | C2 -> "__LABS_link2"
+        |> fun name -> trref mapping name v offset 
     translateBExpr (translate trLinkRef trLinkId l)
 
-/// Returns the set of all stigmergy variables accessed by the expression.
-let rec getLstigVars = function
-    | Id _
-    | Const _ -> Set.empty
-    | Abs e -> getLstigVars e
-    | Ref r -> 
-        match r.offset with
-        | Some e -> getLstigVars e
-        | None -> Set.empty
-        |> match r.var.location with | L _ -> Set.add r.var | _ -> id
-    | Arithm(e1, _, e2) -> Set.union (getLstigVars e1) (getLstigVars e2)
 
-
-
+let prova mapping e = checkUndef (fun v -> v.init = Undef) (trref mapping "") e
+let prova2 mapping e = 
+    let trLinkRef (v, cmp) (offset:string option) =
+            match cmp with
+            | C1 -> "__LABS_link1"
+            | C2 -> "__LABS_link2"
+            |> fun name -> trref mapping name v offset 
+    checkUndef (fun (v, _) -> v.init = Undef) trLinkRef e
+    
+type Prova<'a, 'b when 'a:comparison> = {
+    refTranslator: 'a -> (string option) -> string
+    idTranslator: 'b -> string
+    filterUndef: 'a -> bool
+}
+with
+    member this.BExprTranslator loc = translateBExpr (this.ExprTranslator loc)
+    member this.ExprTranslator l = translate this.refTranslator this.idTranslator l

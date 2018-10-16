@@ -70,12 +70,12 @@ let translateProp sys mapping (p:Property<Var>) =
         |> Map.values
         |> String.concat ""
 
-    let translateProp subs =
-        sprintf "Property %s" p.name
-        |> translate (tr subs) (trId subs)
+    let translateSubs subs =
+        translate (tr subs) (trId subs) ("Property " + p.name)
         |> translateBExpr
+
     subs
-    |> List.map (fun s -> translateProp s p.predicate)
+    |> List.map (fun s -> translateSubs s p.predicate)
     |> String.concat " || "
     |> fun pstring -> inlineassertion pstring p.name
     |> fun x -> sprintf "%s //%s\n" x p.name

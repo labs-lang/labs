@@ -12,8 +12,8 @@ let plink =
             (ws KEYNAME)
             (opt (betweenBrackets p))
             (ws (skipString "of c") >>. 
-                choice [charReturn '1' RefC1; charReturn '2' RefC2])
-            (fun a b c -> {var=c(a); offset=b})
+                choice [charReturn '1' C1; charReturn '2' C2])
+            (fun a b c -> {var=a,c; offset=b})
     let linkId = 
         (ws (skipString "id")) >>. 
         (ws (skipString "of c") >>. 

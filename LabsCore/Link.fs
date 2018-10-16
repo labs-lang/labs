@@ -1,13 +1,11 @@
 ﻿module Link
 open Types
 
-type LinkTerm<'a> =
-    | RefC1 of k:'a
-    | RefC2 of k:'a
+type LinkComponent = | C1 | C2
 
 type LinkId = Id1 | Id2
 
-type Link<'a> = BExpr<LinkTerm<'a>, LinkId>
+type Link<'a> = BExpr<'a * LinkComponent, LinkId>
 
 type Stigmergy<'a> = {
     name:string
