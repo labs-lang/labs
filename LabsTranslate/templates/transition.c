@@ -2,14 +2,17 @@ void {{label}}(int tid) {
     //{{labs}}
 
 {%- include "templates/entry" -%}
-    
+    __VERIFIER_assume(HoutCnt[tid] == 0);
+    __VERIFIER_assume(HinCnt[tid] == 0);
+
+
     {%- for item in assignments -%}
     int val{{forloop.index0}} = {{item.expr}};
     {%- if item.size != 0 -%}
     int offset{{forloop.index0}} = {{item.offset}};
     assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}});
     {%- endif -%}{%- endfor -%}
-    
+
     {%- for item in assignments -%}
     {%- if item.size != 0 -%}
     {{type}}(tid, {{item.key}} + offset{{forloop.index0}}, val{{forloop.index0}});

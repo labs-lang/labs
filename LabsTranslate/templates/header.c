@@ -66,10 +66,24 @@ void setHin(int id, int key) {
     }
 }
 
+void clearHin(int id, int key) {
+    if (Hin[id][key] == 1) {
+        Hin[id][key] = 0;
+        HinCnt[id] = HinCnt[id] - 1;
+    }
+}
+
 void setHout(int id, int key) {
     if (Hout[id][key] == 0) {
         Hout[id][key] = 1;
         HoutCnt[id] = HoutCnt[id] + 1;
+    }
+}
+
+void clearHout(int id, int key) {
+    if (Hout[id][key] == 1) {
+        Hout[id][key] = 0;
+        HoutCnt[id] = HoutCnt[id] - 1;
     }
 }
 
@@ -78,8 +92,8 @@ void setHout(int id, int key) {
 //  Component component_id  assigns to key the evaluated expression
 //
 void attr(int component_id, int key, int value) {
-    __VERIFIER_assume(HoutCnt[component_id] == 0);
-    __VERIFIER_assume(HinCnt[component_id] == 0);
+    // __VERIFIER_assume(HoutCnt[component_id] == 0);
+    // __VERIFIER_assume(HinCnt[component_id] == 0);
     I[component_id][key] = value;
     now(); // local step
 }
@@ -88,8 +102,6 @@ void attr(int component_id, int key, int value) {
 //  Rule LSTIG
 //
 void lstig(int component_id, int key, int value) {
-    __VERIFIER_assume(HoutCnt[component_id] == 0);
-    __VERIFIER_assume(HinCnt[component_id] == 0);
 
     Lvalue[component_id][key] = value;
     int k;
@@ -105,8 +117,8 @@ void lstig(int component_id, int key, int value) {
 
 
 void env(int component_id, int key, int value) {
-    __VERIFIER_assume(HoutCnt[component_id] == 0);
-    __VERIFIER_assume(HinCnt[component_id] == 0);
+    // __VERIFIER_assume(HoutCnt[component_id] == 0);
+    // __VERIFIER_assume(HinCnt[component_id] == 0);
     E[key] = value;
     now(); // local step
 }
@@ -150,9 +162,14 @@ void confirm(void) {
             }
         }
     }
+    for (k = 0; k < MAXKEYL; k++) {
+        if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
+            clearHin(guessedcomp, k);
+        }
+    }
 
-    Hin[guessedcomp][guessedkey] = 0;
-    HinCnt[guessedcomp]--;
+    // Hin[guessedcomp][guessedkey] = 0;
+    // HinCnt[guessedcomp]--;
 }
 
 void propagate(void) {
@@ -169,7 +186,6 @@ void propagate(void) {
     int t = Ltstamp[guessedcomp][guessedkey];
 
     for (i=0; i<MAXCOMPONENTS; i++) {
-
         if ((guessedcomp!=i) && (link(guessedcomp,i,guessedkey)) && (Ltstamp[i][guessedkey]<t)) {
             for (k = 0; k < MAXKEYL; k++) {
                 if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
@@ -181,6 +197,11 @@ void propagate(void) {
         }
     }
 
-    Hout[guessedcomp][guessedkey] = 0;
-    HoutCnt[guessedcomp] = HoutCnt[guessedcomp] - 1;
+    for (k = 0; k < MAXKEYL; k++) {
+        if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
+            clearHout(guessedcomp, k);
+        }
+    }
+    // Hout[guessedcomp][guessedkey] = 0;
+    // HoutCnt[guessedcomp] = HoutCnt[guessedcomp] - 1;
 }
