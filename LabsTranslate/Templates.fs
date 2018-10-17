@@ -46,6 +46,11 @@ let assign var cVarName index =
         | _ -> "")
 
 let serializeInfo (sys, mapping:KeyMapping) =
+    let serializeInit = function
+        | Undef -> "undef"
+        | Range(min, max) -> sprintf "range %i %i" min max
+        | Choose l -> l |> List.map string |> String.concat " " |> (+) "choice "
+
     let serializeKeys (m:seq<Var*int>) =
         m
         |> Seq.sortBy (fun (_, i) -> i)
@@ -55,7 +60,8 @@ let serializeInfo (sys, mapping:KeyMapping) =
             | Array s -> 
                 seq [0..s-1] 
                 |> Seq.map (sprintf "%s[%i]" v.name)
-                |> String.concat ",")
+                |> String.concat ","
+            |> fun s -> sprintf "%s=%s" s (serializeInit v.init))
         |> String.concat ","
         |> fun x -> if x.Length = 0 then "\n" else x
 
