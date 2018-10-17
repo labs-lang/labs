@@ -2,9 +2,6 @@ void {{label}}(int tid) {
     //{{labs}}
 
 {%- include "templates/entry" -%}
-    __VERIFIER_assume(HoutCnt[tid] == 0);
-    __VERIFIER_assume(HinCnt[tid] == 0);
-
 
     {%- for item in assignments -%}
     int val{{forloop.index0}} = {{item.expr}};
@@ -14,10 +11,11 @@ void {{label}}(int tid) {
     {%- endif -%}{%- endfor -%}
 
     {%- for item in assignments -%}
+    {%- capture check -%}{%- if forloop.first -%}1{%- else -%}0{%- endif -%}{%- endcapture -%}
     {%- if item.size != 0 -%}
-    {{type}}(tid, {{item.key}} + offset{{forloop.index0}}, val{{forloop.index0}});
+    {{type}}(tid, {{item.key}} + offset{{forloop.index0}}, val{{forloop.index0}}, {{check}});
     {%- else -%}
-    {{type}}(tid, {{item.key}}, val{{forloop.index0}});
+    {{type}}(tid, {{item.key}}, val{{forloop.index0}}, {{check}});
     {%- endif -%}{%- endfor -%}
     {%- for k in qrykeys -%}
     setHin(tid, {{k}});{%- endfor -%}

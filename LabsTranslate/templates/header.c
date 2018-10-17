@@ -91,9 +91,11 @@ void clearHout(int id, int key) {
 //  Rule ATTR
 //  Component component_id  assigns to key the evaluated expression
 //
-void attr(int component_id, int key, int value) {
-    // __VERIFIER_assume(HoutCnt[component_id] == 0);
-    // __VERIFIER_assume(HinCnt[component_id] == 0);
+void attr(int component_id, int key, int value, _Bool check) {
+    if (check) {
+        __VERIFIER_assume(HoutCnt[component_id] == 0);
+        __VERIFIER_assume(HinCnt[component_id] == 0);
+    }
     I[component_id][key] = value;
     now(); // local step
 }
@@ -101,7 +103,11 @@ void attr(int component_id, int key, int value) {
 //
 //  Rule LSTIG
 //
-void lstig(int component_id, int key, int value) {
+void lstig(int component_id, int key, int value, _Bool check) {
+    if (check) {
+        __VERIFIER_assume(HoutCnt[component_id] == 0);
+        __VERIFIER_assume(HinCnt[component_id] == 0);
+    }
 
     Lvalue[component_id][key] = value;
     int k;
@@ -115,10 +121,12 @@ void lstig(int component_id, int key, int value) {
     setHout(component_id, key);
 }
 
-
-void env(int component_id, int key, int value) {
-    // __VERIFIER_assume(HoutCnt[component_id] == 0);
-    // __VERIFIER_assume(HinCnt[component_id] == 0);
+void env(int component_id, int key, int value, _Bool check) {
+    if (check) {
+        __VERIFIER_assume(HoutCnt[component_id] == 0);
+        __VERIFIER_assume(HinCnt[component_id] == 0);
+    }
+    
     E[key] = value;
     now(); // local step
 }
@@ -139,7 +147,6 @@ void confirm(void) {
     unsigned char guessedcomp;
     __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
     __VERIFIER_assume(HinCnt[guessedcomp] > 0);
-    // __VERIFIER_assume(HoutCnt[guessedcomp] == 0); // Priority to propagate()
 
     unsigned char guessedkey;
     __VERIFIER_assume(guessedkey < MAXKEYL);
@@ -147,7 +154,6 @@ void confirm(void) {
 
     int i, k;
     int t = Ltstamp[guessedcomp][guessedkey];
-    ////printf(">>>[%d] start Hin (%d)\n", guessedcomp, guessedkey);    
     
     for (i=0; i<MAXCOMPONENTS; i++) {
         if ( (guessedcomp!=i) && link(guessedcomp,i,guessedkey) && differentLstig(guessedcomp, i, guessedkey) ) {
@@ -167,16 +173,12 @@ void confirm(void) {
             clearHin(guessedcomp, k);
         }
     }
-
-    // Hin[guessedcomp][guessedkey] = 0;
-    // HinCnt[guessedcomp]--;
 }
 
 void propagate(void) {
     unsigned char guessedcomp;
      __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
      __VERIFIER_assume(HoutCnt[guessedcomp] > 0);
-     // __VERIFIER_assume(HinCnt[guessedcomp] == 0); // Priority to Confirm()
 
     unsigned char guessedkey;
     __VERIFIER_assume(guessedkey < MAXKEYL);
@@ -202,6 +204,4 @@ void propagate(void) {
             clearHout(guessedcomp, k);
         }
     }
-    // Hout[guessedcomp][guessedkey] = 0;
-    // HoutCnt[guessedcomp] = HoutCnt[guessedcomp] - 1;
 }
