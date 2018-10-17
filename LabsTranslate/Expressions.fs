@@ -69,27 +69,18 @@ let rec private translateBExpr filter trref trExpr bexpr =
     let translateBOp = function
     | Conj -> sprintf "((%s) && (%s))"
     | Disj -> sprintf "((%s) || (%s))"
-    let translateCOp = function
-        | Less -> "<"
-        | Equal -> "=="
-        | Greater -> ">"
-        | Leq -> "<="
-        | Geq -> ">="
-        | Neq -> "!="
+
     let trB = translateBExpr filter trref trExpr
+
     match bexpr with
     | True -> "1"
     | False -> "0"
     | Neg b -> sprintf "!(%s)" (trB b)
     | Compound(b1, op, b2) -> 
-        (translateBOp op)
-            (trB b1) (trB b2)
+        (translateBOp op) (trB b1) (trB b2)
     | Compare(e1, op, e2) ->
         let undef1, undef2 = (checkUndef filter trref e1), (checkUndef filter trref e2)
-        sprintf "(%s) %s (%s)"
-            (trExpr e1)
-            (translateCOp op)
-            (trExpr e2)
+        sprintf "(%s) %O (%s)" (trExpr e1) op (trExpr e2)
         |> (if undef1 <> "" then sprintf "%s && %s" undef1 else id)
         |> (if undef2 <> "" then sprintf "%s && %s" undef2 else id)
 

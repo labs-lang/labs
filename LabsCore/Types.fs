@@ -62,10 +62,20 @@ type CmpOp =
     | Leq
     | Geq
     | Neq
+    override this.ToString() = 
+        match this with
+        | Less -> "<"
+        | Equal -> "=="
+        | Greater -> ">"
+        | Leq -> "<="
+        | Geq -> ">="
+        | Neq -> "!="
 
 type Bop =
     | Conj
     | Disj
+    override this.ToString() = 
+        match this with Conj -> "and" | Disj -> "or"
 
 ///<summmary>Boolean expressions.</summary>
 type BExpr<'a, 'b> =
@@ -74,6 +84,12 @@ type BExpr<'a, 'b> =
     | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
     | Neg of BExpr<'a, 'b>
     | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
+    override this.ToString() =
+        match this with
+        | True -> "true" | False -> "false"
+        | Neg b -> sprintf "!(%O)" b
+        | Compare(e1, op, e2) -> sprintf "(%O) %O (%O)" e1 op e2
+        | Compound(b1, op, b2) -> sprintf "(%O) %O (%O)" b1 op b2
 
 type Action<'a> = {
     actionType: Location

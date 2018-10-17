@@ -171,7 +171,7 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
         | Some e -> translateExpr "" e |> Str
         | None -> Int 0
 
-    let liquid a =
+    let liquid a guards =
         let template =
             match a.actionType with
             | I -> "attr"
@@ -196,8 +196,15 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
             ]
             |> Dict
 
+        let g = 
+            if Set.isEmpty guards then ""
+            else 
+                guards
+                |> Set.map (sprintf "%O")
+                |> String.concat " && "
+                |> fun s -> s + " -> " 
         [
-            "labs", Str (string a)
+            "labs", Str (string a |> (+) g)
             "type", Str template
             "qrykeys", qrykeys
             "assignments", a.updates |> Seq.map liquidAssignment |> Lst
@@ -212,7 +219,7 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
             
         let template, list = 
             match n.nodeType with
-            | Basic a -> transition, liquid a
+            | Basic a -> transition, liquid a n.guards
             | Goto -> goto, List.empty
             | Stop -> stop, List.empty
 
