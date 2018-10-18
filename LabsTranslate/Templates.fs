@@ -31,7 +31,7 @@ let def name init =
         | a, b when a > -128   && b < 128      -> "char"
         | a, b when a >= 0     && b < 65536    -> "unsigned short"
         | a, b when a > -32768 && b < 32768    -> "short"
-        | a, _ when a >=0                      -> "unsigned int"
+        | a, _ when a >= 0                     -> "unsigned int"
         | _ -> "int "
     match init with
         | Undef -> "int"
@@ -46,23 +46,18 @@ let assign var cVarName index =
         | _ -> "")
 
 let serializeInfo (sys, mapping:KeyMapping) =
-    let serializeInit = function
-        | Undef -> "undef"
-        | Range(min, max) -> sprintf "range %i %i" min max
-        | Choose l -> l |> List.map string |> String.concat " " |> (+) "choice "
 
     let serializeKeys (m:seq<Var*int>) =
         m
         |> Seq.sortBy (fun (_, i) -> i)
         |> Seq.map (fun (v, _) ->
             match v.vartype with
-            | Scalar -> v.name
+            | Scalar -> sprintf "%s=%O" v.name v.init 
             | Array s -> 
                 seq [0..s-1] 
-                |> Seq.map (sprintf "%s[%i]" v.name)
-                |> String.concat ","
-            |> fun s -> sprintf "%s=%s" s (serializeInit v.init))
-        |> String.concat ","
+                |> Seq.map (fun i -> sprintf "%s[%i]=%O" v.name i v.init)
+                |> String.concat ";")
+        |> String.concat ";"
         |> fun x -> if x.Length = 0 then "\n" else x
 
     let ranges = 

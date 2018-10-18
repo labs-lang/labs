@@ -15,6 +15,12 @@ type VarType =
      | Choose of int list
      | Range of int * int
      | Undef
+     override this.ToString() =
+        match this with
+        | Choose l -> l |> List.map string |> String.concat "," |> sprintf "[%s]"
+        | Range(min, max) -> sprintf "%i..%i" min max
+        | Undef -> "undef"
+
 
 type Var = {
     name:string
