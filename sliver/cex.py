@@ -82,7 +82,7 @@ def _mapCPROVERstate(A, B, C, info):
             last_return = "attr"
             return "{} {}:\t{} <- {}\n".format(
                 info["Comp"][int(tid)],
-                tid, info["I"][int(k)], keys["rvalue"])
+                tid, info["I"][int(k)].name, keys["rvalue"])
 
         is_lstig = LSTIG.match(keys["lvalue"])
         if is_lstig and keys["rvalue"] != UNDEF:
@@ -90,7 +90,7 @@ def _mapCPROVERstate(A, B, C, info):
             last_return = "lstig"
             return "{} {}:\t{} <~ {}".format(
                 info["Comp"][int(tid)],
-                tid, info["L"][int(k)], keys["rvalue"])
+                tid, info["L"][int(k)].name, keys["rvalue"])
 
         is_ltstamp = LTSTAMP.match(keys["lvalue"])
         if is_ltstamp and last_return == "lstig":
@@ -107,7 +107,7 @@ def _mapCPROVERstate(A, B, C, info):
         if is_env and keys["rvalue"] != UNDEF:
             k = is_env.group(1)
             last_return = "env"
-            return "\t{} <-- {}\n".format(info["E"][int(k)], keys["rvalue"])
+            return "\t{} <-- {}\n".format(info["E"][int(k)].name, keys["rvalue"])
 
         return ""
 

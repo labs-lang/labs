@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import begin
-import re
 import platform
 import sys
 from subprocess import check_output, DEVNULL, CalledProcessError
 from enum import Enum
 from os import remove
 import uuid
+from random import choice
+
 from cex import translateCPROVER, translateCSEQ
 
 SYS = platform.system()
@@ -57,6 +58,7 @@ def check_cbmc_version():
 
 cmd = "labs/LabsTranslate"
 
+
 if "Linux" in SYS:
     env = {"LD_LIBRARY_PATH": "labs/libunwind"}
     TIMEOUT_CMD = "/usr/bin/timeout"
@@ -65,7 +67,7 @@ else:
     TIMEOUT_CMD = "/usr/local/bin/gtimeout"
 
 
-class Components:
+class Spawn:
     def __init__(self, d):
         self._dict = d
 
@@ -76,13 +78,28 @@ class Components:
         raise KeyError
 
 
+class Variable:
+    def __init__(self, text):
+        self.name, init = text.split("=")
+        if init[0] == "[":
+            self.values = [int(v) for v in init[1:-1].split(",")]
+        elif ".." in init:
+            low, up = init.split("..")
+            self.values = range(int(low), int(up))
+        elif init == "undef":
+            self.values = [1000000]  # UNDEF
+
+    def rnd_value(self):
+        return choice(self.values)
+
+
 def split_comps(c):
     result = {}
     for comp in c.split(";"):
         name, rng = comp.split(" ")
         compmin, compmax = rng.split(",")
         result[(int(compmin), int(compmax))] = name
-    return Components(result)
+    return Spawn(result)
 
 
 def gather_info(call):
@@ -91,9 +108,9 @@ def gather_info(call):
     # Deserialize system info
     i_names, e_names, l_names, comps, *_ = info.decode().split("\n")
     info = {
-        "I": i_names.split(","),
-        "L": l_names.split(","),
-        "E": e_names.split(","),
+        "I": [Variable(v) for v in i_names.split(";")] if i_names != "" else [],
+        "L": [Variable(v) for v in l_names.split(";")] if l_names != "" else [],
+        "E": [Variable(v) for v in e_names.split(";")] if e_names != "" else [],
         "Comp": split_comps(comps)
     }
     return info
@@ -122,15 +139,15 @@ def parse_linux(file, values, bound, fair, simulate):
         return None, None, None
 
 
-# def get_functions(c_program):
-#     isFunc = re.compile(r"^void (\w+)\(int tid\)")
-
-#     lines = c_program.split("\n")
-#     lines = (
-#         (isFunc.match(l1).group(1), l2.split("// ")[1])
-#         for l1, l2 in zip(lines, lines[1:])
-#         if isFunc.match(l1))
-#     return dict(lines)
+def instrument_simulation(info):
+    # dimacs_call = backends["cbmc"].append("--dimacs")
+    # dimacs_out = check_output(dimacs_call, stderr=DEVNULL)
+    # ##
+    return ",".join(
+        "{}={}".format(var.name, var.rnd_value())
+        for loc in ["I", "L", "E"]
+        for var in info[loc]
+    )
 
 
 @begin.start(auto_convert=True)
@@ -150,6 +167,7 @@ def main(file: "path to LABS file",
     if fname:
         if show:
             print(c_program)
+            print(">>>", instrument_simulation(info))
             return
         if backend == "cbmc":
             check_cbmc_version()
