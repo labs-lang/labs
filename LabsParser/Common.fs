@@ -115,10 +115,13 @@ let pinitdef loc =
     (pvar loc) .>>. ((ws COLON) >>. pinit)
     |>> fun (var, init) -> {var with init=init}
 
+let inline byName v =
+   (^T : (member name : string) v)
+
 let pkeys loc = 
-    let lbl = function I -> "interface" | L _ -> "stigmergy" | E -> "environment"
+    //let lbl = function I -> "interface" | L _ -> "stigmergy" | E -> "environment"
     ws (sepbysemis (ws (pinitdef loc)))
-    >>= toSet (fun x -> x.name) (fun x -> x.name) <??> lbl loc
+    >>= toSet byName byName 
 
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)
