@@ -72,15 +72,22 @@ class Spawn:
         self._dict = d
 
     def __getitem__(self, key):
-        for (a, b), v in self._dict.items():
+        for (a, b), v in self.items():
             if a <= key < b:
                 return v
         raise KeyError
 
+    def values(self):
+        return self._dict.values()
+
+    def items(self):
+        return self._dict.items()
+
 
 class Variable:
-    def __init__(self, text):
-        self.name, init = text.split("=")
+    def __init__(self, index, name, init):
+        self.index = int(index)
+        self.name = name
         if init[0] == "[":
             self.values = [int(v) for v in init[1:-1].split(",")]
         elif ".." in init:
@@ -93,12 +100,32 @@ class Variable:
         return choice(self.values)
 
 
+class Agent:
+    def __init__(self, name, iface, lstig):
+        self.name = name
+        self.iface = {}
+        self.lstig = {}
+
+        for txt in iface.split(";"):
+            index, *text = txt.split("=")
+            self.iface[int(index)] = Variable(int(index), *text)
+
+        for txt in lstig.split(";"):
+            index, *text = txt.split("=")
+            self.lstig[int(index)] = Variable(int(index), *text)
+
+    def __str__(self):
+        return self.name
+
+
 def split_comps(c):
     result = {}
-    for comp in c.split(";"):
+
+    for comp, iface, lstig in zip(c[::3], c[1::3], c[2::3]):
         name, rng = comp.split(" ")
         compmin, compmax = rng.split(",")
-        result[(int(compmin), int(compmax))] = name
+        result[(int(compmin), int(compmax))] = Agent(name, iface, lstig)
+
     return Spawn(result)
 
 
@@ -106,13 +133,21 @@ def gather_info(call):
     call_info = call + ["--info"]
     info = check_output(call_info, env=env)
     # Deserialize system info
-    i_names, e_names, l_names, comps, *_ = info.decode().split("\n")
+    envs, *comps = info.decode().split("\n")
     info = {
-        "I": [Variable(v) for v in i_names.split(";")] if i_names != "" else [],
-        "L": [Variable(v) for v in l_names.split(";")] if l_names != "" else [],
-        "E": [Variable(v) for v in e_names.split(";")] if e_names != "" else [],
+        "E":
+            [Variable(*v.split("=")) for v in envs.split(";")]
+            if envs != ""
+            else [],
         "Comp": split_comps(comps)
     }
+    info["I"] = {}
+    info["L"] = {}
+    for c in info["Comp"].values():
+
+        info["I"].update(c.iface)
+        info["L"].update(c.lstig)
+        print(">>>", instrument_simulation(info), file=sys.stderr)
     return info
 
 
@@ -140,14 +175,19 @@ def parse_linux(file, values, bound, fair, simulate):
 
 
 def instrument_simulation(info):
-    # dimacs_call = backends["cbmc"].append("--dimacs")
-    # dimacs_out = check_output(dimacs_call, stderr=DEVNULL)
-    # ##
-    return ",".join(
-        "{}={}".format(var.name, var.rnd_value())
-        for loc in ["I", "L", "E"]
-        for var in info[loc]
-    )
+    TYPE = "short"
+    e = "\n".join(
+        "{} E[{}]={}".format(TYPE, x.index, x.rnd_value())
+        for x in info["E"])
+    for (low, up), agent in info["Comp"].items():
+        for n in range(low, up):
+            for v in agent.iface.values():
+                e += "\n{} I[{}][{}]={}".format(
+                    TYPE, n, v.index, v.rnd_value())
+            for v in agent.lstig.values():
+                e += "{} Lvalue[{}][{}]={}".format(
+                    TYPE, n, v.index, v.rnd_value())
+    return e
 
 
 @begin.start(auto_convert=True)
@@ -167,7 +207,6 @@ def main(file: "path to LABS file",
     if fname:
         if show:
             print(c_program)
-            print(">>>", instrument_simulation(info))
             return
         if backend == "cbmc":
             check_cbmc_version()
