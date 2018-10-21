@@ -33,6 +33,22 @@ type SystemDef<'a> = {
     spawn: Map<string, int*int>
     properties: Map<string, Property<'a>>
 } with
+    member this.ifaceVars = 
+        lazy
+            this.components
+            |> Map.mapValues (fun c -> c.iface)
+            |> Map.values
+            |> Set.unionMany
+            //|> Seq.reduce Map.merge
+    member this.lstigVars =
+        lazy
+            this.stigmergies
+            |> Map.mapValues (fun s -> s.vars |> Set.unionMany)
+            |> Map.values
+            |> Set.unionMany
+            //|> Seq.reduce Map.merge
+
     member this.SpawnedComps = 
         this.components
         |> Map.filter (fun n _ -> this.spawn.ContainsKey n)
+    
