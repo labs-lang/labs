@@ -7,18 +7,18 @@ void init() {
 
 int i,j;
 for (i=0; i<MAXKEYE; i++) {
-        E[i] = undef_value;
+        E[i] = nondet();
     }
 for (i=0; i<MAXCOMPONENTS; i++) {
     terminated[i] = 0;
     for (j=0; j<MAXKEYI; j++) {
-        I[i][j] = undef_value;
+        I[i][j] = nondet();
     }
     for (j=0; j<MAXKEYI; j++) {
-        I[i][j] = undef_value;
+        I[i][j] = nondet();
     }
     for (j=0; j<MAXKEYL; j++) {
-        Lvalue[i][j] = undef_value;
+        Lvalue[i][j] = nondet();
         Ltstamp[i][j] = 0;
         Hin[i][j] = 0;
         Hout[i][j] = 0;
@@ -27,13 +27,17 @@ for (i=0; i<MAXCOMPONENTS; i++) {
     HoutCnt[i] = 0;
 }
 
-{{- initpcs -}}
+    {%- for item in initpcs -%}
+    for (i={{item.start}}; i<{{item.end}}; i++) {
+        pc[i][0] == {{item.pc}};
+    }
+    {%- endfor -%}
 
-j=0;
-    
-{{- initenv -}}
+    j=0;
+        
+    {{- initenv -}}
 
-{{- initvars -}}
+    {{- initvars -}}
 
     __LABS_time = j;
 

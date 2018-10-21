@@ -1,7 +1,7 @@
 {% for item in defines -%}
 #define {{item.name}} {{item.value}}
 {% endfor -%}
-#define undef_value 1000000 // MaxInt
+#define undef_value 1000000
 
 #ifdef SIMULATION
     #define LABSassert(COND, LABEL)     if(!(COND)) { printf(#LABEL " violated"); } else { printf(#LABEL " satisfied"); } 
@@ -21,10 +21,10 @@ int mod(int n, int m) {
   return n;
 }
 
-unsigned short I[MAXCOMPONENTS][MAXKEYI];
-unsigned short Lvalue[MAXCOMPONENTS][MAXKEYL];
-unsigned short Ltstamp[MAXCOMPONENTS][MAXKEYL];
-unsigned short E[MAXKEYE];
+short I[MAXCOMPONENTS][MAXKEYI];
+short Lvalue[MAXCOMPONENTS][MAXKEYL];
+short Ltstamp[MAXCOMPONENTS][MAXKEYL];
+short E[MAXKEYE];
 
 unsigned char isTuple[MAXKEYL];
 unsigned char tupleStart[MAXKEYL];

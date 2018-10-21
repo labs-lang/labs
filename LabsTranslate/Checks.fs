@@ -62,12 +62,30 @@ let checkComponents sys =
             |> Map.values
             |> String.concat "\n"
             |> Result.Error
-
+            
 /// Binds all references in the system to the corresponding variable.
 let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
+    let addUndefs (sys:SystemDef<'a>) (cmp:ComponentDef<'a>) =
+        sys.ifaceVars.Value
+        |> Set.filter (fun v -> 
+            cmp.iface |> Set.forall (fun x -> v.name <> x.name))
+        //|> Map.mapValues (fun v -> {v with init=Undef})
+        |> fun undefs -> {cmp with iface = Set.union cmp.iface undefs}
+
+    let newComps =
+        sys.components
+        |> Map.mapValues (addUndefs sys)
+
+    let allVars =
+        sys.ifaceVars.Value 
+        |> Set.union sys.lstigVars.Value
+        |> Set.union sys.environment
+        |> Set.map (fun v -> v.name, v)
+        |> Map.ofSeq
+         
     let findString k = 
-        match mapping.TryFind k with
-        | Some(var, _) -> var
+        match allVars.TryFind k with
+        | Some v -> v, mapping.[v.name]
         | None -> failwith (sprintf "Undefined variable: %s" k)
 
     let rec toVarExpr finder = function
@@ -90,26 +108,18 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
 
     let resolveAction action =
         let locationCheck expectedLoc r =
-            let info = findString r.var
-            expectedLoc = info.location
-        let lstigCheck r =
-            let info = findString r.var
-            match info.location with
-            | L _ -> true   
-            | _ -> false
-
-        let check, failMsg = 
-            match action.actionType with
-            | I -> locationCheck I, "attribute"
-            | L _ -> lstigCheck, "stigmergy"
-            | E -> locationCheck E, "environment"
-
+            let info = allVars.[r.var]
+            match expectedLoc with
+            | L _ -> 
+                match info.location with L _ -> true | _ -> false
+            | _ -> expectedLoc = info.location
+            
         action.updates
         |> List.map fst
-        |> List.filter (not << check)
+        |> List.filter (not << (locationCheck action.actionType))
         |> List.map (fun r ->
-            let info = findString r.var
-            sprintf "%O variable %s, treated as %s" info.location r.var failMsg)
+            let info = allVars.[r.var]
+            sprintf "%O variable %s, treated as %O" info.location r.var action.actionType)
         |> fun x -> 
             if not x.IsEmpty then 
                 x |> String.concat "\n" |> failwith
@@ -152,78 +162,84 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         }
 
     ({
-        components = sys.components |> Map.mapValues resolveComponent
+        components = newComps |> Map.mapValues resolveComponent
         stigmergies = sys.stigmergies |> Map.mapValues resolveStigmergy
         environment = sys.environment 
         processes = sys.processes |> Map.mapValues resolveProcess
         spawn = sys.spawn
         properties = sys.properties |> Map.mapValues resolveProp
-    }, mapping) |> Result.Ok
+    }) |> Result.Ok
 
 let analyzeKeys sys = 
     let comps = Map.values sys.components
 
-    let conflicts (setOfVars:Set<Var>) =
-        let hasSameName (v1:Var) (v2:Var) =
-            v1.name = v2.name
-        setOfVars
-        |> Set.map (fun x -> (x.name, Set.filter (hasSameName x) setOfVars))
-        |> Set.filter (fun (_, vars) -> vars.Count > 1)
+    let conflicts (seqOfVars:Set<Var> seq) =
+        let groups =
+            seqOfVars
+            |> Set.unionMany
+            |> List.ofSeq
+            |> List.groupBy (fun x -> x.name)
+            //|> Set.unionMany
+            //|> Seq.map (fun k -> k, (seqOfVars |> Seq.choose (Map.tryFind k) |> List.ofSeq))
+            |> Map.ofSeq
+
+        groups
+        |> Map.mapValues (fun l -> 
+            l,
+            if l.IsEmpty then false
+            else List.exists (fun v -> v.vartype <> l.Head.vartype) l)
+        |> Map.filter (fun _ -> snd)
+        |> Map.keys
         |> fun x -> 
-            if x.IsEmpty
-            then setOfVars
-            else 
-                x 
-                |> Set.map fst
-                |> withcommas
-                |> sprintf "Duplicate variable definitions for %s"
+            if x.IsEmpty then seqOfVars else 
+                x
+                |> Set.map (sprintf "Variable %s cannot be both Scalar and Array") 
+                |> String.concat "\n"
                 |> failwith
 
     /// Makes a dictionary with information about each 
     /// variable in setOfVars.
-    let makeInfo startFrom setOfVars = 
+    let makeInfo startFrom (setOfVars:Set<Var> seq) = 
         let update (mapping, nextIndex) (var:Var) =
-            let newMapping = 
-                Map.add 
-                    (var.name) 
-                    (var, nextIndex)
-                    mapping
-            let newIndex =
+            if Map.containsKey var.name mapping
+            then mapping, nextIndex
+            else 
+                Map.add var.name nextIndex mapping,
                 match var.vartype with
                 | Scalar _ -> nextIndex + 1
                 | Array n -> nextIndex + n
-            (newMapping, newIndex)
-           
+
         setOfVars
+        |> Set.unionMany
+        //|> Set.toList
+        //|> List.concat
         |> Set.fold update (Map.empty, startFrom)
-        
-    let attrKeys = 
+
+    let attrKeys, maxI = 
         comps
         |> Seq.map (fun c -> c.iface)
-        |> Set.unionMany
         |> conflicts
         |> (makeInfo 0)
-        |> fst
 
-    let lstigkeys =
+    let lstigkeys, maxL =
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
-        |> Seq.map Set.unionMany //FIXME duplicate lstig keys may go unnoticed
+        |> fun x -> x
         |> Seq.fold 
             (fun (map, i) vars -> 
-                let newInfo, newI = makeInfo i vars
+                let newInfo, newI = makeInfo i (seq vars)
                 (Map.merge map newInfo, newI)
             )
             (Map.empty, 0)
-        |> fst 
 
-    let envKeys = 
+    let envKeys, maxE = 
         sys.environment
+        |> Seq.singleton
         |> makeInfo 0
-        |> fst 
 
     attrKeys
     |> Map.mergeIfDisjoint lstigkeys
     |> Map.mergeIfDisjoint envKeys
-    |> Result.Ok
+    |> Ok
+    >+> Ok (maxI, maxL, maxE)

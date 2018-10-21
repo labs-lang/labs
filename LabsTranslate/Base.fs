@@ -4,7 +4,7 @@ open Types
 open System.IO
 open Parser
 
-type KeyMapping = Map<string, Var * int>
+type KeyMapping = Map<string, int>
 
 /// Bind operator for Result.
 #if DEBUG
@@ -38,11 +38,10 @@ let log msg r =
         r
     | Result.Error _ -> r
 
-let logErr result = 
-    match result with
-    | Result.Ok _ -> result
+let logErr = function
+    | Result.Ok a -> Result.Ok a
     | Result.Error s -> 
-        eprintfn "%s" s
+        eprintfn "[Error] %s" s
         Result.Error ""
 
 let readFile filepath =
@@ -107,16 +106,3 @@ let makeCounter (start: int) =
         !x
     incr
 
-let private findVar comparison mapping =
-    mapping
-    |> Map.values
-    |> Seq.reduce (fun (v1, i1) (v2, i2) -> 
-        if (comparison i1 i2) then v1, i1 else v2, i2)
-
-let findMaxIndex (mapping:KeyMapping) = 
-    if mapping.IsEmpty then 0 else
-    findVar (>) mapping
-    |> fun (v,i) -> match v.vartype with Scalar -> i | Array s -> i+s-1 
-let findMinIndex mapping = 
-    findVar (<) mapping
-    |> snd

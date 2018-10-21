@@ -24,7 +24,7 @@ let rec getVars filter = function
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let rec getLstigVars expr =
-    getVars (fun x -> match x.location with L _ -> true | _ -> false) expr
+    getVars (fun (x, _) -> match x.location with L _ -> true | _ -> false) expr
 
 let rec private translate trRef trId location =
     let translateAOp op e1 e2 = 
@@ -50,12 +50,11 @@ let rec private translate trRef trId location =
         ((translateAOp op) (translate trRef trId location e1) (translate trRef trId location e2))
 
 /// Translates a variable reference.
-let trref (mapping:KeyMapping) cmp (v:Var) offset =
+let trref cmp (v:Var, i:int) offset =
     do refTypeCheck v offset
     let index =
-        let _, i = mapping.[v.name]
         match offset with
-        | None -> i.ToString()
+        | None -> string i
         | Some off -> sprintf "%i + %s" i off
     (translateLocation v.location) cmp index
 
@@ -93,18 +92,18 @@ with
     member this.BExprTranslator loc = translateBExpr this.filterUndef this.refTranslator (this.ExprTranslator loc)
     member this.ExprTranslator l = translate this.refTranslator this.idTranslator l
 
-let procExpr mapping = {
-    refTranslator= trref mapping "tid"
+let procExpr = {
+    refTranslator= trref "tid"
     idTranslator= fun () -> "tid"
-    filterUndef= fun v -> v.init = Undef
+    filterUndef= fun (v, _) -> v.init = Undef
 }
 
-let linkExpr mapping = 
+let linkExpr = 
     let trLinkId = function | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
     let trLinkRef (v, cmp) (offset:string option) =
-        trref mapping (trLinkId cmp) v offset 
+        trref (trLinkId cmp) v offset 
     {
         refTranslator= trLinkRef
         idTranslator= trLinkId
-        filterUndef= fun (v, _) -> v.init = Undef
+        filterUndef= fun ((v, (_:int)), _) -> v.init = Undef
     }

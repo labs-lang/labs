@@ -7,12 +7,12 @@ open Expressions
 open Properties
 open Liquid
 
-type NodeType = Basic of Action<Var> | Goto | Stop
+type NodeType = Basic of Action<Var * int> | Goto | Stop
 
 type Node = {
     nodeType:NodeType
     label:string
-    guards:Set<BExpr<Var, unit>>
+    guards:Set<BExpr<Var * int, unit>>
     pc:int
     entry: Map<int, int>
     exit: Map<int,int>
@@ -24,7 +24,7 @@ type Node = {
         | Goto _ -> sprintf "%s_%i" this.label this.entry.[pc]
         | Stop _ -> sprintf "Stop_%i" this.entry.[pc]
 
-let baseVisit (procs:Map<string, Process<Var>>) counter rootName =
+let baseVisit (procs:Map<string, Process<Var*int>>) counter rootName =
 
     let pccount = makeCounter -1
     let rec visit name rootEntry cnt pc guards entry exit proc lbl =
@@ -77,19 +77,16 @@ let baseVisit (procs:Map<string, Process<Var>>) counter rootName =
     (visit 
         rootName enM counter pc Set.empty enM exM (procs.[rootName] ^. Nil) rootName), enM.[pc]
 
-let encode (sys:SystemDef<Var>, mapping) = 
+let encode (sys:SystemDef<Var*int>) = 
     if sys.SpawnedComps.IsEmpty then failwith "No components have been spawned!"
     let counter = makeCounter -1
 
-    let trees = 
-        sys.SpawnedComps
-        |> Map.mapValues (fun def -> (def, Map.merge sys.processes def.processes))
-        |> Map.mapValues (fun (_, procs) -> baseVisit procs counter "Behavior")
+    sys.SpawnedComps
+    |> Map.mapValues (fun def -> (def, Map.merge sys.processes def.processes))
+    |> Map.mapValues (fun (_, procs) -> baseVisit procs counter "Behavior")
+    |> fun x -> Ok (sys, x)
 
-    Result.Ok(sys, trees, mapping)
-
-    
-let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
+let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, maxE), bound) =
     // Find the number of PCs used in the program
     let maxPc =
         let getPc node = 
@@ -105,36 +102,30 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
     let maxcomps = 
         Map.fold (fun state _ (_, cmax) -> max state cmax) 0 sys.spawn
 
-    let ifaces = mapping |> Map.filter (fun _ (v, _) -> v.location = I)
-    let env = mapping |> Map.filter (fun _ (v, _) -> v.location = E)
-    let lstig =
-        mapping
-        |> Map.filter (fun _ (v, _) -> match v.location with L _ -> true | _ -> false)
-
     let defines = 
         [
             "BOUND", bound; 
             "MAXCOMPONENTS", maxcomps;
             "MAXPC", maxPc;
-            "MAXKEYI", ((findMaxIndex ifaces) + 1)
-            "MAXKEYL", ((findMaxIndex lstig) + 1)
-            "MAXKEYE", ((findMaxIndex env) + 1)
+            "MAXKEYI", maxI
+            "MAXKEYL", maxL
+            "MAXKEYE", maxE
         ]
         |> (if isSimulation then fun l -> ("SIMULATION", 1)::l else id)
         |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Int b])
 
     let links =
-        let makeLink (s:Stigmergy<Var>) = 
+        let makeLink (s:Stigmergy<Var*int>) = 
             let names =
                 s.vars
                 |> Set.unionMany
-                |> Set.map (fun v -> v.name) 
+                |> Set.map (fun v -> v.name)
             let m = mapping |> Map.filter (fun k _ -> names.Contains k)
             if m.IsEmpty then None else
             Dict [
-                "start", Int (findMinIndex m)
-                "end", Int (findMaxIndex m)
-                "link", s.link |> (linkExpr mapping).BExprTranslator (sprintf "Stigmergy %s" s.name) |> Str
+                "start", Int (Map.values m |> Seq.min)
+                "end", Int (Map.values m |> Seq.max)
+                "link", s.link |> linkExpr.BExprTranslator (sprintf "Stigmergy %s" s.name) |> Str
             ] |> Some
 
         sys.stigmergies
@@ -147,16 +138,16 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping), bound) =
     ]
     |> renderFile "templates/header.c"
 
-let translateGuard mapping = (procExpr mapping).BExprTranslator
+let translateGuard = procExpr.BExprTranslator
 
-let translateCanProceed (trees, mapping:KeyMapping) =
+let translateCanProceed trees =
     let translatePc = sprintf "(pc[tid][%i] == %i)"
     trees
     |> Map.values
     |> Seq.collect fst
     |> Seq.map (fun n -> 
         n.guards 
-        |> Seq.map (translateGuard mapping n.label)
+        |> Seq.map (procExpr.BExprTranslator n.label)
         |> Seq.append (n.entry |> Map.map translatePc |> Map.values)
         |> Seq.map Str
         |> Lst
@@ -165,10 +156,9 @@ let translateCanProceed (trees, mapping:KeyMapping) =
     |> fun x -> seq ["guards", Lst x]
     |> renderFile "templates/canProceed.c"
 
-let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
-    let translateExpr = (procExpr mapping).ExprTranslator
+let translateAll (trees:Map<'b, (Set<Node> * 'c)>) =
     let doOffset = function
-        | Some e -> translateExpr "" e |> Str
+        | Some e -> procExpr.ExprTranslator "" e |> Str
         | None -> Int 0
 
     let liquid a guards =
@@ -182,17 +172,16 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
             a.updates
             |> List.map (getLstigVars << snd)
             |> Set.unionMany
-            |> Seq.map (fun v -> snd mapping.[v.name] |> Int)
+            |> Seq.map (Int << snd)
             |> Lst
 
-        let liquidAssignment (k:Ref<Var, unit>, expr) =
-            let _, index = mapping.[k.var.name]
-            let size = match k.var.vartype with Array s -> s | _ -> 0
+        let liquidAssignment (k:Ref<Var*int, unit>, expr) =
+            let size = match (fst k.var).vartype with Array s -> s | _ -> 0
             seq [
-                "key",  Int index
+                "key",  Int (snd k.var)
                 "offset", doOffset k.offset
                 "size", Int size
-                "expr", translateExpr (string a) expr |> Str
+                "expr", procExpr.ExprTranslator (string a) expr |> Str
             ]
             |> Dict
 
@@ -229,7 +218,7 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
             "exitpoints", liquidPcs n.exit |> Lst
             "guards",
                 n.guards
-                |> Set.map (translateGuard mapping n.label)
+                |> Set.map (procExpr.BExprTranslator n.label)
                 |> Seq.map Str
                 |> Lst
         ]
@@ -244,7 +233,7 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>, mapping:KeyMapping) =
     |> Seq.map newTranslate
     |> Seq.reduce (fun r1 r2 -> r1 >+> r2 |> Result.map (fun (s1:string, s2) -> s1 + s2) )
 
-let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
+let translateMain fair (sys:SystemDef<Var*int>, trees:Map<string, Set<Node> * 'a>) =
     let nodes = 
         trees
         |> Map.values 
@@ -256,7 +245,7 @@ let translateMain fair (sys, trees:Map<string, Set<Node> * 'a>, mapping) =
                 match m with Finally -> true | Always -> false)
     let translateProperties props =
         props
-        |> Map.mapValues (translateProp sys mapping)
+        |> Map.mapValues (translateProp sys)
         |> Map.values
         |> String.concat "\n"
 

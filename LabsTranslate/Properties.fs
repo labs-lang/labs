@@ -12,9 +12,8 @@ let rec cart nll =
     match nll with
     | [] -> []
     | h::t -> List.collect (fun n->f0 n (cart t)) h
-
-
-let translateProp sys mapping (p:Property<Var>) =
+    
+let translateProp sys (p:Property<Var*int>) =
 
     let trId (sub:Map<string, int>) name = 
         match snd p.quantifiers.[name] with 
@@ -23,21 +22,21 @@ let translateProp sys mapping (p:Property<Var>) =
 
     //Given a substitution table, resolves references to quantified
     //component names.
-    let tr (sub:Map<string, int>) (v, c) offset =
+    let tr (sub:Map<string, int>) ((v, i), c) offset =
         match c with
         | None -> 
             if v.location <> E then
                 v.name
                 |> sprintf "Property %s: %s is not an environment variable" p.name
                 |> failwith 
-            trref mapping "" v offset
+            trref "" (v, i) offset
         | Some c ->
-            (trref mapping (trId sub c) v offset)
+            (trref (trId sub c) (v, i) offset)
 
     let predExpr sub = {
         refTranslator = tr sub
         idTranslator = trId sub
-        filterUndef = fun (v, _) -> v.init = Undef
+        filterUndef = fun ((v, _), _) -> v.init = Undef
     }
 
     let exists, forall = 

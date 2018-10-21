@@ -19,18 +19,18 @@ let main argv =
             let! r2 = t2
             let! r3 = t3
 
-            return (r1 <&&> r2 <&&> r3 >>= fun m -> Ok (sys, m))
+            return (r1 <&&> r2 <&&> r3 >>= fun (m, (a,b,c)) -> Ok (sys, m, a,b,c))
         }
         |> Async.RunSynchronously
 
     let translate isSim isFair (x, b) = 
-        let _, trees, mapping = x
+        let sys, trees, mapping, _, _, _ = x
         [
             translateHeader isSim (x, b)
-            translateInit x
-            translateAll (trees, mapping)
-            translateCanProceed (trees, mapping)
-            translateMain isFair x
+            translateInit (sys, trees, mapping)
+            translateAll trees
+            translateCanProceed trees
+            translateMain isFair (sys,trees)
         ]
         |> List.map logErr
         |> List.map (Result.map (printfn "%s"))
@@ -45,7 +45,7 @@ let main argv =
         |> logErr
         >>= checks
 
-    let doTranslate x =
+    let doTranslate (s,m,maxI,maxL,maxE) =
         let bound =
             parsedCli
             |> Result.map (fun args -> args.GetResult <@ Bound @>) 
@@ -60,17 +60,17 @@ let main argv =
             |> Result.map (fun args -> args.Contains <@ Simulation @>)
             |> function Ok true -> true | _ -> false
 
-        x
-        >>= resolveSystem
+
+        resolveSystem (s, m)
         >>= encode
+        |> Result.map (fun (sys, trees) -> sys, trees, m, maxI,maxL,maxE)
         >+> bound
         >>= (translate isSimulation isFair)
         |> logErr // Log any error at the end
         |> setReturnCode
 
-    let doInfo x = 
-        x
-        >>= serializeInfo
+    let doInfo (s,m,_,_,_) = 
+        serializeInfo (s,m)
         |> logErr // Log any error at the end
         |> setReturnCode
 
@@ -78,7 +78,7 @@ let main argv =
     >+> parsedCli
     |> Result.map (fun (x, parsed) ->
         if parsed.Contains <@ Info @>
-        then doInfo (Ok x)
-        else doTranslate (Ok x)
+        then doInfo x
+        else doTranslate x
     )
     |> function Ok i -> i | Error _ -> 10
