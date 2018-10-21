@@ -5,7 +5,9 @@ type Location =
     | L of name:string 
     | E
     override this.ToString() =
-        match this with L n -> n | I -> "Interface" | E -> "Environment"
+        match this with 
+            | I -> "Interface" | E -> "Environment"
+            | L n -> sprintf "Stigmergy (%s)" n 
 
 type VarType = 
     | Scalar
