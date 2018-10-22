@@ -27,8 +27,8 @@ let rec makeExprParser pref pid =
             followedBy (skipString "abs(") >>.
                 (skipString "abs") >>. betweenParen pexpr |>> Abs
             followedBy pint32 >>. pint32 |>> Const <!> "const"
+            followedBy pid >>. pid |>> Id <!> "id"
             attempt (pref pexpr) |>> Ref <!> "ref"
-            pid |>> Id <!> "id"
         ]
     do pexprRef :=
         maybeTuple2 (ws pexprTerm <!> "term") 
