@@ -94,7 +94,7 @@ class Variable:
             low, up = init.split("..")
             self.values = range(int(low), int(up))
         elif init == "undef":
-            self.values = [1000000]  # UNDEF
+            self.values = [-32767]  # UNDEF
 
     def rnd_value(self):
         return choice(self.values)
@@ -185,7 +185,7 @@ def instrument_simulation(info):
                 e += "\n{} I[{}][{}]={}".format(
                     TYPE, n, v.index, v.rnd_value())
             for v in agent.lstig.values():
-                e += "{} Lvalue[{}][{}]={}".format(
+                e += "\n{} Lvalue[{}][{}]={}".format(
                     TYPE, n, v.index, v.rnd_value())
     return e
 
