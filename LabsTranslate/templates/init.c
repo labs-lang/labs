@@ -1,31 +1,27 @@
 void init() {
 
-{% for t in tuples -%}
-    tupleStart[{{t.index}}] = {{t.start}};
-    tupleEnd[{{t.index}}] = {{t.end}};
-{% endfor -%}
+    short _I[MAXCOMPONENTS][MAXKEYI];
+    short _Lvalue[MAXCOMPONENTS][MAXKEYL];
+    short _E[MAXKEYE];
 
-int i,j;
-for (i=0; i<MAXKEYE; i++) {
-        E[i] = nondet();
+    int i,j;
+    for (i=0; i<MAXKEYE; i++) {
+            E[i] = _E[i];
     }
-for (i=0; i<MAXCOMPONENTS; i++) {
-    terminated[i] = 0;
-    for (j=0; j<MAXKEYI; j++) {
-        I[i][j] = nondet();
+    for (i=0; i<MAXCOMPONENTS; i++) {
+        terminated[i] = 0;
+        for (j=0; j<MAXKEYI; j++) {
+            I[i][j] = _I[i][j];
+        }
+        for (j=0; j<MAXKEYL; j++) {
+            Lvalue[i][j] = _Lvalue[i][j];
+            Ltstamp[i][j] = 0;
+            Hin[i][j] = 0;
+            Hout[i][j] = 0;
+        }
+        HinCnt[i] = 0;
+        HoutCnt[i] = 0;
     }
-    for (j=0; j<MAXKEYI; j++) {
-        I[i][j] = nondet();
-    }
-    for (j=0; j<MAXKEYL; j++) {
-        Lvalue[i][j] = nondet();
-        Ltstamp[i][j] = 0;
-        Hin[i][j] = 0;
-        Hout[i][j] = 0;
-    }
-    HinCnt[i] = 0;
-    HoutCnt[i] = 0;
-}
 
     {%- for item in initpcs -%}
     for (i={{item.start}}; i<{{item.end}}; i++) {
@@ -41,11 +37,15 @@ for (i=0; i<MAXCOMPONENTS; i++) {
 
     __LABS_time = j;
 
-    {% comment %}
-    We set all items in a tuple to the timestamp of the last one
-    {% endcomment %}
+    for (i=0; i<MAXKEYE; i++) {
+        E[i] = _E[i];
+    }
     for (i=0; i<MAXCOMPONENTS; i++) {
+        for (j=0; j<MAXKEYI; j++) {
+            I[i][j] = _I[i][j];
+        }
         for (j=0; j<MAXKEYL; j++) {
+            Lvalue[i][j] = _Lvalue[i][j];
             Ltstamp[i][j] = Ltstamp[i][tupleEnd[j]];
         }
     }

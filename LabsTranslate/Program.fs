@@ -70,7 +70,7 @@ let main argv =
         |> setReturnCode
 
     let doInfo (s,m,_,_,_) = 
-        serializeInfo (s,m)
+        serializeInfo (s, m)
         |> logErr // Log any error at the end
         |> setReturnCode
 

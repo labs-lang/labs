@@ -14,7 +14,7 @@ let inline (>>=) r f = try Result.bind f r with ex -> Result.Error (ex.Message)
 #endif
 
 // Returns r2 if r1 is Ok, else returns r1
-let inline (<&&>) r1 r2 = r1 |> Result.bind (fun _ -> r2)
+let inline (<&&>) r1 r2 = r1 >>= (fun _ -> r2)
 
 let setReturnCode r =
     match r with 
@@ -27,9 +27,6 @@ let (>+>) r2 r1 =
     | Result.Ok a, Result.Ok b -> Result.Ok (a, b)
     | Result.Error err, _
     | _, Result.Error err -> Result.Error err
-
-let (<&>) f g a =
-    (f a) >+> (g a)
     
 let log msg r = 
     match r with

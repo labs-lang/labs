@@ -1,7 +1,7 @@
 {% for item in defines -%}
 #define {{item.name}} {{item.value}}
 {% endfor -%}
-#define undef_value 1000000
+#define undef_value -32767 // SHRT_MIN
 
 #ifdef SIMULATION
     #define LABSassert(COND, LABEL)     if(!(COND)) { printf(#LABEL " violated"); } else { printf(#LABEL " satisfied"); } 
@@ -26,17 +26,19 @@ short Lvalue[MAXCOMPONENTS][MAXKEYL];
 short Ltstamp[MAXCOMPONENTS][MAXKEYL];
 short E[MAXKEYE];
 
-unsigned char isTuple[MAXKEYL];
-unsigned char tupleStart[MAXKEYL];
-unsigned char tupleEnd[MAXKEYL];
+// unsigned char tupleStart[MAXKEYL];
+// unsigned char tupleEnd[MAXKEYL];
 
-unsigned int Hin[MAXCOMPONENTS][MAXKEYL];
-unsigned int Hout[MAXCOMPONENTS][MAXKEYL]; 
+_Bool Hin[MAXCOMPONENTS][MAXKEYL];
+_Bool Hout[MAXCOMPONENTS][MAXKEYL]; 
 unsigned char HinCnt[MAXCOMPONENTS];
 unsigned char HoutCnt[MAXCOMPONENTS];
-unsigned char terminated[MAXCOMPONENTS];
+_Bool terminated[MAXCOMPONENTS];
 unsigned int pc[MAXCOMPONENTS][MAXPC];
 unsigned int __LABS_time;
+
+const unsigned char tupleStart[MAXKEYL] = { {{ tupleStart | join: ", " }} };
+const unsigned char tupleEnd[MAXKEYL] = { {{ tupleEnd | join: ", " }} };
 
 
 _Bool link(int __LABS_link1, int __LABS_link2, int key) {

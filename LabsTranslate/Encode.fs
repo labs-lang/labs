@@ -87,6 +87,33 @@ let encode (sys:SystemDef<Var*int>) =
     |> fun x -> Ok (sys, x)
 
 let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, maxE), bound) =
+
+    let tupleStart, tupleEnd =
+        /// Finds the min and max indexes of the given tuple.
+        let extrema (tup:Set<Var>) =
+            let indexes = 
+                tup
+                |> Set.map (fun v -> mapping.[v.name])
+            let endIndexes = 
+                tup
+                |> Set.map (fun v ->
+                    match v.vartype with
+                    | Scalar -> 0
+                    | Array n -> n - 1 
+                    |> (+) mapping.[v.name])
+
+            (Seq.min indexes, Seq.max endIndexes)
+        let makeTuple (tup: Set<Var>) =
+            let min, max = extrema tup
+            List.replicate (max-min+1) (min, max)
+        
+        sys.stigmergies
+        |> Map.values
+        |> Seq.map (fun s -> s.vars)
+        |> Seq.collect (List.map (makeTuple))
+        |> List.concat
+        |> List.unzip
+
     // Find the number of PCs used in the program
     let maxPc =
         let getPc node = 
@@ -135,6 +162,8 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
     [
         "defines", Lst defines
         "links", Lst links
+        "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
+        "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst
     ]
     |> renderFile "templates/header.c"
 

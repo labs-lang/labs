@@ -6,7 +6,7 @@ open Liquid
 
 let initVar (mapping:KeyMapping) tid (var:Var) =
     let baseIndex = mapping.[var.name]
-    let cVarName = (translateLocation var.location tid)
+    let cVarName s = "_" + (translateLocation var.location tid s)
 
     let initAssumption i =
         let v = cVarName (string i)
@@ -41,10 +41,7 @@ let translateInit (sys, trees, mapping:KeyMapping) =
                 "end", Int maxI
                 "pc", Int entry
             ] |> Dict)
-            //sprintf "pc[i][0] = %i;" entry
-            //|> forLoop minI maxI)
         |> Map.values
-        //|> String.concat ""
 
     let initMap tid m = 
         m
@@ -69,34 +66,10 @@ let translateInit (sys, trees, mapping:KeyMapping) =
         |> Map.map initRange
         |> Map.values
         |> String.concat "\n"
-
-    let makeTuples =
-        /// Finds the min and max indexes of the given tuple.
-        let extrema (tup:Set<Var>) =
-            let indexes = 
-                tup
-                |> Set.map (fun v -> mapping.[v.name])
-            (Seq.min indexes, Seq.max indexes)
-
-        let makeTuple (tup: Set<Var>) =
-            let extr = extrema tup
-            tup 
-            |> Seq.map (fun v -> Dict [
-                "index", Int mapping.[v.name]
-                "start", Int (fst extr)
-                "end", Int (snd extr)
-                ])
-
-        sys.stigmergies
-        |> Map.values
-        |> Seq.map (fun s -> s.vars)
-        |> Seq.collect (List.map makeTuple)
-        |> Seq.concat
         
     [
         "initenv", sys.environment |> initMap "" |> indent 4 |> Str
         "initvars", initAll |> indent 4 |> Str
         "initpcs", (initPc sys trees) |> Lst
-        "tuples", Lst makeTuples
     ]
     |> renderFile "templates/init.c"    

@@ -211,8 +211,6 @@ let analyzeKeys sys =
 
         setOfVars
         |> Set.unionMany
-        //|> Set.toList
-        //|> List.concat
         |> Set.fold update (Map.empty, startFrom)
 
     let attrKeys, maxI = 
@@ -242,4 +240,4 @@ let analyzeKeys sys =
     |> Map.mergeIfDisjoint lstigkeys
     |> Map.mergeIfDisjoint envKeys
     |> Ok
-    >+> Ok (maxI, maxL, maxE)
+    >+> Ok (max maxI 1, max maxL 1, max maxE 1)
