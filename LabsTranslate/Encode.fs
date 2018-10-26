@@ -27,19 +27,21 @@ type Node = {
 let baseVisit (procs:Map<string, Process<Var*int>>) counter rootName =
 
     let pccount = makeCounter -1
-    let rec visit name rootEntry cnt pc guards entry exit proc lbl =
-        let vs = visit name rootEntry cnt pc
+    let rec visit visited cnt pc guards entry exit proc lbl =
+        let vs = visit visited cnt pc
 
         let node = {guards=guards; pc=pc; entry=entry; nodeType=Goto; exit=exit; label=lbl}
 
         match proc with
         | Base a -> 
             Set.singleton {node with nodeType=Basic a}
-        | Name s when s = name ->
-            Set.singleton {node with exit=rootEntry}
-        | Name s -> visit s entry cnt pc guards entry exit procs.[s] (lbl)
+        | Name s when Map.containsKey s visited ->
+            Set.singleton {node with exit=visited.[s]}
+        | Name s -> 
+            let newVisited = Map.add s entry visited
+            visit newVisited cnt pc guards entry exit procs.[s] lbl
         | Await(b, p) -> 
-            visit name rootEntry cnt pc (guards.Add b) entry exit p lbl
+            vs (guards.Add b) entry exit p lbl
         | Choice(p, q) -> 
             let pnodes = vs guards entry exit p (lbl+"_L")
             let qnodes = vs guards entry exit q (lbl+"_R")
@@ -57,8 +59,8 @@ let baseVisit (procs:Map<string, Process<Var*int>>) counter rootName =
             let qentry = entry.Add(rightPc, rCount())
             let qexit = exit.Add(rightPc, rCount()).Remove(pc)
 
-            let pnodes = visit name rootEntry lCount leftPc guards pentry pexit p (lbl + "_L")
-            let qnodes = visit name rootEntry rCount rightPc guards qentry qexit q (lbl + "_R")
+            let pnodes = visit visited lCount leftPc guards pentry pexit p (lbl + "_L")
+            let qnodes = visit visited rCount rightPc guards qentry qexit q (lbl + "_R")
 
             let joinEntry = Map.merge pexit qexit
             let joinExit = joinEntry |> Map.mapValues (fun _ -> 0) |> Map.merge exit
@@ -73,9 +75,9 @@ let baseVisit (procs:Map<string, Process<Var*int>>) counter rootName =
     let pc = pccount()
     let enM = Map.empty.Add(pc, counter())
     let exM = Map.empty.Add(pc, counter())
+    let visited = Map.ofList [rootName, enM]
 
-    (visit 
-        rootName enM counter pc Set.empty enM exM (procs.[rootName] ^. Nil) rootName), enM.[pc]
+    (visit visited counter pc Set.empty enM exM (procs.[rootName] ^. Nil) rootName), enM.[pc]
 
 let encode (sys:SystemDef<Var*int>) = 
     if sys.SpawnedComps.IsEmpty then failwith "No components have been spawned!"
