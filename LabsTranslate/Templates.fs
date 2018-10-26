@@ -25,11 +25,16 @@ let assign var cVarName index =
         | _ -> "")
 
 let serializeInfo (sys, mapping:KeyMapping) =
+
+    let formatVar v =
+        match v.vartype with
+        | Scalar -> sprintf "%i=%s=%O" mapping.[v.name] v.name v.init
+        | Array s -> sprintf "%i=%s[%i]=%O" mapping.[v.name] v.name s v.init
     let serializeVars (m:Set<Var>) =
         if Set.isEmpty m then "" else 
             m
-            |> Set.map (fun v -> v.name, sprintf "%i=%s=%O" mapping.[v.name] v.name v.init)
-            |> Seq.sortBy (fun (name, _) -> mapping.[name])
+            |> Set.map (fun v -> mapping.[v.name], formatVar v)
+            |> Seq.sortBy fst
             |> Seq.map snd
             |> String.concat ";"
 
