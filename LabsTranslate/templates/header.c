@@ -3,12 +3,12 @@
 {% endfor -%}
 #define undef_value -32767 // SHRT_MIN
 
+#define LABSassume(COND)            __VERIFIER_assume(COND)   
+
 #ifdef SIMULATION
-    #define LABSassert(COND, LABEL)     if(!(COND)) { printf(#LABEL " violated"); } else { printf(#LABEL " satisfied"); } 
-    #define LABSassume(COND)            if(!(COND)) { exit(); }
+    #define LABSassert(COND, LABEL)     if(!(COND)) { printf(">>>" #LABEL " violated"); } else { printf(">>>" #LABEL " satisfied"); } 
 #else 
     #define LABSassert(COND, LABEL)     /*#LABEL*/ assert(COND)
-    #define LABSassume(COND)            __VERIFIER_assume(COND)   
 #endif
 
 int abs(int x) {
