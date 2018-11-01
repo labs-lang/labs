@@ -4,7 +4,7 @@ open FParsec
 open Types
 open Expressions    
 
-let pexpr = makeExprParser simpleRef (skipString "id" |> ws)
+let pexpr = makeExprParser simpleRef (skipString "id" >>. notFollowedBy (skipSatisfy isAlphanum))
 
 /// Parses elementary processes ("actions")
 let paction =
@@ -32,12 +32,12 @@ do pprocTermRef :=
     let pSkip = stringReturn "Skip" Skip
     let pGuarded = (ws pguard) .>>. ((ws GUARD) >>. pproc)
     choice [
+        followedBy (skipChar '(') >>. betweenParen pproc <!> "pparen"
         attempt pNil <!> "Nil"; 
         attempt pSkip <!> "Skip";
         attempt pGuarded <!> "Guarded" |>> Await;
         IDENTIFIER |>> Name; 
         paction |>> Base;
-        betweenParen pproc
     ]
 
 do pprocRef := 
