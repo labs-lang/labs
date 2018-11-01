@@ -25,7 +25,7 @@ stigmergy Right {
 agent Robot {
 
     interface = pos: 0.._max
-    stigmergies = Left, Right
+    stigmergies = Left; Right
 
     Behavior =
         idLeft <~ id;
@@ -33,7 +33,7 @@ agent Robot {
         (
             (idLeft != id and pos > 0 ->
                 pos <- pos - 1)
-            &
+            ++
             (idRight != id and pos < _max ->
                 pos <- pos + 1
             )
