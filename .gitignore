@@ -454,6 +454,7 @@ bower_components
 Scripts/
 out
 *.gif
+*.pyc
 sliver/begin
 linux
 sliver/core
