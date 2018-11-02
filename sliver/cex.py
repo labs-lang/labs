@@ -1,4 +1,5 @@
 import re
+from modules.info import Info
 
 
 ATTR = re.compile(r"I\[([0-9]+)l?\]\[([0-9]+)l?\]")
@@ -12,6 +13,8 @@ OFFSET = 17
 
 
 def translateCPROVER(cex, fname, info, offset=-1):
+    info = Info.parse(info)
+
     with open(fname) as f:
         c_program = f.readlines()
     translatedcex = ''
@@ -81,16 +84,16 @@ def _mapCPROVERstate(A, B, C, info):
             tid, k = is_attr.group(1), is_attr.group(2)
             last_return = "attr"
             return "{} {}:\t{} <- {}\n".format(
-                info["Comp"][int(tid)],
-                tid, info["I"][int(k)].name, keys["rvalue"])
+                info.spawn[int(tid)],
+                tid, info.i[int(k)].name, keys["rvalue"])
 
         is_lstig = LSTIG.match(keys["lvalue"])
         if is_lstig and keys["rvalue"] != UNDEF:
             tid, k = is_lstig.group(1), is_lstig.group(2)
             last_return = "lstig"
             return "{} {}:\t{} <~ {}".format(
-                info["Comp"][int(tid)],
-                tid, info["L"][int(k)].name, keys["rvalue"])
+                info.spawn[int(tid)],
+                tid, info.lstig[int(k)].name, keys["rvalue"])
 
         is_ltstamp = LTSTAMP.match(keys["lvalue"])
         if is_ltstamp and last_return == "lstig":
@@ -107,7 +110,7 @@ def _mapCPROVERstate(A, B, C, info):
         if is_env and keys["rvalue"] != UNDEF:
             k = is_env.group(1)
             last_return = "env"
-            return "\t{} <-- {}\n".format(info["E"][int(k)].name, keys["rvalue"])
+            return "\t{} <-- {}\n".format(info.e[int(k)].name, keys["rvalue"])
 
         return ""
 

@@ -6,9 +6,10 @@ from subprocess import check_output, DEVNULL, CalledProcessError
 from enum import Enum
 from os import remove
 import uuid
-from random import choice
 
 from cex import translateCPROVER, translateCSEQ
+from modules.info import raw_info
+
 
 SYS = platform.system()
 
@@ -26,6 +27,10 @@ timeout_descr = """configure time limit (seconds).
 A value of 0 means no timeout (default)"""
 
 values_descr = "specify values for parameterised specification (key=value)"
+
+simulate_descr = """number of simulation traces to analyze.
+0 = run in verification mode (default)
+"""
 
 backends = {
     "cbmc": ["cbmc"],
@@ -56,9 +61,6 @@ def check_cbmc_version():
         backends_debug["cbmc"].extend(additional_flags)
 
 
-cmd = "labs/LabsTranslate"
-
-
 if "Linux" in SYS:
     env = {"LD_LIBRARY_PATH": "labs/libunwind"}
     TIMEOUT_CMD = "/usr/bin/timeout"
@@ -67,93 +69,9 @@ else:
     TIMEOUT_CMD = "/usr/local/bin/gtimeout"
 
 
-class Spawn:
-    def __init__(self, d):
-        self._dict = d
-
-    def __getitem__(self, key):
-        for (a, b), v in self.items():
-            if a <= key < b:
-                return v
-        raise KeyError
-
-    def values(self):
-        return self._dict.values()
-
-    def items(self):
-        return self._dict.items()
-
-
-class Variable:
-    def __init__(self, index, name, init):
-        self.index = int(index)
-        self.name = name
-        if init[0] == "[":
-            self.values = [int(v) for v in init[1:-1].split(",")]
-        elif ".." in init:
-            low, up = init.split("..")
-            self.values = range(int(low), int(up))
-        elif init == "undef":
-            self.values = [-32767]  # UNDEF
-
-    def rnd_value(self):
-        return choice(self.values)
-
-
-class Agent:
-    def __init__(self, name, iface, lstig):
-        self.name = name
-        self.iface = {}
-        self.lstig = {}
-
-        for txt in iface.split(";"):
-            index, *text = txt.split("=")
-            self.iface[int(index)] = Variable(int(index), *text)
-
-        for txt in lstig.split(";"):
-            index, *text = txt.split("=")
-            self.lstig[int(index)] = Variable(int(index), *text)
-
-    def __str__(self):
-        return self.name
-
-
-def split_comps(c):
-    result = {}
-
-    for comp, iface, lstig in zip(c[::3], c[1::3], c[2::3]):
-        name, rng = comp.split(" ")
-        compmin, compmax = rng.split(",")
-        result[(int(compmin), int(compmax))] = Agent(name, iface, lstig)
-
-    return Spawn(result)
-
-
-def gather_info(call):
-    call_info = call + ["--info"]
-    info = check_output(call_info, env=env)
-    # Deserialize system info
-    envs, *comps = info.decode().split("\n")
-    info = {
-        "E":
-            [Variable(*v.split("=")) for v in envs.split(";")]
-            if envs != ""
-            else [],
-        "Comp": split_comps(comps)
-    }
-    info["I"] = {}
-    info["L"] = {}
-    for c in info["Comp"].values():
-
-        info["I"].update(c.iface)
-        info["L"].update(c.lstig)
-        print(">>>", instrument_simulation(info), file=sys.stderr)
-    return info
-
-
 def parse_linux(file, values, bound, fair, simulate):
     call = [
-        cmd,
+        "labs/LabsTranslate",
         "--file", file,
         "--bound", str(bound)]
     if values:
@@ -168,26 +86,10 @@ def parse_linux(file, values, bound, fair, simulate):
 
         with open(fname, 'wb') as out_file:
             out_file.write(out)
-        return out.decode("utf-8"), fname, gather_info(call)
+        return out.decode("utf-8"), fname, raw_info(call)
     except CalledProcessError as e:
         print(e, file=sys.stderr)
         return None, None, None
-
-
-def instrument_simulation(info):
-    TYPE = "short"
-    e = "\n".join(
-        "{} E[{}]={}".format(TYPE, x.index, x.rnd_value())
-        for x in info["E"])
-    for (low, up), agent in info["Comp"].items():
-        for n in range(low, up):
-            for v in agent.iface.values():
-                e += "\n{} I[{}][{}]={}".format(
-                    TYPE, n, v.index, v.rnd_value())
-            for v in agent.lstig.values():
-                e += "\n{} Lvalue[{}][{}]={}".format(
-                    TYPE, n, v.index, v.rnd_value())
-    return e
 
 
 @begin.start(auto_convert=True)
@@ -195,7 +97,7 @@ def main(file: "path to LABS file",
          backend: backend_descr = "cbmc",
          steps: "number of system evolutions" = 1,
          fair: "enforce fair interleaving of components" = False,
-         simulate: "run in simulation mode" = False,
+         simulate: simulate_descr = 0,
          show: "print C encoding and exit" = False,
          debug: "enable additional checks in the backend" = False,
          timeout: timeout_descr = 0,
@@ -204,10 +106,15 @@ def main(file: "path to LABS file",
 """
     print("Encoding...", file=sys.stderr)
     c_program, fname, info = parse_linux(file, values, steps, fair, simulate)
+    info = info.decode().replace("\n", "|")[:-1]
     if fname:
         if show:
             print(c_program)
             return
+
+        if simulate:
+            backend = "cseq"
+
         if backend == "cbmc":
             check_cbmc_version()
 
@@ -217,6 +124,12 @@ def main(file: "path to LABS file",
             backend_call.extend(["--steps", str(steps), "-i"])
 
         backend_call.append(fname)
+
+        if simulate:
+            backend_call.extend([
+                "--simulate", str(simulate),
+                "--info", info])
+
         if timeout > 0:
             backend_call = [TIMEOUT_CMD, str(timeout)] + backend_call
         try:
@@ -254,13 +167,16 @@ def main(file: "path to LABS file",
                 else:
                     print("", file=sys.stderr)
             else:
-                if backend == "cbmc":
+                if backend == "cbmc" and not simulate:
                     print(translateCPROVER(out, fname, info))
-                elif backend == "cseq":
+                elif backend == "cseq" and not simulate:
                     print(translateCSEQ(out, fname, info))
                 else:
                     print(out)
-            remove(fname)
-            if backend == "cseq":
-                for suffix in ("", ".map", ".cbmc-assumptions.log"):
-                    remove("_cs_" + fname + suffix)
+            try:
+                remove(fname)
+                if backend == "cseq":
+                    for suffix in ("", ".map", ".cbmc-assumptions.log"):
+                        remove("_cs_" + fname + suffix)
+            except FileNotFoundError:
+                pass
