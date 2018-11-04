@@ -7,7 +7,7 @@ open Base
 let checkNames sys =
 
     let rec usedNames = function
-        | Name n -> Set.singleton n
+        | Name (n, _) -> Set.singleton n
         | Await(_, p) -> usedNames p
         | Seq(p, q)
         | Par(p, q)
@@ -65,6 +65,7 @@ let checkComponents sys =
             
 /// Binds all references in the system to the corresponding variable.
 let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
+    
     let addUndefs (sys:SystemDef<'a>) (cmp:ComponentDef<'a>) =
         sys.ifaceVars.Value
         |> Set.filter (fun v -> 
@@ -131,13 +132,13 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
 
     let rec resolveProcess = function
     | Nil -> Nil
-    | Skip -> Skip
-    | Base a -> resolveAction a |> Base
+    | Skip pos -> Skip pos
+    | Base (a, pos) -> Base(resolveAction a, pos)
     | Await(b, p) -> Await(toVarBExpr findString b, resolveProcess p)
     | Seq(p1, p2) -> Seq(resolveProcess p1, resolveProcess p2)
     | Choice(p1, p2) -> Choice(resolveProcess p1, resolveProcess p2)
     | Par(p1, p2) -> Par(resolveProcess p1, resolveProcess p2)
-    | Name n -> Name n
+    | Name (n, pos) -> Name (n, pos)
 
     let resolveComponent (c:ComponentDef<string>) = {
         name = c.name
