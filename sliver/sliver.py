@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import begin
+import click
 import platform
 import sys
 from subprocess import check_output, DEVNULL, CalledProcessError
@@ -20,17 +20,23 @@ class Backends(Enum):
     CSeq = "cseq"
 
 
-backend_descr = """choose the verification backend.
-Options are: {}""".format(", ".join(b.value for b in Backends))
+HELPMSG = {
+    "backend": "backend to use in verification mode.",
 
-timeout_descr = """configure time limit (seconds).
-A value of 0 means no timeout (default)"""
+    "debug": "Enable additional checks in the backend.",
 
-values_descr = "specify values for parameterised specification (key=value)"
+    "fair": "Enforce fair interleaving of components.",
 
-simulate_descr = """number of simulation traces to analyze.
-0 = run in verification mode (default)
-"""
+    "show": "Print C encoding and exit.",
+
+    "simulate": (
+        "Number of simulation traces to analyze. "
+        "If 0, run in verification mode."),
+
+    "steps": "Number of system evolutions.",
+
+    "timeout": """configure time limit (seconds). If 0, no timeout"""
+}
 
 backends = {
     "cbmc": ["cbmc"],
@@ -92,18 +98,35 @@ def parse_linux(file, values, bound, fair, simulate):
         return None, None, None
 
 
-@begin.start(auto_convert=True)
-def main(file: "path to LABS file",
-         backend: backend_descr = "cbmc",
-         steps: "number of system evolutions" = 1,
-         fair: "enforce fair interleaving of components" = False,
-         simulate: simulate_descr = 0,
-         show: "print C encoding and exit" = False,
-         debug: "enable additional checks in the backend" = False,
-         timeout: timeout_descr = 0,
-         *values: values_descr):
-    """ SLiVER - Symbolyc LAbS VERification. v1.0 (May 2018)
+def DEFAULTS(name):
+    return {
+        "help": HELPMSG[name],
+        "show_default": True
+    }
+
+
+@click.command()
+@click.argument('file', required=True, type=click.Path(exists=True))
+@click.argument('values', nargs=-1)
+@click.option(
+    '--backend',
+    type=click.Choice(b.value for b in Backends),
+    default="cbmc", **DEFAULTS("backend"))
+@click.option('--debug', default=False, is_flag=True, **DEFAULTS("debug"))
+@click.option('--fair/--no-fair', default=False, **DEFAULTS("fair"))
+@click.option('--simulate', default=0, type=int, **DEFAULTS("simulate"))
+@click.option('--show', default=False, is_flag=True, **DEFAULTS("show"))
+@click.option('--steps', default=1, type=int, **DEFAULTS("steps"))
+@click.option('--timeout', default=0, type=int, **DEFAULTS("timeout"))
+def main(file, backend, steps, fair, simulate, show, values, timeout, debug):
+    """
+* * *  SLiVER - Symbolic LAbS VERification. v1.1 (November 2018) * * *
+
+FILE -- path of LABS file to analyze
+
+VALUES -- assign values for parameterised specification (key=value)
 """
+
     print("Encoding...", file=sys.stderr)
     c_program, fname, info = parse_linux(file, values, steps, fair, simulate)
     info = info.decode().replace("\n", "|")[:-1]
@@ -180,3 +203,7 @@ def main(file: "path to LABS file",
                         remove("_cs_" + fname + suffix)
             except FileNotFoundError:
                 pass
+
+
+if __name__ == "__main__":
+    main()
