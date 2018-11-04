@@ -23,16 +23,16 @@ int main(void) {
         LABSassume(choice[__LABS_step] < MAXCOMPONENTS + 2);
     
         if (choice[__LABS_step] < MAXCOMPONENTS) {
-            LABSassume(agent_choice[__LABS_step] < {{ schedule.size }});
+            // LABSassume(agent_choice[__LABS_step] < {{ schedule.size }});
             {%- if fair -%}
             LABSassume(choice[__LABS_step] == last+1 || (last == MAXCOMPONENTS - 1 && choice[__LABS_step] == 0));
             {%- endif -%}
 
             {%- for item in schedule -%}
             {%- if forloop.first -%}
-            if (agent_choice[__LABS_step] == {{forloop.index0}}) {{item}}(choice[__LABS_step]);
+            if ({{ item.entry | join: " && " }}) {{ item.name }}(choice[__LABS_step]);
             {%- else -%}
-            else if ((agent_choice[__LABS_step] == {{forloop.index0}})) {{item}}(choice[__LABS_step]);
+            else if ({{ item.entry | join: " && " }}) {{ item.name }}(choice[__LABS_step]);
             {%- endif -%}
             {%- endfor -%}
             
