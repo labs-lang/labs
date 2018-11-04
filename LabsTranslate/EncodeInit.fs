@@ -32,14 +32,18 @@ let initVar (mapping:KeyMapping) tid (var:Var) =
 
 let translateInit (sys, trees, mapping:KeyMapping) =
 
-    let initPc sys trees =
+    let initPc =
         trees
         |> Map.map (fun n (_, entry) -> 
             let minI, maxI = sys.spawn.[n]
+            let entries = 
+                entry |> Set.toList |> List.groupBy fst
+                |> Seq.map (fun (pc, vals) -> Dict[ "pc", Int pc; "values", Lst (List.map (Int << snd) vals) ]) 
+
             seq [
                 "start", Int minI
                 "end", Int maxI
-                "pc", Int entry
+                "pcs", Lst entries
             ] |> Dict)
         |> Map.values
 
@@ -70,6 +74,6 @@ let translateInit (sys, trees, mapping:KeyMapping) =
     [
         "initenv", sys.environment |> initMap "" |> indent 4 |> Str
         "initvars", initAll |> indent 4 |> Str
-        "initpcs", (initPc sys trees) |> Lst
+        "initpcs", initPc |> Lst
     ]
     |> renderFile "templates/init.c"    
