@@ -110,7 +110,7 @@ class labs_mapper(core.module.BasicModule):
 			try:
 				choice_bitwidth = (findpropositionalvarsize(splitonfull,lines).bind(self))/contexts
 			except:
-				self.error("DIMACS lookup failed for the given symbol")
+				self.error("DIMACS lookup failed for the given symbol %s" % spliton)
 
 			# split on least significant digits of the symbolic variables that represent the context-switch points
 			if cores >= 2: varset.append(findpropositionalvar(splitonfull,lines,0).bind(self))
