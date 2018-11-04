@@ -455,6 +455,7 @@ Scripts/
 out
 *.gif
 *.pyc
-sliver/begin
+sliver/click
+sliver/pycparser
 linux
 sliver/core
