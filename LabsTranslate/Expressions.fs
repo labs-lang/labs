@@ -92,11 +92,13 @@ with
     member this.BExprTranslator loc = translateBExpr this.filterUndef this.refTranslator (this.ExprTranslator loc)
     member this.ExprTranslator l = translate this.refTranslator this.idTranslator l
 
-let procExpr = {
-    refTranslator= trref "tid"
-    idTranslator= fun () -> "tid"
+let customProcExpr name = {
+    refTranslator= trref name
+    idTranslator= fun () -> name
     filterUndef= fun (v, _) -> v.init = Undef
 }
+
+let procExpr = customProcExpr "tid"
 
 let linkExpr = 
     let trLinkId = function | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
