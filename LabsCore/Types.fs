@@ -112,33 +112,33 @@ type Action<'a> = {
                 (this.updates |> List.map (string << fst) |> String.concat ",")
                 (this.updates  |> List.map (string << snd) |> String.concat ",")
 
-type Process<'a> = 
+type Process<'a, 'b> = 
     | Nil
-    | Skip
-    | Base of Action<'a>
-    | Seq of Process<'a> * Process<'a>
-    | Choice of Process<'a> * Process<'a>
-    | Par of Process<'a> * Process<'a>
-    | Await of BExpr<'a, unit> * Process<'a>
-    | Name of string
+    | Skip of 'b
+    | Base of Action<'a> * 'b
+    | Seq of Process<'a, 'b> * Process<'a, 'b>
+    | Choice of Process<'a, 'b> * Process<'a, 'b>
+    | Par of Process<'a, 'b> * Process<'a, 'b>
+    | Await of BExpr<'a, unit> * Process<'a, 'b>
+    | Name of string * 'b
     static member private monoid left right op = 
         match left,right with
-        | _, Skip -> left
-        | Skip, _ -> right
+        | _, Skip _ -> left
+        | Skip _, _ -> right
         | _ -> op(left, right)
-    static member ( ^. )(left: Process<'a>, right: Process<'a>) =
-        Process<'a>.monoid left right Seq
-    static member ( ^+ )(left: Process<'a>, right: Process<'a>) =
+    static member ( ^. )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
+        Seq(left, right)
+    static member ( ^+ )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
         Choice(left, right)
-    static member ( ^| )(left: Process<'a>, right: Process<'a>) =
-        Process<'a>.monoid left right Par
+    static member ( ^| )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
+        Process<'a, 'b>.monoid left right Par
     override this.ToString() =
         match this with
         | Nil -> "0"
-        | Skip -> "√"
-        | Base a -> string a
+        | Skip _ -> "√"
+        | Base (a, _) -> string a
         | Seq(p, q) -> sprintf "%O; %O" p q
         | Choice(p, q) -> sprintf "%O + %O" p q
         | Par(p, q) -> sprintf "%O | %O" p q
         | Await(b, p) -> sprintf "%A -> %O" b p
-        | Name s -> s
+        | Name (s, _) -> s

@@ -22,14 +22,14 @@ type ComponentDef<'a> = {
     name: string
     iface: Set<Var>
     lstig: string list
-    processes: Map<string, Process<'a>>
+    processes: Map<string, Process<'a, FParsec.Position>>
 }
 
 type SystemDef<'a> = {
     environment: Set<Var>
     stigmergies: Map<string,Stigmergy<'a>>
     components: Map<string, ComponentDef<'a>>
-    processes: Map<string, Process<'a>>
+    processes: Map<string, Process<'a, FParsec.Position>>
     spawn: Map<string, int*int>
     properties: Map<string, Property<'a>>
 } with

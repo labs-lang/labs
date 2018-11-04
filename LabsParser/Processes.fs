@@ -29,15 +29,15 @@ let pprocTerm, pprocTermRef = createParserForwardedToRef()
 do pprocTermRef :=
     let pguard = makeBExprParser pexpr
     let pNil = stringReturn "Nil" Nil
-    let pSkip = stringReturn "Skip" Skip
+    let pSkip = skipString "Skip" >>. getPosition |>> Skip
     let pGuarded = (ws pguard) .>>. ((ws GUARD) >>. pproc)
     choice [
         followedBy (skipChar '(') >>. betweenParen pproc <!> "pparen"
         attempt pNil <!> "Nil"; 
         attempt pSkip <!> "Skip";
         attempt pGuarded <!> "Guarded" |>> Await;
-        IDENTIFIER |>> Name; 
-        paction |>> Base;
+        IDENTIFIER .>>. getPosition |>> Name; 
+        paction .>>. getPosition |>> Base;
     ]
 
 do pprocRef := 
