@@ -1,0 +1,80 @@
+system {
+    extern = _birds, _grid, _delta
+    spawn = Bird: _birds   
+}
+
+stigmergy Cohesion {
+    link =
+        ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+        ((y of c1 - y of c2) * (y of c1 - y of c2)) > _delta * _delta
+        and count of c1 >= count of c2
+        and leader of c1 != leader of c2
+
+    posx, posy: -1, -1
+}
+
+stigmergy Repulsion {
+    link = abs(x of c1 - x of c2) < 2 and abs(y of c1 - y of c2) < 2
+
+    repX, repY: -1, -1
+}
+
+stigmergy Alignment {
+    link =
+        ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+        ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta * _delta
+
+    dirx, diry: [-1, 1], [-1, 1];
+    leader: -1;
+    count: 0
+}
+
+agent Bird {
+    interface = x: 0.._grid; y: 0.._grid
+    stigmergies = Cohesion; Alignment; Repulsion
+    
+    # At first, every agent is the leader of their own swarm.
+    # Exchange of stigmergic messages naturally leads to the
+    # election of a leader for each group of connected birds
+    Behavior = leader <~ id; Loop
+    Loop = Move; Attract; Loop
+
+
+    # Only move if there is no agent on the destination position
+    Move = (
+            (x + dirx % _grid = repX and y + diry % _grid = repY ->
+                Skip)
+            ++
+            (x + dirx % _grid != repX  or y + diry % _grid != repy ->
+                x, y <- (x + dirx) % _grid, (y + diry) % _grid)
+        );
+        repX, repY <~ x, y
+        
+
+    Attract = (
+            # Leaders only signal their own position
+            (leader = id -> posx, posy <~ x, y)
+            ++
+            # Followers upgrade the count of their swarm
+            (leader != id -> count <~ count + 1)
+        );
+        (
+            # When a non-leader gets (posx, posy) != (-1, -1) it means that is
+            # has sensed a swarm "better" than the current one. Thus, is 
+            # changes its direction to point towards its new leader.
+            # Notice that this will trigger feedback loops among other agents 
+            # near it.
+
+            (x = posx or posx = -1 -> Skip)
+            ++
+            (x != posx and posx != -1 -> dirx <- (x-posx) / abs(x-posx))
+        ); (
+            (y = posy or posy = -1 -> Skip)
+            ++
+            (y != posy and posy != -1 -> diry <- (y-posy) / abs(y-posy));
+        )
+}
+
+check {
+    Count = finally exists Bird b, count of b = _birds 
+}
