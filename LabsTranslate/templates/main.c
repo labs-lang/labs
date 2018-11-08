@@ -12,8 +12,6 @@ void finally() {
 int main(void) {
     init();
     unsigned char choice[BOUND];
-    unsigned char agent_choice[BOUND];
-
 
     int __LABS_step;
     {% if fair -%}unsigned char last;{% endif %}
@@ -23,7 +21,6 @@ int main(void) {
         LABSassume(choice[__LABS_step] < MAXCOMPONENTS + 2);
     
         if (choice[__LABS_step] < MAXCOMPONENTS) {
-            // LABSassume(agent_choice[__LABS_step] < {{ schedule.size }});
             {%- if fair -%}
             LABSassume(choice[__LABS_step] == last+1 || (last == MAXCOMPONENTS - 1 && choice[__LABS_step] == 0));
             {%- endif -%}

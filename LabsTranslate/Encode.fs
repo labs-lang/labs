@@ -46,9 +46,7 @@ let rec getEntryPoints (procs:Map<string, Process<_,_>>) counter name =
         | Name (s, _) ->
             visit (Set.add s visited) pc cnt parent procs.[s]
 
-
-    let pc = pccount()
-    let entryMap = visit (Set.singleton name) pc counter Set.empty procs.[name]
+    let entryMap = visit (Set.singleton name) (pccount()) counter Set.empty procs.[name]
 
     let rec entryOf p =
         match p with
@@ -94,7 +92,6 @@ let encodeProcess (procs:Map<string, Process<_,_>>) counter rootName =
             |> Set.union (visit visited guards p2)
         | Name (s, _) when Map.containsKey s visited ->
             Set.empty
-            //{node with entry=entryMap.[p]; exit = visited.[s]} |> Set.singleton
         | Name (s, _) ->
             let e = entry procs.[s]
             let newVisited = Map.add s e visited
