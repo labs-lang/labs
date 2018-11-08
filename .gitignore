@@ -455,7 +455,10 @@ Scripts/
 out
 *.gif
 *.pyc
+
+linux
+
 sliver/click
 sliver/pycparser
-linux
 sliver/core
+sliver/cseq.py
