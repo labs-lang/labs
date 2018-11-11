@@ -37,10 +37,12 @@ let rec getEntryPoints (procs:Map<string, Process<_,_>>) counter name =
         | Seq(p1, p2) //-> Map.merge (visit pc cnt parent p1) (visit pc cnt Set.empty p2)
         | Choice(p1, p2) -> Map.mergeIfDisjoint (v p1) (v p2)
         | Par(p1, p2) -> 
-            let leftCnt = makeCounter -1
-            let rightCnt = makeCounter -1
+            let leftPc, leftCnt = pccount(), makeCounter -1
+            let rightPc, rightCnt = pccount(), makeCounter -1
             let par = parent.Add (pc, cnt())
-            Map.merge (visit visited (pccount()) leftCnt par p1) (visit visited (pccount()) rightCnt par p2)
+            Map.merge (visit visited leftPc leftCnt par p1) (visit visited rightPc rightCnt par p2)
+            // Add entry point for join node
+            |> Map.add p ([leftPc, leftCnt(); rightPc, rightCnt()] |> Set.ofList |> Set.union parent)
         | Await(_,p) -> v p
         | Name (s, _) when Set.contains s visited -> Map.empty
         | Name (s, _) ->
@@ -61,10 +63,16 @@ let rec getEntryPoints (procs:Map<string, Process<_,_>>) counter name =
             Set.union (entryOf p1) (entryOf p2)
         | Name (s, _) -> entryOf procs.[s]
 
-    entryOf
+    let rec joinOf proc = 
+        match proc with
+        | Par(_,_) ->
+            entryMap.[proc]
+        | _ -> Set.empty
+
+    entryOf, joinOf
 
 let encodeProcess (procs:Map<string, Process<_,_>>) counter rootName =
-    let entry = getEntryPoints procs counter rootName
+    let entryOf, joinOf = getEntryPoints procs counter rootName
 
     let rec visit visited guards p =
         let node = 
@@ -77,29 +85,45 @@ let encodeProcess (procs:Map<string, Process<_,_>>) counter rootName =
             }
         match p with
         | Nil -> Set.empty
-        | Skip _ -> Set.singleton {node with entry=entry p}
+        | Skip _ -> Set.singleton {node with entry=entryOf p}
         | Base (a, _) -> 
-            {node with action=Some a; entry=entry p} |> Set.singleton
+            {node with action=Some a; entry=entryOf p} |> Set.singleton
         | Seq(p1, p2) ->
-            let p1exit = entry p2
+            let p1exit = entryOf p2
             let visitP2 = visit visited Set.empty p2
             visit visited guards p1
             |> Set.map (fun n -> if n.exit = Set.empty then {n with exit=p1exit} else n)
             |> Set.union visitP2
-        | Choice(p1, p2)
-        | Par(p1, p2) ->
-            visit visited guards p1
+        | Choice(p1, p2) ->
+            visit visited guards p1 
             |> Set.union (visit visited guards p2)
+        | Par(p1, p2) ->
+            let joinEntry = joinOf p
+            let mapToJoin n =
+                if n.exit = Set.empty then
+                    // n must only set its own program counter
+                    let pcs = n.entry |> Set.map fst
+                    let ex = Set.filter (fun (p, _) -> pcs.Contains p) joinEntry
+                    {n with exit=ex}
+                else n
+            let leftVisit = 
+                visit visited guards p1 |> Set.map mapToJoin
+            let rightVisit =
+                visit visited guards p2 |> Set.map mapToJoin
+            leftVisit
+            |> Set.union rightVisit
+            |> Set.add {node with entry=joinEntry}
+            
         | Name (s, _) when Map.containsKey s visited ->
             Set.empty
         | Name (s, _) ->
-            let e = entry procs.[s]
+            let e = entryOf procs.[s]
             let newVisited = Map.add s e visited
             visit newVisited guards procs.[s]
          | Await(b, p) ->
              visit visited (Set.add b guards) p
 
-    visit Map.empty Set.empty procs.[rootName], (entry procs.[rootName])
+    visit Map.empty Set.empty procs.[rootName], (entryOf procs.[rootName])
 
 let encode (sys:SystemDef<_>) = 
     if sys.SpawnedComps.IsEmpty then failwith "No components have been spawned!"
@@ -141,6 +165,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
     // Find the number of PCs used in the program
     let maxPc =
         let getPc node = 
+            eprintfn "%A" node
             node.entry |> Set.map fst |> Set.maxElement
 
         trees
