@@ -59,7 +59,7 @@ backends_debug = {
 
 
 def check_cbmc_version():
-    cbmc_check = ["cbmc", "--version"]
+    cbmc_check = backends["cbmc"] + ["--version"]
     CBMC_V, CBMC_SUBV = check_output(cbmc_check).decode().strip().split(".")
     if not (int(CBMC_V) <= 5 and int(CBMC_SUBV) <= 4):
         additional_flags = ["--trace", "--stop-on-fail"]
