@@ -211,8 +211,7 @@ let analyzeKeys sys =
                 | Array n -> nextIndex + n
 
         setOfVars
-        |> Set.unionMany
-        |> Set.fold update (Map.empty, startFrom)
+        |> Seq.fold (fun x s -> Set.fold update x s) (Map.empty, startFrom)
 
     let attrKeys, maxI = 
         comps
@@ -224,7 +223,6 @@ let analyzeKeys sys =
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
-        |> fun x -> x
         |> Seq.fold 
             (fun (map, i) vars -> 
                 let newInfo, newI = makeInfo i (seq vars)
