@@ -154,7 +154,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
         let makeTuple (tup: Set<Var>) =
             let min, max = extrema tup
             List.replicate (max-min+1) (min, max)
-        
+
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
@@ -165,7 +165,6 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
     // Find the number of PCs used in the program
     let maxPc =
         let getPc node = 
-            eprintfn "%A" node
             node.entry |> Set.map fst |> Set.maxElement
 
         trees
