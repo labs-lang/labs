@@ -25,9 +25,9 @@ int main(void) {
 
             {%- for item in schedule -%}
             {%- if forloop.first -%}
-            if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(choice[__LABS_step]);
+            if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
             {%- else -%}
-            else if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(choice[__LABS_step]);
+            else if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
             {%- endif -%}
             {%- endfor -%}
             
