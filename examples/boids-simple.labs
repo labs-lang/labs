@@ -34,9 +34,7 @@ agent Bird {
     # At first, every agent is the leader of their own swarm.
     # Exchange of stigmergic messages naturally leads to the
     # election of a leader for each group of connected birds
-    Behavior = leader <~ id; Loop
-    Loop = Move; Attract; Loop
-
+    Behavior = Move; Attract; Behavior
 
     # Only move if there is no agent on the destination position
     Move =  
