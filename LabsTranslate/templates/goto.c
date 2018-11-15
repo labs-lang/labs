@@ -4,9 +4,9 @@ void {{label}}(int tid) {
 {% include "templates/entry" %}
 
     {%- if assignments -%}{%- for item in assignments -%}
-    int val{{forloop.index0}} = {{item.expr}};
+    TYPEOFVALUES val{{forloop.index0}} = {{item.expr}};
     {%- if item.size != 0 -%}
-    int offset{{forloop.index0}} = {{item.offset}};
+    TYPEOFVALUES offset{{forloop.index0}} = {{item.offset}};
     assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}});
     {%- endif -%}{%- endfor -%}
 
@@ -22,11 +22,11 @@ void {{label}}(int tid) {
 
     {%- for item in exitpoints -%}
     {%- if item.values.size == 1-%}
-    pc[tid][{{ item.pc }}] == {{ item.values.first }};
+    pc[tid][{{ item.pc }}] = {{ item.values.first }};
     {%- else -%}
-    int pc{{item.pc}};
-    LABSassume({%- for val in item.values -%} pc{{ item.pc }} == {{ val }}{% unless forloop.last %} || {% endunless %}{%- endfor-%});
-    pc[tid][{{ item.pc }}] == pc{{ item.pc }};
+    TYPEOFPC pc{{item.pc}};
+    LABSassume({%- for val in item.values -%} pc{{ item.pc }} == {{ val }}{% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    pc[tid][{{ item.pc }}] = pc{{ item.pc }};
     {%-endif-%}{%- endfor -%}
 
 }

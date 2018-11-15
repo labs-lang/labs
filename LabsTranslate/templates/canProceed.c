@@ -9,7 +9,7 @@ _Bool canProceed(int tid) {
 
 _Bool terminalState() {
     // Returns 1 if the system is in a terminal state.
-    for (int i=0; i<MAXCOMPONENTS; i++) {
+    for (unsigned i=0; i<MAXCOMPONENTS; i++) {
         if (canProceed(i)) return 0;
         if (HinCnt[i] > 0 || HoutCnt[i] > 0) return 0;
     }

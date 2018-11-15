@@ -11,36 +11,41 @@ void finally() {
 
 int main(void) {
     init();
-    unsigned char choice[BOUND];
+    TYPEOFAGENTID firstAgent;
 
-    int __LABS_step;
+    unsigned __LABS_step;
     {% if fair -%}unsigned char last;{% endif %}
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
-        if (terminalState()) break;
+        // if (terminalState()) break;
         
-        LABSassume(choice[__LABS_step] < MAXCOMPONENTS + 2);
-    
-        if (choice[__LABS_step] < MAXCOMPONENTS) {
-            {%- if fair -%}
-            LABSassume(choice[__LABS_step] == last+1 || (last == MAXCOMPONENTS - 1 && choice[__LABS_step] == 0));
-            {%- endif -%}
+        _Bool sys_or_not;
+
+        if (sys_or_not) {
+            LABSassume(firstAgent < MAXCOMPONENTS);
 
             {%- for item in schedule -%}
             {%- if forloop.first -%}
-            if ({{ item.entry | join: " && " }}) {{ item.name }}(choice[__LABS_step]);
+            if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(choice[__LABS_step]);
             {%- else -%}
-            else if ({{ item.entry | join: " && " }}) {{ item.name }}(choice[__LABS_step]);
+            else if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(choice[__LABS_step]);
             {%- endif -%}
             {%- endfor -%}
             
             {%- if fair -%}
-            last = choice[__LABS_step];
+            if (firstAgent == MAXCOMPONENTS - 1) {
+                firstAgent = 0;
+            }
+            else {
+                firstAgent++;
+            }
             {%- endif -%}
         }
-        else if (choice[__LABS_step] == MAXCOMPONENTS) 
-            propagate();
-        else if (choice[__LABS_step] == MAXCOMPONENTS + 1)
-            confirm();
+        else {
+            _Bool propagate_or_confirm; 
+
+            if (propagate_or_confirm) propagate();
+            else confirm();
+        }
         monitor();
     }
     

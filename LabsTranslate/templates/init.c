@@ -1,11 +1,11 @@
 void init() {
 
-    short _I[MAXCOMPONENTS][MAXKEYI];
-    short _Lvalue[MAXCOMPONENTS][MAXKEYL];
-    short _E[MAXKEYE];
-    unsigned int _pc[MAXCOMPONENTS][MAXPC];
+    TYPEOFVALUES _I[MAXCOMPONENTS][MAXKEYI];
+    TYPEOFVALUES _Lvalue[MAXCOMPONENTS][MAXKEYL];
+    TYPEOFVALUES _E[MAXKEYE];
+    TYPEOFPC _pc[MAXCOMPONENTS][MAXPC];
 
-    int i,j;
+    unsigned char i, j;
     for (i=0; i<MAXCOMPONENTS; i++) {
         terminated[i] = 0;
         for (j=0; j<MAXKEYL; j++) {
@@ -24,7 +24,7 @@ void init() {
     {%- for p in item.pcs -%}
     {%- if p.values.size == 1 -%}
     _pc[{{i}}][{{ p.pc }}] = {{ p.values.first }};{%- else -%}
-    LABSassume({%- for val in p.values -%} _pc[{{i}}][{{ p.pc }}] == {{ val }}{% unless forloop.last %} || {% endunless %}{%- endfor-%});
+    LABSassume({%- for val in p.values -%} (_pc[{{i}}][{{ p.pc }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
     {%- endif -%}
     {% endfor %}
 
