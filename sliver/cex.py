@@ -8,6 +8,11 @@ LTSTAMP = re.compile(r"Ltstamp\[([0-9]+)l?\]\[([0-9]+)l?\]")
 ENV = re.compile(r"E\[([0-9]+)l?\]")
 STEP = re.compile(r"__LABS_step")
 
+PROPAGATE = re.compile(r"propagate_or_confirm=TRUE")
+CONFIRM = re.compile(r"propagate_or_confirm=FALSE")
+
+
+
 UNDEF = "16960"
 OFFSET = 17
 
@@ -62,10 +67,11 @@ def keys_of(ln):
 
 last_return = ""
 last_step = -1
+last_sys = []
 
 
 def _mapCPROVERstate(A, B, C, info):
-    global last_return, last_step
+    global last_return, last_step, last_sys
     '''
     'Violated property:'
     '  file _cs_lazy_unsafe.c line 318 function thread3_0'
@@ -78,6 +84,20 @@ def _mapCPROVERstate(A, B, C, info):
         keys = keys_of(A)
         keys["lvalue"], rvalue = C.strip().split("=")
         keys["rvalue"] = rvalue.split(" ")[0]
+
+        if PROPAGATE.match(C.strip()):
+            last_sys.append("propagate ")
+        elif CONFIRM.match(C.strip()):
+            last_sys.append("confirm ")
+        elif keys["lvalue"] == "guessedcomp":
+            tid = int(keys["rvalue"])
+            agent = "from {} {}: ".format(info.spawn[tid], tid)
+            last_sys.append(agent)
+        elif keys["lvalue"] == "guessedkey":
+            last_sys.append(info.lstig[int(keys["rvalue"])].name)
+            result = ("".join(last_sys) + "\n")
+            last_sys = []
+            return result
 
         is_attr = ATTR.match(keys["lvalue"])
         if is_attr and keys["rvalue"] != UNDEF:
