@@ -107,8 +107,9 @@ let pinit =
         |>> Range)
     let pSingle = (ws pint32) |>> (Choose << List.singleton)
     let pUndef = stringReturn strUNDEF Undef
+    let pId = stringReturn "id" Init.Id
 
-    choice [pChoose; pRange; pSingle; pUndef] |> ws
+    choice [pChoose; pRange; pSingle; pUndef; pId] |> ws
 
 /// Parses a single init definition.
 let pinitdef loc =
