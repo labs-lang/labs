@@ -60,9 +60,9 @@ let makeBExprParser pexpr =
         let pbexprCompare =
             tuple3 pexpr (ws pcompareop <!> "compare") pexpr |>> Compare
         choice [
-            attempt pbexprNeg <!> "bneg"
+            followedBy NEG >>. pbexprNeg <!> "bneg"
             attempt pbexprCompare <!> "bcompare"
-            betweenParen pbexpr <!> "bparen"
+            followedBy (skipChar '(') >>. betweenParen pbexpr <!> "bparen"
             stringReturn "true" True
             stringReturn "false" False
         ]
