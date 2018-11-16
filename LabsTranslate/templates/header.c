@@ -14,14 +14,10 @@
     #define LABSassert(COND, LABEL)     /*#LABEL*/ assert(COND)
 #endif
 
-typedef short TYPEOFVALUES;
-typedef unsigned short TYPEOFPC;
-typedef unsigned short TYPEOFTIME;
 
-typedef unsigned char TYPEOFAGENTID;
-typedef unsigned char TYPEOFKEYIID;
-typedef unsigned char TYPEOFKEYLID;
-typedef unsigned char TYPEOFKEYEID;
+{% for item in typedefs -%}
+typedef {{item.value}} {{item.name}};
+{% endfor %}
 
 
 
@@ -69,30 +65,30 @@ TYPEOFTIME now(void) {
     return ++__LABS_time;
 }
 
+void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     if (Hin[id][key] == 0) {
         Hin[id][key] = 1;
-void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
         HinCnt[id] = HinCnt[id] + 1;
     }
 }
 
+void clearHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     if (Hin[id][key] == 1) {
         Hin[id][key] = 0;
-void clearHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
         HinCnt[id] = HinCnt[id] - 1;
     }
 }
 
+void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     if (Hout[id][key] == 0) {
         Hout[id][key] = 1;
-void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
         HoutCnt[id] = HoutCnt[id] + 1;
     }
 }
 
+void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     if (Hout[id][key] == 1) {
         Hout[id][key] = 0;
-void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
         HoutCnt[id] = HoutCnt[id] - 1;
     }
 }

@@ -11,10 +11,9 @@ void finally() {
 
 int main(void) {
     init();
-    TYPEOFAGENTID firstAgent;
+    TYPEOFAGENTID firstAgent{% if firstagent == 0 %} = 0{% endif %};
 
     unsigned __LABS_step;
-    {% if fair -%}unsigned char last;{% endif %}
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
         // if (terminalState()) break;
         

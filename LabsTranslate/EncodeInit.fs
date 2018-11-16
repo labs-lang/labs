@@ -18,10 +18,10 @@ let initVar (mapping:KeyMapping) tid (var:Var) =
         | Choose l ->
             l
             |> Seq.map (sprintf "(%s == %i)" v)
-            |> String.concat " || "
+            |> String.concat " | "
             |> assume
         | Range(minI, maxI) -> //assumeIntRange index minI maxI
-            sprintf "%s >= %i && %s < %i" v minI v maxI |> assume
+            sprintf "(%s >= %i) & (%s < %i)" v minI v maxI |> assume
         + match var.location with 
             | L _ -> sprintf "Ltstamp[%s][%i] = j++;\n" tid i
             | _ -> ""

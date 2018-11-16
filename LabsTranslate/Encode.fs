@@ -176,6 +176,9 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
 
     let maxcomps = 
         Map.fold (fun state _ (_, cmax) -> max state cmax) 0 sys.spawn
+        
+    let bitwidth num = 
+        System.Math.Log(float num, 2.) |> int |> (+) 1
 
     let defines = 
         [
@@ -188,6 +191,18 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
         ]
         |> (if isSimulation then fun l -> ("SIMULATION", 1)::l else id)
         |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Int b])
+
+    let typedefs =
+        [
+            "TYPEOFVALUES", "short"
+            "TYPEOFPC", "unsigned char"
+            "TYPEOFTIME", "unsigned char" 
+            "TYPEOFAGENTID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxcomps)
+            "TYPEOFKEYIID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxI)
+            "TYPEOFKEYLID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxL)
+            "TYPEOFKEYEID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxE)
+        ]
+        |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Str b])
 
     let links =
         let makeLink (s:Stigmergy<Var*int>) = 
@@ -209,6 +224,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
 
     [
         "defines", Lst defines
+        "typedefs", Lst typedefs
         "links", Lst links
         "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
         "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst
@@ -218,19 +234,27 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
 let translateGuard = procExpr.BExprTranslator
 
 
-let liquidEntry tid node = 
-    let translatePc = sprintf "(pc[%s][%i] == %i)" tid
+let liquidGuards tid node = 
     node.guards 
     |> Seq.map ((customProcExpr tid).BExprTranslator node.label)
-    |> Seq.append (node.entry |> Set.map (fun (a, b) -> translatePc a b))
     |> Seq.map Str
-    |> Lst
+
+let liquidEntry tid node = 
+    let translatePc = sprintf "(pc[%s][%i] == %i)" tid
+    node.entry 
+    |> Set.map (fun (a, b) -> translatePc a b)
+    |> Seq.map Str
 
 let translateCanProceed trees =
+    let liquidAll tid n = 
+        liquidEntry tid n
+        |> Seq.append (liquidGuards tid n)
+        |> Lst
+
     trees
     |> Map.values
     |> Seq.collect fst
-    |> Seq.map (liquidEntry "tid")
+    |> Seq.map (liquidAll "tid")
     |> Seq.distinct
     |> fun x -> seq ["guards", Lst x]
     |> renderFile "templates/canProceed.c"
@@ -247,10 +271,18 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>) =
             | L _ -> "lstig"
             | E -> "env"
 
+        let rec guardkeys = function
+            | False | True -> Set.empty
+            | Neg b -> guardkeys b
+            | Compound(b1,_,b2) -> guardkeys b1 |> Set.union (guardkeys b2)
+            | Compare(e1,_,e2) -> (getLstigVars e1) |> Set.union (getLstigVars e2)
+            
+
         let qrykeys =
             a.updates
             |> List.map (getLstigVars << snd)
             |> Set.unionMany
+            |> Set.union (guards |> Set.map guardkeys |> Set.unionMany)
             |> Seq.map (Int << snd)
             |> Lst
 
@@ -330,9 +362,18 @@ let translateMain fair (sys:SystemDef<Var*int>, trees:Map<string, Set<Node> * 'a
         |> Map.values
         |> String.concat "\n"
 
+
+    let scheduleElement (n:Node) =
+        Dict [
+            "name", Str n.lbl
+            "entry", liquidEntry "firstAgent" n |> Lst
+            "guards", liquidGuards "firstAgent" n |> Lst
+        ]
+
     [
+        "firstagent", if sys.spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair;
-        "schedule", nodes |> Seq.map (fun n -> Dict ["name", Str n.lbl; "entry", liquidEntry "choice[__LABS_step]" n]) |> Lst
+        "schedule", nodes |> Seq.map scheduleElement |> Lst
         "alwaysasserts",
             alwaysP
             |> translateProperties
