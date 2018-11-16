@@ -136,7 +136,7 @@ class labs_mapper(core.module.BasicModule):
 			# to parallel feeder
 			self.setOutputParam('extrargs', extrargs)
 
-		if not simulate:
+		if not simulate or int(simulate) == 0:
 			verificationmode(cores)
 		else:
 			self.setOutputParam('simulate', int(simulate))

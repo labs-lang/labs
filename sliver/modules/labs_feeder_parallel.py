@@ -107,7 +107,8 @@ class labs_feeder_parallel(core.module.BasicModule):
 
 		if self.getInputParamValue('simulate') is not None:
 			simulate = int(self.getInputParamValue('simulate'))
-			cores = 16
+			if simulate: 
+				cores = 16
 
 
 		if cores > 1: print "Parallel analysis using %s cores" % cores
@@ -285,30 +286,26 @@ class labs_feeder_parallel(core.module.BasicModule):
 			print("---> [%s] %s  +%0.2fs pid:[%s] cmd:[%s] <---" %(id,s,time.time()-starttime,os.getpid(),cmd))
 
 			l.acquire()
-
-			lastone = True   # is this the only process still running?
-
-			for k in range(0,cores):
-				if pool[k]!=0 and k!=id:
-					lastone = False
+			# is this the only process still running?
+			lastone = not any(pool[k]!=0 and k!=id for k in xrange(cores))
 
 			# last process to terminate, and no error traces found
 			if lastone:
 				self.setOutputParam('exitcode', code[id])
-
 				# dump backend's output to file
 				######core.utils.saveFile(logfile,out)
 				pipe.send(out)
 				pipe.close()
-	
+		
 			l.release()
 
-		# error trace found or error from the backend:
-		# stop all other processes immediately
+		# error trace found or error from the backend
 		if not(code[id] == 0 or code[id] == -9):
-			#print("---> [%s] FAIL  +%0.2fs pid:[%s] cmd:[%s] pool:[%s] code:[%s] sub:[%s] <---" %(id,time.time()-starttime,os.getpid(),cmd,tids,codes,subs))
 			print("---> [%s] FAIL  +%0.2fs pid:[%s] cmd:[%s] <---" %(id,time.time()-starttime,os.getpid(),cmd))
 
+		# stop all other processes immediately
+		# But only if I am the first (boh[id] != 0)
+		if not(code[id] == 0 or code[id] == -9) and boh[id] != 0:
 			l.acquire()
 
 			for k in range(0,cores):
