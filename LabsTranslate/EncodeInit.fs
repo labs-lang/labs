@@ -11,7 +11,10 @@ let initVar (mapping:KeyMapping) tid (var:Var) =
     let initAssumption i =
         let v = cVarName (string i)
         match var.init with
+        | Init.Id -> sprintf "%s = %s;\n" v tid
         | Undef -> sprintf "%s == undef_value" v |> assume
+        | Choose l when l.Length = 1 ->
+            sprintf "%s = %i;\n" v l.Head
         | Choose l ->
             l
             |> Seq.map (sprintf "(%s == %i)" v)
