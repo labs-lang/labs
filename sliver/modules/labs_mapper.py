@@ -84,7 +84,7 @@ class labs_mapper(core.module.BasicModule):
 
 		''' Run the verification tool on the input file '''
 		if backend == 'cbmc-assumptions':
-			cmdline = backendFilename[backend] + " " + seqfile + " --dimacs | grep \"c \""    #--outfile " + seqfile+".dimacs"
+			cmdline = backendFilename[backend] + " " + seqfile + " --dimacs | grep \"^c \""    #--outfile " + seqfile+".dimacs"
 
 		command = core.utils.Command(cmdline)
 		out, err, code = command.run(timeout=int(7200))   # store stdout, stderr, process' return value
