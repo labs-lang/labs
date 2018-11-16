@@ -18,7 +18,11 @@ void {{label}}(int tid) {
     {{type}}(tid, {{item.key}}, val{{forloop.index0}}, {{check}});
     {%- endif -%}{%- endfor -%}
     {%- for k in qrykeys -%}
-    setHin(tid, {{k}});{%- endfor -%}{%- endif -%}
+    setHin(tid, {{k}});{%- endfor -%}
+    {%- else -%}
+    __VERIFIER_assume(HoutCnt[tid] == 0);
+    __VERIFIER_assume(HinCnt[tid] == 0);
+    {%- endif -%}
 
     {%- for item in exitpoints -%}
     {%- if item.values.size == 1-%}
