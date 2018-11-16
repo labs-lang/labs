@@ -66,29 +66,29 @@ TYPEOFTIME now(void) {
 }
 
 void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hin[id][key] == 0) {
-        Hin[id][key] = 1;
+    if (Hin[id][tupleStart[key]] == 0) {
+        Hin[id][tupleStart[key]] = 1;
         HinCnt[id] = HinCnt[id] + 1;
     }
 }
 
 void clearHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hin[id][key] == 1) {
-        Hin[id][key] = 0;
+    if (Hin[id][tupleStart[key]] == 1) {
+        Hin[id][tupleStart[key]] = 0;
         HinCnt[id] = HinCnt[id] - 1;
     }
 }
 
 void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hout[id][key] == 0) {
-        Hout[id][key] = 1;
+    if (Hout[id][tupleStart[key]] == 0) {
+        Hout[id][tupleStart[key]] = 1;
         HoutCnt[id] = HoutCnt[id] + 1;
     }
 }
 
 void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hout[id][key] == 1) {
-        Hout[id][key] = 0;
+    if (Hout[id][tupleStart[key]] == 1) {
+        Hout[id][tupleStart[key]] = 0;
         HoutCnt[id] = HoutCnt[id] - 1;
     }
 }
@@ -113,14 +113,8 @@ void lstig(TYPEOFAGENTID component_id, TYPEOFKEYLID key, TYPEOFVALUES value, _Bo
     __VERIFIER_assume((!check) | (HinCnt[component_id] == 0));
 
     Lvalue[component_id][key] = value;
-    int k;
-    TYPEOFTIME tstamp = now();
-    for (k = 0; k < MAXKEYL; k++) {
-        if ((k >= tupleStart[key]) & (k <= tupleEnd[key])) {
-            Ltstamp[component_id][k] = tstamp;
-        }
-    }
-
+    Ltstamp[component_id][tupleStart[key]] = now();
+    
     setHout(component_id, key);
 }
 
@@ -163,11 +157,7 @@ void confirm(void) {
             }
         }
     }
-    for (k = 0; k < MAXKEYL; k++) {
-        if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
-            clearHin(guessedcomp, k);
-        }
-    }
+    clearHin(guessedcomp, guessedkey);
 }
 
 void propagate(void) {
@@ -195,9 +185,5 @@ void propagate(void) {
         }
     }
 
-    for (k = 0; k < MAXKEYL; k++) {
-        if (k >= tupleStart[guessedkey] && k <= tupleEnd[guessedkey]) {
-            clearHout(guessedcomp, k);
-        }
-    }
+    clearHout(guessedcomp, guessedkey);
 }
