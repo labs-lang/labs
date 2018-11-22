@@ -33,9 +33,9 @@ do pprocTermRef :=
     let pGuarded = (ws pguard) .>>. ((ws GUARD) >>. pproc)
     choice [
         followedBy (skipChar '(') >>. betweenParen pproc <!> "pparen"
+        attempt pGuarded <!> "Guarded" |>> Await;
         attempt pNil <!> "Nil"; 
         attempt pSkip <!> "Skip";
-        attempt pGuarded <!> "Guarded" |>> Await;
         IDENTIFIER .>>. getPosition |>> Name; 
         paction .>>. getPosition |>> Base;
     ]
