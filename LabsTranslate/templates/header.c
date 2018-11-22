@@ -76,7 +76,7 @@ void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     HinCnt[id] = HinCnt[id] + 1;
     // }
     HinCnt[id] = HinCnt[id] + (!Hin[id][tupleStart[key]]);
-        Hin[id][tupleStart[key]] = 1;
+    Hin[id][tupleStart[key]] = 1;
 }
 
 void clearHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
@@ -86,7 +86,7 @@ void clearHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     // }
     HinCnt[id] = HinCnt[id] - (Hin[id][tupleStart[key]]);
     assert(HinCnt[id] >= 0);
-        Hin[id][tupleStart[key]] = 0;
+    Hin[id][tupleStart[key]] = 0;
 }
 
 void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
@@ -95,7 +95,7 @@ void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     HoutCnt[id] = HoutCnt[id] + 1;
     // }
     HoutCnt[id] = HoutCnt[id] + (!Hout[id][tupleStart[key]]);
-        Hout[id][tupleStart[key]] = 1;
+    Hout[id][tupleStart[key]] = 1;
 }
 
 void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
@@ -105,7 +105,7 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     // }
     assert(HoutCnt[id] > 0);
     HoutCnt[id] = HoutCnt[id] - (Hout[id][tupleStart[key]]);
-        Hout[id][tupleStart[key]] = 0;
+    Hout[id][tupleStart[key]] = 0;
 }
 
 //
@@ -157,20 +157,31 @@ void confirm(void) {
     __VERIFIER_assume(guessedkey < MAXKEYL);
     __VERIFIER_assume(Hin[guessedcomp][guessedkey] == 1);
 
+    // NOTE: Since SetHin(), SetHout() only work on tupleStarts,
+    // guessedkey is guaranteed to be the 1st element of some tuple
+
+    // assert(guessedkey == tupleStart[guessedkey]);
+
     TYPEOFAGENTID i;
-    TYPEOFKEYLID k;
-    TYPEOFTIME t = Ltstamp[guessedcomp][guessedkey];
+    TYPEOFTIME t = timeof(guessedcomp, guessedkey);
     
+    // Send data from guessedcomp to i
     for (i=0; i<MAXCOMPONENTS; i++) {
-        if ( (guessedcomp!=i) && link(guessedcomp,i,guessedkey) && differentLstig(guessedcomp, i, guessedkey) ) {
+        if (((guessedcomp!=i) & (timeof(i, guessedkey) != t)) && 
+            link(guessedcomp,i,guessedkey)) {
+            
             setHout(i, guessedkey);
-            for (k = 0; k < MAXKEYL; k++) {
-                if ((k >= tupleStart[guessedkey]) & (k <= tupleEnd[guessedkey])) {
-                    if (Ltstamp[i][k]<=t) {
-                        Lvalue[i][k] = Lvalue[guessedcomp][k];
-                        Ltstamp[i][k] = t;
-                    }
+            // If data is fresh, agent i copies it to its stigmergy
+            if (timeof(i, guessedkey) < t) {
+                TYPEOFKEYLID k, next;
+                clearHin(i, guessedkey);
+                for (k = 0; k < MAXTUPLE; k++) {
+                    next = guessedkey + k;
+                    // if ((next<MAXKEYL) && (tupleStart[next] == guessedkey))
+                    if (next <= tupleEnd[guessedkey])
+                        Lvalue[i][next] = Lvalue[guessedcomp][next];
                 }
+                Ltstamp[i][guessedkey] = t;
             }
         }
     }
@@ -179,28 +190,35 @@ void confirm(void) {
 
 void propagate(void) {
     TYPEOFAGENTID guessedcomp;
-     __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
-     __VERIFIER_assume(HoutCnt[guessedcomp] > 0);
+    __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
+    __VERIFIER_assume(HoutCnt[guessedcomp] > 0);
 
     TYPEOFKEYLID guessedkey;
     __VERIFIER_assume(guessedkey < MAXKEYL);
     __VERIFIER_assume(Hout[guessedcomp][guessedkey] == 1);
 
+    // assert(guessedkey == tupleStart[guessedkey]);
+
     TYPEOFAGENTID i;
-    TYPEOFKEYLID k;
-    TYPEOFTIME t = Ltstamp[guessedcomp][guessedkey];
+    TYPEOFTIME t = timeof(guessedcomp, guessedkey);
 
     for (i=0; i<MAXCOMPONENTS; i++) {
-        if ((guessedcomp!=i) && (Ltstamp[i][guessedkey]<t) && (link(guessedcomp,i,guessedkey))) {
-            for (k = 0; k < MAXKEYL; k++) {
-                if ((k >= tupleStart[guessedkey]) & (k <= tupleEnd[guessedkey])) {
-                    Lvalue[i][k] = Lvalue[guessedcomp][k];
-                    Ltstamp[i][k] = t;
-                }
-            }
+        if (((guessedcomp!=i) & (timeof(i, guessedkey)<t)) && (link(guessedcomp,i,guessedkey))) {
+            // If data is fresh, i copies it to its stigmergy and
+            // will propagate it in the future (setHout)
             setHout(i, guessedkey);
+            TYPEOFKEYLID k, next;
+            for (k = 0; k < MAXTUPLE; k++) {
+                next = guessedkey+k;
+                clearHin(i, guessedkey);
+                // if (next<MAXKEYL && tupleStart[next] == tupleStart[guessedkey])
+                if (next <= tupleEnd[guessedkey])
+                    Lvalue[i][next] = Lvalue[guessedcomp][next];
+            }
+            Ltstamp[i][guessedkey] = t;
+
         }
     }
-
     clearHout(guessedcomp, guessedkey);
 }
+
