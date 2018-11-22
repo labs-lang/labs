@@ -17,12 +17,12 @@ linux: publishlinux sliverlinux
 	cp examples/*.labs build/linux_x64;
 	cp -r LabsTranslate/templates build/linux_x64;
 
-publishmac:
+publishmac: build/osx_64/labs/LabsTranslate.dll
+
+build/osx_64/labs/LabsTranslate.dll:
 	dotnet publish -r osx.10.10-x64 -c Release -o ../build/osx_x64/labs
 
 mac: publishmac slivermac
-	cp -r linux/ build/osx_x64/;
-	mv build/osx_x64/libunwind build/osx_x64/labs/libunwind;
 	cp examples/*.labs build/osx_x64;
 	cp -r LabsTranslate/templates build/osx_x64;
 
