@@ -62,7 +62,12 @@ Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID k
 }
 
 TYPEOFTIME now(void) {
+    assert((TYPEOFTIME) (__LABS_time+1) > (TYPEOFTIME)__LABS_time);
     return ++__LABS_time;
+}
+
+TYPEOFTIME timeof(TYPEOFAGENTID id, TYPEOFKEYLID key) {
+    return Ltstamp[id][tupleStart[key]];
 }
 
 void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
