@@ -18,7 +18,8 @@ void {{label}}(int tid) {
     {{type}}(tid, {{item.key}}, val{{forloop.index0}}, {{check}});
     {%- endif -%}{%- endfor -%}
     {%- for k in qrykeys -%}
-    setHin(tid, {{k}});{%- endfor -%}
+    setHin(tid, {{k}});
+    {%- endfor -%}
     {%- else -%}
     __VERIFIER_assume(HoutCnt[tid] == 0);
     __VERIFIER_assume(HinCnt[tid] == 0);
@@ -29,7 +30,7 @@ void {{label}}(int tid) {
     pc[tid][{{ item.pc }}] = {{ item.values.first }};
     {%- else -%}
     TYPEOFPC pc{{item.pc}};
-    LABSassume({%- for val in item.values -%} pc{{ item.pc }} == {{ val }}{% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    LABSassume({%- for val in item.values -%} (pc{{ item.pc }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
     pc[tid][{{ item.pc }}] = pc{{ item.pc }};
     {%-endif-%}{%- endfor -%}
 
