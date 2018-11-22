@@ -23,7 +23,7 @@ let initVar (mapping:KeyMapping) tid (var:Var) =
         | Range(minI, maxI) -> //assumeIntRange index minI maxI
             sprintf "(%s >= %i) & (%s < %i)" v minI v maxI |> assume
         + match var.location with 
-            | L _ -> sprintf "Ltstamp[%s][%i] = j++;\n" tid i
+            | L _ -> sprintf "Ltstamp[%s][tupleStart[%i]] = now();\n" tid i
             | _ -> ""
 
     match var.vartype with
