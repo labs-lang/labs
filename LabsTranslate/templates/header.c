@@ -66,31 +66,41 @@ TYPEOFTIME now(void) {
 }
 
 void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hin[id][tupleStart[key]] == 0) {
+    // if (Hin[id][tupleStart[key]] == 0) {
+    //     Hin[id][tupleStart[key]] = 1;
+    //     HinCnt[id] = HinCnt[id] + 1;
+    // }
+    HinCnt[id] = HinCnt[id] + (!Hin[id][tupleStart[key]]);
         Hin[id][tupleStart[key]] = 1;
-        HinCnt[id] = HinCnt[id] + 1;
-    }
 }
 
 void clearHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hin[id][tupleStart[key]] == 1) {
+    // if (Hin[id][tupleStart[key]] == 1) {
+    //     Hin[id][tupleStart[key]] = 0;
+    //     HinCnt[id] = HinCnt[id] - 1;
+    // }
+    HinCnt[id] = HinCnt[id] - (Hin[id][tupleStart[key]]);
+    assert(HinCnt[id] >= 0);
         Hin[id][tupleStart[key]] = 0;
-        HinCnt[id] = HinCnt[id] - 1;
-    }
 }
 
 void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hout[id][tupleStart[key]] == 0) {
+    // if (Hout[id][tupleStart[key]] == 0) {
+    //     Hout[id][tupleStart[key]] = 1;
+    //     HoutCnt[id] = HoutCnt[id] + 1;
+    // }
+    HoutCnt[id] = HoutCnt[id] + (!Hout[id][tupleStart[key]]);
         Hout[id][tupleStart[key]] = 1;
-        HoutCnt[id] = HoutCnt[id] + 1;
-    }
 }
 
 void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
-    if (Hout[id][tupleStart[key]] == 1) {
+    // if (Hout[id][tupleStart[key]] == 1) {
+    //     Hout[id][tupleStart[key]] = 0;
+    //     HoutCnt[id] = HoutCnt[id] - 1;
+    // }
+    assert(HoutCnt[id] > 0);
+    HoutCnt[id] = HoutCnt[id] - (Hout[id][tupleStart[key]]);
         Hout[id][tupleStart[key]] = 0;
-        HoutCnt[id] = HoutCnt[id] - 1;
-    }
 }
 
 //
