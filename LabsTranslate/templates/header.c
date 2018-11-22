@@ -3,7 +3,6 @@
 {% endfor -%}
 #define undef_value -128 // SHRT_MIN
 
-
 #define LABSassume(COND)            __VERIFIER_assume(COND)   
 
 #ifdef SIMULATION
@@ -19,6 +18,7 @@
 typedef {{item.value}} {{item.name}};
 {% endfor %}
 
+typedef unsigned __CPROVER_bitvector[1] Bool;
 
 
 TYPEOFVALUES abs(TYPEOFVALUES x) {
@@ -34,11 +34,11 @@ TYPEOFVALUES Lvalue[MAXCOMPONENTS][MAXKEYL];
 TYPEOFTIME Ltstamp[MAXCOMPONENTS][MAXKEYL];
 TYPEOFVALUES E[MAXKEYE];
 
-_Bool Hin[MAXCOMPONENTS][MAXKEYL];
-_Bool Hout[MAXCOMPONENTS][MAXKEYL]; 
+Bool Hin[MAXCOMPONENTS][MAXKEYL];
+Bool Hout[MAXCOMPONENTS][MAXKEYL]; 
 unsigned char HinCnt[MAXCOMPONENTS];
 unsigned char HoutCnt[MAXCOMPONENTS];
-_Bool terminated[MAXCOMPONENTS];
+Bool terminated[MAXCOMPONENTS];
 unsigned char pc[MAXCOMPONENTS][MAXPC];
 TYPEOFTIME __LABS_time;
 
@@ -46,8 +46,8 @@ const unsigned char tupleStart[MAXKEYL] = { {{ tupleStart | join: ", " }} };
 const unsigned char tupleEnd[MAXKEYL] = { {{ tupleEnd | join: ", " }} };
 
 
-_Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID key) {
-    _Bool __LABS_link = 0;
+Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID key) {
+    Bool __LABS_link = 0;
     {%- for l in links -%}
         {%- if forloop.first -%}
     if ((key >= {{l.start}}) & (key <= {{l.end}})){
@@ -96,37 +96,39 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
 //
 //  Rule ATTR
 //  Component component_id  assigns to key the evaluated expression
+//  If check is true, transition is guarded by HoutCnt == HinCnt == 0
 //
-void attr(TYPEOFAGENTID component_id, TYPEOFKEYIID key, TYPEOFVALUES value, _Bool check) {
-    __VERIFIER_assume((!check) | (HoutCnt[component_id] == 0));
-    __VERIFIER_assume((!check) | (HinCnt[component_id] == 0));
+void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, Bool check) {
+    __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
+    __VERIFIER_assume((!check) | (HinCnt[id] == 0));
 
-    I[component_id][key] = value;
+    I[id][key] = value;
     now(); // local step
 }
 
 //
 //  Rule LSTIG
 //
-void lstig(TYPEOFAGENTID component_id, TYPEOFKEYLID key, TYPEOFVALUES value, _Bool check) {
-    __VERIFIER_assume((!check) | (HoutCnt[component_id] == 0));
-    __VERIFIER_assume((!check) | (HinCnt[component_id] == 0));
+void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, Bool check) {
+    __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
+    __VERIFIER_assume((!check) | (HinCnt[id] == 0));
 
-    Lvalue[component_id][key] = value;
-    Ltstamp[component_id][tupleStart[key]] = now();
+    Lvalue[id][key] = value;
+    // Only update the timestamp of the 1st element in the tuple
+    Ltstamp[id][tupleStart[key]] = now();
     
-    setHout(component_id, key);
+    setHout(id, key);
 }
 
-void env(TYPEOFAGENTID component_id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
-    __VERIFIER_assume((!check) | (HoutCnt[component_id] == 0));
-    __VERIFIER_assume((!check) | (HinCnt[component_id] == 0));
+void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, Bool check) {
+    __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
+    __VERIFIER_assume((!check) | (HinCnt[id] == 0));
     
     E[key] = value;
     now(); // local step
 }
 
-_Bool differentLstig(TYPEOFAGENTID comp1, TYPEOFAGENTID comp2, TYPEOFKEYLID key) {
+Bool differentLstig(TYPEOFAGENTID comp1, TYPEOFAGENTID comp2, TYPEOFKEYLID key) {
     TYPEOFKEYLID k  = tupleStart[key];
     return ((Lvalue[comp1][k] != Lvalue[comp1][k]) | (Ltstamp[comp1][k] != Ltstamp[comp2][k]));
 }
