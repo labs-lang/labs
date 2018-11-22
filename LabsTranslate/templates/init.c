@@ -29,14 +29,12 @@ void init() {
     {% endfor %}
 
     {%- endfor -%}{%- endfor -%}
-
-    j=0;
         
     {{- initenv -}}
 
     {{- initvars -}}
 
-    __LABS_time = j;
+    now();
 
     for (i=0; i<MAXKEYE; i++) {
         E[i] = _E[i];
@@ -52,7 +50,6 @@ void init() {
 
         for (j=0; j<MAXKEYL; j++) {
             Lvalue[i][j] = _Lvalue[i][j];
-            Ltstamp[i][j] = Ltstamp[i][tupleEnd[j]];
         }
     }
 }
