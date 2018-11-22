@@ -136,7 +136,7 @@ let encode (sys:SystemDef<_>) =
 
 let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, maxE), bound) =
 
-    let tupleStart, tupleEnd =
+    let (tupleStart, tupleEnd), maxTuple =
         /// Finds the min and max indexes of the given tuple.
         let extrema (tup:Set<Var>) =
             let indexes = 
@@ -153,14 +153,14 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
             (Seq.min indexes, Seq.max endIndexes)
         let makeTuple (tup: Set<Var>) =
             let min, max = extrema tup
-            List.replicate (max-min+1) (min, max)
+            List.replicate (max-min+1) (min, max), max-min
 
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
         |> Seq.collect (List.map (makeTuple))
-        |> List.concat
-        |> List.unzip
+        |> Seq.reduce (fun (l1,s1) (l2,s2) -> List.append l1 l2, max s1 s2)
+        |> fun (lst, size) -> List.unzip lst, size+1
 
     // Find the number of PCs used in the program
     let maxPc =
@@ -188,6 +188,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
             "MAXKEYI", maxI
             "MAXKEYL", maxL
             "MAXKEYE", maxE
+            "MAXTUPLE", maxTuple
         ]
         |> (if isSimulation then fun l -> ("SIMULATION", 1)::l else id)
         |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Int b])
