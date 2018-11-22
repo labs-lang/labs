@@ -42,8 +42,8 @@ Bool terminated[MAXCOMPONENTS];
 unsigned char pc[MAXCOMPONENTS][MAXPC];
 TYPEOFTIME __LABS_time;
 
-const unsigned char tupleStart[MAXKEYL] = { {{ tupleStart | join: ", " }} };
-const unsigned char tupleEnd[MAXKEYL] = { {{ tupleEnd | join: ", " }} };
+const TYPEOFKEYLID tupleStart[MAXKEYL] = { {{ tupleStart | join: ", " }} };
+const TYPEOFKEYLID tupleEnd[MAXKEYL] = { {{ tupleEnd | join: ", " }} };
 
 
 Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID key) {
