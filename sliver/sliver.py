@@ -50,7 +50,8 @@ backends = {
 }
 
 backends_debug = {
-    "cbmc": ["cbmc", "--bounds-check" "--signed-overflow-check"],
+    "cbmc":
+        backends["cbmc"] + ["--bounds-check", "--signed-overflow-check"],
     "esbmc": [
         "esbmc", "--no-pointer-check", "--no-align-check",
         "--no-unwinding-assertions", "--z3"],
