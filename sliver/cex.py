@@ -46,7 +46,11 @@ def translateCPROVER(cex, fname, info, offset=-1):
         # case 2: final transation with property violation
         elif ln.startswith('Violated property'):
             Y = keys_of(lines[k + 1])
-            _, prop = c_program[int(Y["line"]) + offset].split("//")
+            prop = c_program[int(Y["line"]) + offset]
+            try:
+                _, prop = c_program[int(Y["line"]) + offset].split("//")
+            except ValueError:
+                pass
             translatedcex += """Violated property: {}\n""".format(prop)
             break  # Stop converting after the 1st property has been violated
 
@@ -68,10 +72,11 @@ def keys_of(ln):
 last_return = ""
 last_step = -1
 last_sys = []
+last_agent = -1
 
 
 def _mapCPROVERstate(A, B, C, info):
-    global last_return, last_step, last_sys
+    global last_return, last_step, last_sys, last_agent
     '''
     'Violated property:'
     '  file _cs_lazy_unsafe.c line 318 function thread3_0'
@@ -84,6 +89,11 @@ def _mapCPROVERstate(A, B, C, info):
         keys = keys_of(A)
         keys["lvalue"], rvalue = C.strip().split("=")
         keys["rvalue"] = rvalue.split(" ")[0]
+
+        is_ltstamp = LTSTAMP.match(keys["lvalue"])
+        if is_ltstamp and last_return == "lstig":
+            last_return = "ltstamp"
+            return " ({})\n".format(keys["rvalue"])
 
         if PROPAGATE.match(C.strip()):
             last_sys.append("propagate ")
@@ -110,15 +120,15 @@ def _mapCPROVERstate(A, B, C, info):
         is_lstig = LSTIG.match(keys["lvalue"])
         if is_lstig and keys["rvalue"] != UNDEF:
             tid, k = is_lstig.group(1), is_lstig.group(2)
+            agent = "{} {}:".format(info.spawn[int(tid)], tid)
+            if last_return == "lstig" and last_agent == tid:
+                agent = ""
+            if last_return == "lstig" and last_agent != tid:
+                agent = "\n" + agent
             last_return = "lstig"
-            return "{} {}:\t{} <~ {}".format(
-                info.spawn[int(tid)],
-                tid, info.lstig[int(k)].name, keys["rvalue"])
-
-        is_ltstamp = LTSTAMP.match(keys["lvalue"])
-        if is_ltstamp and last_return == "lstig":
-            last_return = "ltstamp"
-            return " ({})\n".format(keys["rvalue"])
+            last_agent = tid
+            return "{}\t{} <~ {}".format(
+                agent, info.lstig[int(k)].name, keys["rvalue"])
 
         if (keys["lvalue"].startswith("__LABS_step") and
                 keys["rvalue"] != last_step):
