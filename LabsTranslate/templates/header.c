@@ -207,10 +207,10 @@ void propagate(void) {
             // If data is fresh, i copies it to its stigmergy and
             // will propagate it in the future (setHout)
             setHout(i, guessedkey);
+            clearHin(i, guessedkey);
             TYPEOFKEYLID k, next;
             for (k = 0; k < MAXTUPLE; k++) {
                 next = guessedkey+k;
-                clearHin(i, guessedkey);
                 // if (next<MAXKEYL && tupleStart[next] == tupleStart[guessedkey])
                 if (next <= tupleEnd[guessedkey])
                     Lvalue[i][next] = Lvalue[guessedcomp][next];
