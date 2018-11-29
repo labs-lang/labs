@@ -14,14 +14,14 @@ let initVar (mapping:KeyMapping) tid (var:Var) =
         | Init.Id -> sprintf "%s = %s;\n" v tid
         | Undef -> sprintf "%s == undef_value" v |> assume
         | Choose l when l.Length = 1 ->
-            sprintf "%s = %i;\n" v l.Head
+            sprintf "%s = (%O);\n" v l.Head
         | Choose l ->
             l
-            |> Seq.map (sprintf "(%s == %i)" v)
+            |> Seq.map (sprintf "(%s == (%O))" v)
             |> String.concat " | "
             |> assume
-        | Range(minI, maxI) -> //assumeIntRange index minI maxI
-            sprintf "(%s >= %i) & (%s < %i)" v minI v maxI |> assume
+        | Range(minE, maxE) -> //assumeIntRange index minI maxI
+            sprintf "(%s >= (%O)) & (%s < (%O))" v minE v maxE |> assume
         + match var.location with 
             | L _ -> sprintf "Ltstamp[%s][tupleStart[%i]] = now();\n" tid i
             | _ -> ""

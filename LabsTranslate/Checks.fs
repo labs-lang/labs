@@ -90,7 +90,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         | None -> failwith (sprintf "Undefined variable: %s" k)
 
     let rec toVarExpr finder = function
-        | Id i -> Id i
+        | Expr.Id i -> Expr.Id i
         | Const i -> Const i
         | Abs e -> Abs (toVarExpr finder e)
         | Ref r -> Ref (toVarRef finder r)
@@ -98,6 +98,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
             Expr.Arithm(toVarExpr finder e1, op, toVarExpr finder e2)
     and toVarRef finder r = 
         {var= finder r.var; offset=Option.map (toVarExpr finder) r.offset}
+
     let rec toVarBExpr finder = function
     | True -> True
     | False -> False

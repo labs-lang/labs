@@ -32,7 +32,7 @@ let rec private translate trRef trId location =
         | Plus | Minus | Times | Div -> sprintf "( %s %O %s )" e1 op e2
         | Mod -> sprintf "mod( %s, %s )" e1 e2
     function
-    | Id i -> 
+    | Expr.Id i -> 
         try (trId i) with
         | :? System.Collections.Generic.KeyNotFoundException ->
             sprintf "%s: Undefined component %s" location (i.ToString())
