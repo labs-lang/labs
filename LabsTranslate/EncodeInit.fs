@@ -3,25 +3,28 @@ open Types
 open Base
 open Templates
 open Liquid
+open Expressions
 
 let initVar (mapping:KeyMapping) tid (var:Var) =
+    let constExprTranslator = (constExpr tid).ExprTranslator "init"
     let baseIndex = mapping.[var.name]
     let cVarName s = "_" + (translateLocation var.location tid s)
 
     let initAssumption i =
         let v = cVarName (string i)
         match var.init with
-        | Init.Id -> sprintf "%s = %s;\n" v tid
         | Undef -> sprintf "%s == undef_value" v |> assume
         | Choose l when l.Length = 1 ->
-            sprintf "%s = (%O);\n" v l.Head
+            sprintf "%s = (%s);\n" v (constExprTranslator l.Head)
         | Choose l ->
             l
-            |> Seq.map (sprintf "(%s == (%O))" v)
+            |> Seq.map (sprintf "(%s == (%s))" v << constExprTranslator)
             |> String.concat " | "
             |> assume
         | Range(minE, maxE) -> //assumeIntRange index minI maxI
-            sprintf "(%s >= (%O)) & (%s < (%O))" v minE v maxE |> assume
+            sprintf "(%s >= (%s)) & (%s < (%s))" 
+                v (constExprTranslator minE) v (constExprTranslator maxE)
+            |> assume
         + match var.location with 
             | L _ -> sprintf "Ltstamp[%s][tupleStart[%i]] = now();\n" tid i
             | _ -> ""

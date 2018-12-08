@@ -98,6 +98,12 @@ let customProcExpr name = {
     filterUndef= fun (v, _) -> v.init = Undef
 }
 
+let constExpr name = {
+    refTranslator= fun () _ -> ""
+    idTranslator= fun () -> name
+    filterUndef= fun () -> false
+}
+
 let procExpr = customProcExpr "tid"
 
 let linkExpr = 

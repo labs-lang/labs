@@ -139,14 +139,12 @@ type VarType =
  type Init =
      | Choose of Expr<unit,unit> list
      | Range of Expr<unit,unit> * Expr<unit,unit>
-     | Id
      | Undef
      override this.ToString() =
         match this with
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> sprintf "%O..%O" min max
         | Undef -> "undef"
-        | Id -> "id"
 
 
 type Var = {
