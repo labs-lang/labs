@@ -127,13 +127,13 @@ class Variable:
             self.size = int(size[:-1])
         else:
             self.name = name
-        if init[0] == "[":
-            self.values = [int(v) for v in init[1:-1].split(",")]
-        elif ".." in init:
-            low, up = init.split("..")
-            self.values = range(int(low), int(up))
-        elif init == "undef":
-            self.values = [-32767]  # UNDEF
+        # if init[0] == "[":
+        #     self.values = [(v) for v in init[1:-1].split(",")]
+        # elif ".." in init:
+        #     low, up = init.split("..")
+        #     self.values = range(int(low), int(up))
+        # elif init == "undef":
+        #     self.values = [-32767]  # UNDEF
 
     def rnd_value(self):
         """Returns a random, feasible initial value for the variable.
