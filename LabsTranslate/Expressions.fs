@@ -11,16 +11,16 @@ let refTypeCheck v (offset:'a option) =
         | Array(_) -> offset.IsNone, (sprintf "Array %s treated as Scalar")
     if test then failwith (msg v.name) else ()
 
-let rec getVars filter = function
-    | Id _
-    | Const _ -> Set.empty
-    | Abs e -> getVars filter e
-    | Ref r -> 
-        match r.offset with
-        | Some e -> getVars filter e
-        | None -> Set.empty
+
+let getVars filter (expr:Expr<_,_>) =
+    let rec getvars = function
+    | Ref r when r.offset.IsNone -> 
+        if (filter r.var) then Set.singleton r.var else Set.empty
+    | Ref r when r.offset.IsSome ->
+        r.offset.Value.visit getvars Set.union
         |> if (filter r.var) then Set.add r.var else id
-    | Arithm(e1, _, e2) -> Set.union (getVars filter e1) (getVars filter e2)
+    | _ -> Set.empty
+    expr.visit getvars Set.union
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let rec getLstigVars expr =
