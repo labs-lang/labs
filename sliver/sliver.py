@@ -39,13 +39,13 @@ HELPMSG = {
 }
 
 backends = {
-    "cbmc": ["cbmc"],
+    "cbmc": ["/usr/local/bin/cbmc5.4"],
     "esbmc": [
         "esbmc", "--no-bounds-check", "--no-div-by-zero-check",
         "--no-pointer-check", "--no-align-check", "--no-unwinding-assertions",
         "--z3"],
     "cseq": [
-        "./cseq.py", "-l", "labs_parallel", "--split", "choice",
+        "./cseq.py", "-l", "labs_parallel", "--split", "_I",
         "--cores", "4"]
 }
 
