@@ -1,5 +1,5 @@
 system {
-    extern = _birds, _grid, _delta
+    extern = _birds, _grid, _delta, _k
     spawn = Bird: _birds
 }
 
@@ -13,7 +13,7 @@ stigmergy Alignment {
 }
 
 agent Bird {
-    interface = x: 0.._grid; y: 0.._grid
+    interface = x: _k..(_grid - _k); y: _k..(_grid - _k)
     stigmergies = Alignment
     
     Behavior = Move; Behavior
