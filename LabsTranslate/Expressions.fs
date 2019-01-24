@@ -1,6 +1,5 @@
 ﻿module internal Expressions
 open Types
-open Base
 open Link
 open Templates
 
