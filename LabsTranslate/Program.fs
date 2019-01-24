@@ -5,10 +5,9 @@ open Encode
 open Templates
 open ArgParse
 
+
 [<EntryPoint>]
 let main argv =
-
-    let parsedCli = argv |> parseCLI
 
     let checks sys = 
         async {
@@ -19,53 +18,38 @@ let main argv =
             let! r2 = t2
             let! r3 = t3
 
-            return (r1 <&&> r2 <&&> r3 >>= fun (m, (a,b,c)) -> Ok (sys, m, a,b,c))
+            return (r1 <&&> r2 <&&> r3 >>= fun (m, (a, b, c)) -> Ok (sys, m, a,b,c))
         }
         |> Async.RunSynchronously
 
-    let translate isSim isFair (x, b) = 
-        let sys, trees, mapping, _, _, _ = x
-        [
-            translateHeader isSim (x, b)
-            translateInit (sys, trees, mapping)
-            translateAll trees
-            translateCanProceed trees
-            translateMain isFair (sys,trees)
-        ]
-        |> List.map logErr
-        |> List.map (Result.map (printfn "%s"))
-        |> List.reduce (<&&>)
 
-        
-    let readAndCheck =
-        (filenameOf parsedCli)
-        >>= readFile
-        >+> (placeholders parsedCli)
+    let readAndCheck (cli:Argu.ParseResults<_>) =
+        cli.GetResult File
+        |> readFile
+        >+> Ok (placeholders cli)
         >>= parse
         |> logErr
         >>= checks
 
-    let doTranslate (s,m,maxI,maxL,maxE) =
-        let bound =
-            parsedCli
-            |> Result.map (fun args -> args.GetResult <@ Bound @>) 
-
-        let isFair = 
-            parsedCli
-            |> Result.map (fun args -> args.Contains <@ Fair @>)
-            |> function Ok true -> true | _ -> false
-
-        let isSimulation =
-            parsedCli
-            |> Result.map (fun args -> args.Contains <@ Simulation @>)
-            |> function Ok true -> true | _ -> false
+    let doTranslate (cli:Argu.ParseResults<_>) (s, m, maxI, maxL, maxE) =
+        let translate x = 
+            let bound = cli.GetResult (Bound, defaultValue=1)
+            let sys, trees, _, _, _, _ = x
+            [
+                translateHeader (cli.Contains Simulation) (cli.Contains No_Bitvector)  bound x
+                translateInit (sys, trees, m)
+                translateAll trees
+                translateCanProceed trees
+                translateMain (cli.Contains Fair) (sys, trees)
+            ]
+            |> List.map ((Result.map (printfn "%s")) >> logErr)
+            |> List.reduce (<&&>)
 
 
         resolveSystem (s, m)
         >>= encode
-        |> Result.map (fun (sys, trees) -> sys, trees, m, maxI,maxL,maxE)
-        >+> bound
-        >>= (translate isSimulation isFair)
+        |> Result.map (fun (sys, trees) -> (sys, trees, m, maxI,maxL,maxE))
+        >>= translate
         |> logErr // Log any error at the end
         |> setReturnCode
 
@@ -74,11 +58,18 @@ let main argv =
         |> logErr // Log any error at the end
         |> setReturnCode
 
-    readAndCheck
-    >+> parsedCli
-    |> Result.map (fun (x, parsed) ->
-        if parsed.Contains <@ Info @>
-        then doInfo x
-        else doTranslate x
-    )
-    |> function Ok i -> i | Error _ -> 10
+    try
+        let parsedCli = parseCLI argv
+        readAndCheck parsedCli
+        |> Result.map (fun x ->
+            if parsedCli.Contains Info
+            then doInfo x
+            else doTranslate parsedCli x
+        )
+        |> 
+            function | Ok i -> i 
+                     | Error _ -> 10
+    with 
+        e -> 
+            eprintfn "%s" e.Message
+            10

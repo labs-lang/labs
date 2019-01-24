@@ -134,7 +134,23 @@ let encode (sys:SystemDef<_>) =
     |> Map.mapValues (fun (_, procs) -> encodeProcess procs counter "Behavior")
     |> fun x -> Ok (sys, x)
 
-let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, maxE), bound) =
+let translateHeader isSimulation noBitvectors bound (sys, trees, mapping:KeyMapping, maxI, maxL, maxE) =
+
+    let getTypedef num = 
+        let getStandardTypes = 
+            function
+            | a, b when a >= 0     && b < 256      -> "unsigned char"
+            | a, b when a > -128   && b < 128      -> "char"
+            | a, b when a >= 0     && b < 65536    -> "unsigned short"
+            | a, b when a > -32768 && b < 32768    -> "short"
+            | a, _ when a >= 0                     -> "unsigned int"
+            | _ -> "int "
+        let bitwidth num = 
+            System.Math.Log(float num, 2.) |> int |> (+) 1
+        if noBitvectors
+        then getStandardTypes (0, num)
+        else sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth num)
+    
 
     let (tupleStart, tupleEnd), maxTuple =
         /// Finds the min and max indexes of the given tuple.
@@ -176,9 +192,8 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
 
     let maxcomps = 
         Map.fold (fun state _ (_, cmax) -> max state cmax) 0 sys.spawn
-        
-    let bitwidth num = 
-        System.Math.Log(float num, 2.) |> int |> (+) 1
+
+
 
     let defines = 
         [
@@ -198,10 +213,11 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
             "TYPEOFVALUES", "short"
             "TYPEOFPC", "unsigned char"
             "TYPEOFTIME", "unsigned char" 
-            "TYPEOFAGENTID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxcomps)
-            "TYPEOFKEYIID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxI)
-            "TYPEOFKEYLID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxL)
-            "TYPEOFKEYEID", sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth maxE)
+            "TYPEOFAGENTID", getTypedef maxcomps
+            "TYPEOFKEYIID", getTypedef maxI
+            "TYPEOFKEYLID", getTypedef maxL
+            "TYPEOFKEYEID", getTypedef maxE
+            "Bool", getTypedef 1
         ]
         |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Str b])
 
