@@ -47,7 +47,10 @@ let translateProp sys (p:Property<Var*int>) =
             [amin..amax-1]
             |> List.map (fun i -> Map.add nextId i subs)
             |> List.map (fun s -> trProp s {prop with quantifiers=prop.quantifiers.Remove nextId})
-            |> String.concat(match quantifier with All -> " & " | Exists -> " | ")
+            |> String.concat(
+                match quantifier with 
+                | All -> " & "
+                | Exists -> " | ")
         else
             translateSub subs prop.predicate
 
