@@ -7,7 +7,7 @@ from enum import Enum
 from os import remove
 import uuid
 
-from cex import translateCPROVER, translateCSEQ
+from cex import translateCPROVER
 from modules.info import raw_info
 
 
@@ -92,13 +92,11 @@ def parse_linux(file, values, bound, fair, simulate, bv):
     if not bv:
         call.append("--no-bitvector")
     try:
-        print(values)
         out = check_output(call, env=env)
         fname = "".join((
             file[:-5], "_",
             "".join(v.replace("=", "") for v in values),
             "_", str(uuid.uuid4())[:6], ".c"))
-        print(fname)
         with open(fname, 'wb') as out_file:
             out_file.write(out)
         return out.decode("utf-8"), fname, raw_info(call)
@@ -202,10 +200,10 @@ VALUES -- assign values for parameterised specification (key=value)
                 else:
                     print("", file=sys.stderr)
             else:
-                if backend == "cbmc" and not simulate:
+                if backend == "cseq" and not simulate:
+                    print(translateCPROVER(out, fname, info, 19))
+                elif not simulate:
                     print(translateCPROVER(out, fname, info))
-                elif backend == "cseq" and not simulate:
-                    print(translateCSEQ(out, fname, info))
                 else:
                     print(out)
             try:

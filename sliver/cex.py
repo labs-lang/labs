@@ -12,14 +12,11 @@ PROPAGATE = re.compile(r"propagate_or_confirm=TRUE")
 CONFIRM = re.compile(r"propagate_or_confirm=FALSE")
 
 
-
 UNDEF = "16960"
-OFFSET = 17
 
 
 def translateCPROVER(cex, fname, info, offset=-1):
     info = Info.parse(info)
-
     with open(fname) as f:
         c_program = f.readlines()
     translatedcex = ''
@@ -58,10 +55,6 @@ def translateCPROVER(cex, fname, info, offset=-1):
         translatedcex = "Counterexample:\n\n{}\n".format(translatedcex)
 
     return translatedcex
-
-
-def translateCSEQ(cex, fname, info):
-    return translateCPROVER(cex, fname, info, 15)
 
 
 def keys_of(ln):
