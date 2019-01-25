@@ -13,13 +13,9 @@
     #define LABSassert(COND, LABEL)     /*#LABEL*/ assert(COND)
 #endif
 
-
 {% for item in typedefs -%}
 typedef {{item.value}} {{item.name}};
 {% endfor %}
-
-typedef unsigned __CPROVER_bitvector[1] Bool;
-
 
 TYPEOFVALUES abs(TYPEOFVALUES x) {
   return (x>0) ? x : -x;
