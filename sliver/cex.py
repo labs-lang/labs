@@ -86,7 +86,7 @@ def _mapCPROVERstate(A, B, C, info):
         is_ltstamp = LTSTAMP.match(keys["lvalue"])
         if is_ltstamp and last_return == "lstig":
             last_return = "ltstamp"
-            return " ({})\n".format(keys["rvalue"])
+            return "({})\n".format(keys["rvalue"])
 
         if PROPAGATE.match(C.strip()):
             last_sys.append("propagate ")
@@ -105,6 +105,8 @@ def _mapCPROVERstate(A, B, C, info):
         is_attr = ATTR.match(keys["lvalue"])
         if is_attr and keys["rvalue"] != UNDEF:
             tid, k = is_attr.group(1), is_attr.group(2)
+            if int(k) >= len(info.i):
+                return ""
             last_return = "attr"
             return "{} {}:\t{} <- {}\n".format(
                 info.spawn[int(tid)],
@@ -113,25 +115,26 @@ def _mapCPROVERstate(A, B, C, info):
         is_lstig = LSTIG.match(keys["lvalue"])
         if is_lstig and keys["rvalue"] != UNDEF:
             tid, k = is_lstig.group(1), is_lstig.group(2)
+            if int(k) >= len(info.lstig):
+                return ""
             agent = "{} {}:".format(info.spawn[int(tid)], tid)
-            if last_return == "lstig" and last_agent == tid:
-                agent = ""
-            if last_return == "lstig" and last_agent != tid:
-                agent = "\n" + agent
             last_return = "lstig"
-            last_agent = tid
-            return "{}\t{} <~ {}".format(
-                agent, info.lstig[int(k)].name, keys["rvalue"])
+            last_agent = agent
+            return "{}\t{} <~ {}\n".format(
+                agent,  # if last_agent != agent else "",
+                info.lstig[int(k)].name, keys["rvalue"])
 
         if (keys["lvalue"].startswith("__LABS_step") and
                 keys["rvalue"] != last_step):
             last_return = "step"
-            last_step = keys["rvalue"]
+            last_step = keys["rvalue"].replace("u", "")
             return "--step {}--\n".format(last_step)
 
         is_env = ENV.match(keys["lvalue"])
         if is_env and keys["rvalue"] != UNDEF:
             k = is_env.group(1)
+            if int(k) >= len(info.e):
+                return ""
             last_return = "env"
             return "\t{} <-- {}\n".format(info.e[int(k)].name, keys["rvalue"])
 
