@@ -23,6 +23,8 @@ class Backends(Enum):
 HELPMSG = {
     "backend": "backend to use in verification mode.",
 
+    "bitvector": "enable bitvector optimization (default: true)",
+
     "debug": "Enable additional checks in the backend.",
 
     "fair": "Enforce fair interleaving of components.",
@@ -45,7 +47,7 @@ backends = {
         "--no-pointer-check", "--no-align-check", "--no-unwinding-assertions",
         "--z3"],
     "cseq": [
-        "./cseq.py", "-l", "labs_parallel", "--split", "_I",
+        "./cseq.py", "-l", "labs_parallel", "--split", "sys_or_not",
         "--cores", "4"]
 }
 
@@ -76,7 +78,7 @@ else:
     TIMEOUT_CMD = "/usr/local/bin/gtimeout"
 
 
-def parse_linux(file, values, bound, fair, simulate):
+def parse_linux(file, values, bound, fair, simulate, bv):
     call = [
         "labs/LabsTranslate",
         "--file", file,
@@ -87,10 +89,16 @@ def parse_linux(file, values, bound, fair, simulate):
         call.append("--fair")
     if simulate:
         call.append("--simulation")
+    if not bv:
+        call.append("--no-bitvector")
     try:
+        print(values)
         out = check_output(call, env=env)
-        fname = str(uuid.uuid4()) + ".c"
-
+        fname = "".join((
+            file[:-5], "_",
+            "".join(v.replace("=", "") for v in values),
+            "_", str(uuid.uuid4())[:6], ".c"))
+        print(fname)
         with open(fname, 'wb') as out_file:
             out_file.write(out)
         return out.decode("utf-8"), fname, raw_info(call)
@@ -115,11 +123,13 @@ def DEFAULTS(name):
     default="cbmc", **DEFAULTS("backend"))
 @click.option('--debug', default=False, is_flag=True, **DEFAULTS("debug"))
 @click.option('--fair/--no-fair', default=False, **DEFAULTS("fair"))
+@click.option('--bv/--no-bv', default=True, **DEFAULTS("bitvector"))
 @click.option('--simulate', default=0, type=int, **DEFAULTS("simulate"))
 @click.option('--show', default=False, is_flag=True, **DEFAULTS("show"))
 @click.option('--steps', default=1, type=int, **DEFAULTS("steps"))
 @click.option('--timeout', default=0, type=int, **DEFAULTS("timeout"))
-def main(file, backend, steps, fair, simulate, show, values, timeout, debug):
+def main(file, backend, steps, fair, bv, simulate, show, values, timeout,
+         debug):
     """
 * * *  SLiVER - Symbolic LAbS VERification. v1.1 (November 2018) * * *
 
@@ -129,7 +139,8 @@ VALUES -- assign values for parameterised specification (key=value)
 """
 
     print("Encoding...", file=sys.stderr)
-    c_program, fname, info = parse_linux(file, values, steps, fair, simulate)
+    c_program, fname, info = parse_linux(
+        file, values, steps, fair, simulate, bv)
     info = info.decode().replace("\n", "|")[:-1]
     if fname:
         if show:
