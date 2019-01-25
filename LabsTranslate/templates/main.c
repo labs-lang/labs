@@ -12,14 +12,16 @@ void finally() {
 int main(void) {
     init();
     TYPEOFAGENTID firstAgent{% if firstagent == 0 %} = 0{% endif %};
+    _Bool sys_or_not[BOUND];
+
 
     unsigned __LABS_step;
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
         // if (terminalState()) break;
         
-        _Bool sys_or_not;
+        // _Bool sys_or_not;
 
-        if (sys_or_not) {
+        if (sys_or_not[__LABS_step]) {
             LABSassume(firstAgent < MAXCOMPONENTS);
 
             {%- for item in schedule -%}

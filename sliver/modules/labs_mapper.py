@@ -102,7 +102,7 @@ class labs_mapper(core.module.BasicModule):
 
 			varset = []
 
-			splitonfull = 'c init::1::%s!0@1#1 ' % spliton
+			splitonfull = 'c main::1::%s!0@1#1 ' % spliton
 
 			if contexts == 1:
 				cores = 1
