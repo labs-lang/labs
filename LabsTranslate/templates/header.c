@@ -17,7 +17,7 @@
 typedef {{item.value}} {{item.name}};
 {% endfor %}
 
-TYPEOFVALUES abs(TYPEOFVALUES x) {
+TYPEOFVALUES __abs(TYPEOFVALUES x) {
   return (x>0) ? x : -x;
 }
 
@@ -81,7 +81,7 @@ void clearHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     HinCnt[id] = HinCnt[id] - 1;
     // }
     HinCnt[id] = HinCnt[id] - (Hin[id][tupleStart[key]]);
-    assert(HinCnt[id] >= 0);
+    // assert(HinCnt[id] >= 0);
     Hin[id][tupleStart[key]] = 0;
 }
 
@@ -99,7 +99,7 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     Hout[id][tupleStart[key]] = 0;
     //     HoutCnt[id] = HoutCnt[id] - 1;
     // }
-    assert(HoutCnt[id] > 0);
+    // assert(HoutCnt[id] > 0);
     HoutCnt[id] = HoutCnt[id] - (Hout[id][tupleStart[key]]);
     Hout[id][tupleStart[key]] = 0;
 }

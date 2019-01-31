@@ -37,7 +37,7 @@ let rec private translate trRef trId location =
             sprintf "%s: Undefined component %s" location (i.ToString())
             |> failwith 
     | Const i -> sprintf "%i" i
-    | Abs e -> sprintf "abs(%s)" (translate trRef trId location e)
+    | Abs e -> sprintf "__abs(%s)" (translate trRef trId location e)
     | Ref r ->
         try
             (trRef r.var (r.offset |> Option.map (translate trRef trId location)))
