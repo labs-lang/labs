@@ -7,6 +7,7 @@
 #  Foundations of Coordination Languages and 
 #  Self-Adaptative Systems (FOCLASA), 2018).
 #
+constants
 labs_mapper
 labs_feeder_parallel
 ###labs_cex
