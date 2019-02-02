@@ -17,7 +17,7 @@ agent Bird {
     stigmergies = Alignment
     
     Behavior = Move; Behavior
-    Move = x <- (x + dirx) % _grid ++ y <- (y + diry) % _grid
+    Move = x, y <- (x + dirx) % _grid, (y + diry) % _grid
 
 }
 

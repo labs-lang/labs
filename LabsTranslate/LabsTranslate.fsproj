@@ -44,9 +44,9 @@
     <DefineConstants>RELEASE;NETCOREAPP</DefineConstants>
     <GenerateTailCalls>true</GenerateTailCalls>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Rescue' ">
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Choice-safe' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/rescue.labs --values n=1 delta=21 grid=16 --bound 16</StartArguments>
+    <StartArguments>--file ../examples/choice.labs --values max=2 --bound 2 --fair</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
