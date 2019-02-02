@@ -11,39 +11,42 @@ void finally() {
 
 int main(void) {
     init();
-    unsigned char choice[BOUND];
-    unsigned char agent_choice[BOUND];
+    TYPEOFAGENTID firstAgent{% if firstagent == 0 %} = 0{% endif %};
+    _Bool sys_or_not[BOUND];
 
 
-    int __LABS_step;
-    {% if fair -%}unsigned char last;{% endif %}
+    unsigned __LABS_step;
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
-        if (terminalState()) break;
+        // if (terminalState()) break;
         
-        LABSassume(choice[__LABS_step] < MAXCOMPONENTS + 2);
-    
-        if (choice[__LABS_step] < MAXCOMPONENTS) {
-            LABSassume(agent_choice[__LABS_step] < {{ schedule.size }});
-            {%- if fair -%}
-            LABSassume(choice[__LABS_step] == last+1 || (last == MAXCOMPONENTS - 1 && choice[__LABS_step] == 0));
-            {%- endif -%}
+        // _Bool sys_or_not;
+
+        if (sys_or_not[__LABS_step]) {
+            LABSassume(firstAgent < MAXCOMPONENTS);
 
             {%- for item in schedule -%}
             {%- if forloop.first -%}
-            if (agent_choice[__LABS_step] == {{forloop.index0}}) {{item}}(choice[__LABS_step]);
+            if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
             {%- else -%}
-            else if ((agent_choice[__LABS_step] == {{forloop.index0}})) {{item}}(choice[__LABS_step]);
+            else if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
             {%- endif -%}
             {%- endfor -%}
             
             {%- if fair -%}
-            last = choice[__LABS_step];
+            if (firstAgent == MAXCOMPONENTS - 1) {
+                firstAgent = 0;
+            }
+            else {
+                firstAgent++;
+            }
             {%- endif -%}
         }
-        else if (choice[__LABS_step] == MAXCOMPONENTS) 
-            propagate();
-        else if (choice[__LABS_step] == MAXCOMPONENTS + 1)
-            confirm();
+        else {
+            _Bool propagate_or_confirm; 
+
+            if (propagate_or_confirm) propagate();
+            else confirm();
+        }
         monitor();
     }
     

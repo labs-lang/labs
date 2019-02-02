@@ -7,7 +7,7 @@ open Base
 let checkNames sys =
 
     let rec usedNames = function
-        | Name n -> Set.singleton n
+        | Name (n, _) -> Set.singleton n
         | Await(_, p) -> usedNames p
         | Seq(p, q)
         | Par(p, q)
@@ -65,6 +65,7 @@ let checkComponents sys =
             
 /// Binds all references in the system to the corresponding variable.
 let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
+    
     let addUndefs (sys:SystemDef<'a>) (cmp:ComponentDef<'a>) =
         sys.ifaceVars.Value
         |> Set.filter (fun v -> 
@@ -89,7 +90,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
         | None -> failwith (sprintf "Undefined variable: %s" k)
 
     let rec toVarExpr finder = function
-        | Id i -> Id i
+        | Expr.Id i -> Expr.Id i
         | Const i -> Const i
         | Abs e -> Abs (toVarExpr finder e)
         | Ref r -> Ref (toVarRef finder r)
@@ -97,6 +98,7 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
             Expr.Arithm(toVarExpr finder e1, op, toVarExpr finder e2)
     and toVarRef finder r = 
         {var= finder r.var; offset=Option.map (toVarExpr finder) r.offset}
+
     let rec toVarBExpr finder = function
     | True -> True
     | False -> False
@@ -131,13 +133,13 @@ let resolveSystem (sys:SystemDef<string>, mapping:KeyMapping) =
 
     let rec resolveProcess = function
     | Nil -> Nil
-    | Skip -> Skip
-    | Base a -> resolveAction a |> Base
+    | Skip pos -> Skip pos
+    | Base (a, pos) -> Base(resolveAction a, pos)
     | Await(b, p) -> Await(toVarBExpr findString b, resolveProcess p)
     | Seq(p1, p2) -> Seq(resolveProcess p1, resolveProcess p2)
     | Choice(p1, p2) -> Choice(resolveProcess p1, resolveProcess p2)
     | Par(p1, p2) -> Par(resolveProcess p1, resolveProcess p2)
-    | Name n -> Name n
+    | Name (n, pos) -> Name (n, pos)
 
     let resolveComponent (c:ComponentDef<string>) = {
         name = c.name
@@ -210,8 +212,7 @@ let analyzeKeys sys =
                 | Array n -> nextIndex + n
 
         setOfVars
-        |> Set.unionMany
-        |> Set.fold update (Map.empty, startFrom)
+        |> Seq.fold (fun x s -> Set.fold update x s) (Map.empty, startFrom)
 
     let attrKeys, maxI = 
         comps
@@ -223,7 +224,6 @@ let analyzeKeys sys =
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
-        |> fun x -> x
         |> Seq.fold 
             (fun (map, i) vars -> 
                 let newInfo, newI = makeInfo i (seq vars)

@@ -1,6 +1,6 @@
 ﻿module internal System
 open FParsec
-open Common
+open Init
 open Types
 open Processes
 

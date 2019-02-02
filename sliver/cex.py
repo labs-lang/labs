@@ -8,13 +8,15 @@ LTSTAMP = re.compile(r"Ltstamp\[([0-9]+)l?\]\[([0-9]+)l?\]")
 ENV = re.compile(r"E\[([0-9]+)l?\]")
 STEP = re.compile(r"__LABS_step")
 
+PROPAGATE = re.compile(r"propagate_or_confirm=TRUE")
+CONFIRM = re.compile(r"propagate_or_confirm=FALSE")
+
+
 UNDEF = "16960"
-OFFSET = 17
 
 
 def translateCPROVER(cex, fname, info, offset=-1):
     info = Info.parse(info)
-
     with open(fname) as f:
         c_program = f.readlines()
     translatedcex = ''
@@ -41,7 +43,11 @@ def translateCPROVER(cex, fname, info, offset=-1):
         # case 2: final transation with property violation
         elif ln.startswith('Violated property'):
             Y = keys_of(lines[k + 1])
-            _, prop = c_program[int(Y["line"]) + offset].split("//")
+            prop = c_program[int(Y["line"]) + offset]
+            try:
+                _, prop = c_program[int(Y["line"]) + offset].split("//")
+            except ValueError:
+                pass
             translatedcex += """Violated property: {}\n""".format(prop)
             break  # Stop converting after the 1st property has been violated
 
@@ -51,10 +57,6 @@ def translateCPROVER(cex, fname, info, offset=-1):
     return translatedcex
 
 
-def translateCSEQ(cex, fname, info):
-    return translateCPROVER(cex, fname, info, 15)
-
-
 def keys_of(ln):
     tokens = ln.split()
     return {key: value for key, value in zip(tokens[0::2], tokens[1::2])}
@@ -62,10 +64,12 @@ def keys_of(ln):
 
 last_return = ""
 last_step = -1
+last_sys = []
+last_agent = -1
 
 
 def _mapCPROVERstate(A, B, C, info):
-    global last_return, last_step
+    global last_return, last_step, last_sys, last_agent
     '''
     'Violated property:'
     '  file _cs_lazy_unsafe.c line 318 function thread3_0'
@@ -79,9 +83,30 @@ def _mapCPROVERstate(A, B, C, info):
         keys["lvalue"], rvalue = C.strip().split("=")
         keys["rvalue"] = rvalue.split(" ")[0]
 
+        is_ltstamp = LTSTAMP.match(keys["lvalue"])
+        if is_ltstamp and last_return == "lstig":
+            last_return = "ltstamp"
+            return "({})\n".format(keys["rvalue"])
+
+        if PROPAGATE.match(C.strip()):
+            last_sys.append("propagate ")
+        elif CONFIRM.match(C.strip()):
+            last_sys.append("confirm ")
+        elif keys["lvalue"] == "guessedcomp":
+            tid = int(keys["rvalue"])
+            agent = "from {} {}: ".format(info.spawn[tid], tid)
+            last_sys.append(agent)
+        elif keys["lvalue"] == "guessedkey":
+            last_sys.append(info.lstig[int(keys["rvalue"])].name)
+            result = ("".join(last_sys) + "\n")
+            last_sys = []
+            return result
+
         is_attr = ATTR.match(keys["lvalue"])
         if is_attr and keys["rvalue"] != UNDEF:
             tid, k = is_attr.group(1), is_attr.group(2)
+            if int(k) >= len(info.i):
+                return ""
             last_return = "attr"
             return "{} {}:\t{} <- {}\n".format(
                 info.spawn[int(tid)],
@@ -90,25 +115,26 @@ def _mapCPROVERstate(A, B, C, info):
         is_lstig = LSTIG.match(keys["lvalue"])
         if is_lstig and keys["rvalue"] != UNDEF:
             tid, k = is_lstig.group(1), is_lstig.group(2)
+            if int(k) >= len(info.lstig):
+                return ""
+            agent = "{} {}:".format(info.spawn[int(tid)], tid)
             last_return = "lstig"
-            return "{} {}:\t{} <~ {}".format(
-                info.spawn[int(tid)],
-                tid, info.lstig[int(k)].name, keys["rvalue"])
-
-        is_ltstamp = LTSTAMP.match(keys["lvalue"])
-        if is_ltstamp and last_return == "lstig":
-            last_return = "ltstamp"
-            return " ({})\n".format(keys["rvalue"])
+            last_agent = agent
+            return "{}\t{} <~ {}\n".format(
+                agent,  # if last_agent != agent else "",
+                info.lstig[int(k)].name, keys["rvalue"])
 
         if (keys["lvalue"].startswith("__LABS_step") and
                 keys["rvalue"] != last_step):
             last_return = "step"
-            last_step = keys["rvalue"]
+            last_step = keys["rvalue"].replace("u", "")
             return "--step {}--\n".format(last_step)
 
         is_env = ENV.match(keys["lvalue"])
         if is_env and keys["rvalue"] != UNDEF:
             k = is_env.group(1)
+            if int(k) >= len(info.e):
+                return ""
             last_return = "env"
             return "\t{} <-- {}\n".format(info.e[int(k)].name, keys["rvalue"])
 

@@ -1,10 +1,11 @@
 void init() {
 
-    short _I[MAXCOMPONENTS][MAXKEYI];
-    short _Lvalue[MAXCOMPONENTS][MAXKEYL];
-    short _E[MAXKEYE];
+    TYPEOFVALUES _I[MAXCOMPONENTS][MAXKEYI];
+    TYPEOFVALUES _Lvalue[MAXCOMPONENTS][MAXKEYL];
+    TYPEOFVALUES _E[MAXKEYE];
+    TYPEOFPC _pc[MAXCOMPONENTS][MAXPC];
 
-    int i,j;
+    unsigned char i, j;
     for (i=0; i<MAXCOMPONENTS; i++) {
         terminated[i] = 0;
         for (j=0; j<MAXKEYL; j++) {
@@ -17,29 +18,38 @@ void init() {
     }
 
     {%- for item in initpcs -%}
-    for (i={{item.start}}; i<{{item.end}}; i++) {
-        pc[i][0] == {{item.pc}};
-    }
-    {%- endfor -%}
+    {%- assign a = item.end | minus: 1 -%}
+    {%- for i in (item.start..a) -%}
 
-    j=0;
+    {%- for p in item.pcs -%}
+    {%- if p.values.size == 1 -%}
+    _pc[{{i}}][{{ p.pc }}] = {{ p.values.first }};{%- else -%}
+    LABSassume({%- for val in p.values -%} (_pc[{{i}}][{{ p.pc }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    {%- endif -%}
+    {% endfor %}
+
+    {%- endfor -%}{%- endfor -%}
         
     {{- initenv -}}
 
     {{- initvars -}}
 
-    __LABS_time = j;
+    now();
 
     for (i=0; i<MAXKEYE; i++) {
         E[i] = _E[i];
     }
     for (i=0; i<MAXCOMPONENTS; i++) {
+        for (j=0; j<MAXPC; j++) {
+            pc[i][j] = _pc[i][j];
+        }
+
         for (j=0; j<MAXKEYI; j++) {
             I[i][j] = _I[i][j];
         }
+
         for (j=0; j<MAXKEYL; j++) {
             Lvalue[i][j] = _Lvalue[i][j];
-            Ltstamp[i][j] = Ltstamp[i][tupleEnd[j]];
         }
     }
 }

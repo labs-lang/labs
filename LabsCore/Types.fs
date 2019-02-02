@@ -9,28 +9,6 @@ type Location =
             | I -> "Interface" | E -> "Environment"
             | L n -> sprintf "Stigmergy (%s)" n 
 
-type VarType = 
-    | Scalar
-    | Array of size:int
- /// Initialization values
- type Init =
-     | Choose of int list
-     | Range of int * int
-     | Undef
-     override this.ToString() =
-        match this with
-        | Choose l -> l |> List.map string |> String.concat "," |> sprintf "[%s]"
-        | Range(min, max) -> sprintf "%i..%i" min max
-        | Undef -> "undef"
-
-
-type Var = {
-    name:string
-    vartype:VarType
-    location:Location
-    init:Init
-}
-with override this.ToString() = this.name
 
 type ArithmOp =
     | Plus
@@ -55,6 +33,16 @@ type Expr<'a, 'b> =
         | Ref r -> string r
         | Abs e -> sprintf "abs(%O)" e
         | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
+
+    member this.visit fn compose =
+        let rec visit x =
+            match x with
+            | Id _ 
+            | Const _ 
+            | Ref _ -> fn x
+            | Abs e -> visit e
+            | Arithm (e1, _, e2) -> compose (visit e1) (visit e2)
+        visit this
 
 and Ref<'a, 'b> = 
     {var:'a; offset: Expr<'a, 'b> option}
@@ -112,33 +100,57 @@ type Action<'a> = {
                 (this.updates |> List.map (string << fst) |> String.concat ",")
                 (this.updates  |> List.map (string << snd) |> String.concat ",")
 
-type Process<'a> = 
+type Process<'a, 'b> = 
     | Nil
-    | Skip
-    | Base of Action<'a>
-    | Seq of Process<'a> * Process<'a>
-    | Choice of Process<'a> * Process<'a>
-    | Par of Process<'a> * Process<'a>
-    | Await of BExpr<'a, unit> * Process<'a>
-    | Name of string
+    | Skip of 'b
+    | Base of Action<'a> * 'b
+    | Seq of Process<'a, 'b> * Process<'a, 'b>
+    | Choice of Process<'a, 'b> * Process<'a, 'b>
+    | Par of Process<'a, 'b> * Process<'a, 'b>
+    | Await of BExpr<'a, unit> * Process<'a, 'b>
+    | Name of string * 'b
     static member private monoid left right op = 
         match left,right with
-        | _, Skip -> left
-        | Skip, _ -> right
+        | _, Skip _ -> left
+        | Skip _, _ -> right
         | _ -> op(left, right)
-    static member ( ^. )(left: Process<'a>, right: Process<'a>) =
-        Process<'a>.monoid left right Seq
-    static member ( ^+ )(left: Process<'a>, right: Process<'a>) =
+    static member ( ^. )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
+        Seq(left, right)
+    static member ( ^+ )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
         Choice(left, right)
-    static member ( ^| )(left: Process<'a>, right: Process<'a>) =
-        Process<'a>.monoid left right Par
+    static member ( ^| )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
+        Process<'a, 'b>.monoid left right Par
     override this.ToString() =
         match this with
         | Nil -> "0"
-        | Skip -> "√"
-        | Base a -> string a
+        | Skip _ -> "√"
+        | Base (a, _) -> string a
         | Seq(p, q) -> sprintf "%O; %O" p q
         | Choice(p, q) -> sprintf "%O + %O" p q
         | Par(p, q) -> sprintf "%O | %O" p q
         | Await(b, p) -> sprintf "%A -> %O" b p
-        | Name s -> s
+        | Name (s, _) -> s
+
+
+type VarType = 
+    | Scalar
+    | Array of size:int
+ /// Initialization values
+ type Init =
+     | Choose of Expr<unit,unit> list
+     | Range of Expr<unit,unit> * Expr<unit,unit>
+     | Undef
+     override this.ToString() =
+        match this with
+        | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
+        | Range(min, max) -> sprintf "%O..%O" min max
+        | Undef -> "undef"
+
+
+type Var = {
+    name:string
+    vartype:VarType
+    location:Location
+    init:Init
+}
+with override this.ToString() = this.name

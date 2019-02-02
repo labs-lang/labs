@@ -4,11 +4,11 @@ open FParsec
 
 let parithmop : Parser<_> =
     choice [
-        (notFollowedBy (skipString "++") >>. charReturn '+' Plus <!> "Plus");
-        (notFollowedBy (skipString "->") >>. charReturn '-' Minus <!> "Minus");
-        (charReturn '*' Times);
-        (charReturn '/' Div);
-        (charReturn '%' Mod)
+        notFollowedBy (skipString "++") >>. charReturn '+' Plus <!> "Plus"
+        notFollowedBy (skipString "->") >>. charReturn '-' Minus <!> "Minus"
+        charReturn '*' Times
+        charReturn '/' Div
+        charReturn '%' Mod
     ]
 
 let simpleRef p = 
@@ -27,7 +27,7 @@ let rec makeExprParser pref pid =
             followedBy (skipString "abs(") >>.
                 (skipString "abs") >>. betweenParen pexpr |>> Abs
             followedBy pint32 >>. pint32 |>> Const <!> "const"
-            followedBy pid >>. pid |>> Id <!> "id"
+            followedBy pid >>. pid |>> Expr.Id <!> "id"
             attempt (pref pexpr) |>> Ref <!> "ref"
         ]
     do pexprRef :=
@@ -60,9 +60,9 @@ let makeBExprParser pexpr =
         let pbexprCompare =
             tuple3 pexpr (ws pcompareop <!> "compare") pexpr |>> Compare
         choice [
-            attempt pbexprNeg <!> "bneg"
+            followedBy NEG >>. pbexprNeg <!> "bneg"
             attempt pbexprCompare <!> "bcompare"
-            betweenParen pbexpr <!> "bparen"
+            followedBy (skipChar '(') >>. betweenParen pbexpr <!> "bparen"
             stringReturn "true" True
             stringReturn "false" False
         ]

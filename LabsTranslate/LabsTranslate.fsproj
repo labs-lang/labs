@@ -4,11 +4,11 @@
   </PropertyGroup>
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/flock.labs --values birds=10 delta=21 grid=16 --bound 10 --fair</StartArguments>
+    <StartArguments>--file ../examples/flock.labs --values birds=10 delta=21 grid=16 k=4 --bound 10 --fair</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Flock2info' ">
@@ -41,16 +41,16 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DefineConstants>RELEASE;NETCOREAPP;NETCOREAPP2_1</DefineConstants>
+    <DefineConstants>RELEASE;NETCOREAPP</DefineConstants>
     <GenerateTailCalls>true</GenerateTailCalls>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Rescue' ">
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Choice-safe' ">
     <StartAction>Project</StartAction>
-    <StartArguments>--file ../examples/rescue.labs --values n=1 delta=21 grid=16 --bound 16</StartArguments>
+    <StartArguments>--file ../examples/choice.labs --values max=2 --bound 2 --fair</StartArguments>
     <ExternalConsole>false</ExternalConsole>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Update="Microsoft.NETCore.App" Version="2.1.*" />
+    <PackageReference Update="Microsoft.NETCore.App" />
   </ItemGroup>
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />

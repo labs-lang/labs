@@ -84,7 +84,7 @@ class labs_mapper(core.module.BasicModule):
 
 		''' Run the verification tool on the input file '''
 		if backend == 'cbmc-assumptions':
-			cmdline = backendFilename[backend] + " " + seqfile + " --dimacs | grep \"c \""    #--outfile " + seqfile+".dimacs"
+			cmdline = backendFilename[backend] + " " + seqfile + " --dimacs | grep \"^c \""    #--outfile " + seqfile+".dimacs"
 
 		command = core.utils.Command(cmdline)
 		out, err, code = command.run(timeout=int(7200))   # store stdout, stderr, process' return value
@@ -110,7 +110,7 @@ class labs_mapper(core.module.BasicModule):
 			try:
 				choice_bitwidth = (findpropositionalvarsize(splitonfull,lines).bind(self))/contexts
 			except:
-				self.error("DIMACS lookup failed for the given symbol")
+				self.error("DIMACS lookup failed for the given symbol %s" % spliton)
 
 			# split on least significant digits of the symbolic variables that represent the context-switch points
 			if cores >= 2: varset.append(findpropositionalvar(splitonfull,lines,0).bind(self))
@@ -136,7 +136,7 @@ class labs_mapper(core.module.BasicModule):
 			# to parallel feeder
 			self.setOutputParam('extrargs', extrargs)
 
-		if not simulate:
+		if not simulate or int(simulate) == 0:
 			verificationmode(cores)
 		else:
 			self.setOutputParam('simulate', int(simulate))

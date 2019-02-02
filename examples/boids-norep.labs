@@ -1,0 +1,64 @@
+system {
+    extern = _birds, _grid, _delta
+    spawn = Bird: _birds   
+}
+
+stigmergy Cohesion {
+    link = (count of c1 >= count of c2)
+    leader, posx, posy, count: id, -1, -1, 1
+}
+
+stigmergy Alignment {
+    link =
+        (((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+                 ((y of c1 - y of c2) * (y of c1 - y of c2))) <= _delta * _delta
+
+    dirx, diry: [-1, 1], [-1, 1]
+}
+
+agent Bird {
+    interface = x: 0.._grid; y: 0.._grid
+    stigmergies = Cohesion; Alignment
+    
+    # At first, every agent is the leader of their own swarm.
+    # Exchange of stigmergic messages naturally leads to the
+    # election of a leader for each group of connected birds
+    Behavior = Move; Attract; Behavior
+
+    # Don't move if on the edges
+    Move =
+        (x + dirx != (x+dirx) % _grid or y + diry != (y+diry) % _grid ->
+            Skip)
+        ++  
+        (x + dirx = (x+dirx) % _grid and y + diry = (y+diry) % _grid ->
+            x, y <- x + dirx, y + diry)
+
+    Attract = (
+            # Leaders only signal their own position
+            # Followers upgrade the count of their swarm
+            (leader = id -> posx, posy <~ x, y)
+            ++
+            (leader != id -> count <~ count + 1)
+        );
+
+        # Leaders ignore (posx, posy)
+        ((leader = id -> Skip)
+            ++
+        # Followers that are close to (posx,posy) ignore it
+        # The others adapt dirx or diry to point toward (posx, posy)
+        (leader != id -> (
+                (( abs(x - posx) > _delta -> dirx <~ (posx-x) / abs(posx-x))
+                ++
+                ( abs(x - posx) <= _delta -> Skip));
+            (
+                (( abs(y - posy) > _delta -> diry <~ (posy-y) / abs(posy-y))
+                ++
+                ( abs(y - posy) <= _delta -> Skip)))
+        )))
+
+}
+
+check {
+    OneLeader = finally forall Bird b1, forall Bird b2, 
+        leader of b1 = leader of b2
+}

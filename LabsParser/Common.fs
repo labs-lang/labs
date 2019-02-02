@@ -1,7 +1,6 @@
 ﻿[<AutoOpen>]
 module internal Common
 open FParsec
-open Types
 
 type Parser<'t> = Parser<'t, unit>
 
@@ -89,39 +88,9 @@ let toSet dupFn formatOnFail lst =
         |> fun msg _ -> Reply(Error, unexpected msg)
     else
         preturn (Set.ofList lst)
-
-let pvar loc = 
-    pipe2 KEYNAME (opt (betweenBrackets puint32))
-        (fun name -> 
-            let v = {vartype=Scalar; name=name; location=loc; init=Undef}
-            function
-            | Some b -> {v with vartype=Array(int b)}
-            | None -> v)
-
-let pinit = 
-    let pChoose = 
-        (sepbycommas pint32) |> betweenBrackets |>> Choose
-    let pRange = 
-        followedBy (pint32 >>. RANGE)
-        >>. ((ws pint32) .>>. (RANGE >>. (ws pint32)) 
-        |>> Range)
-    let pSingle = (ws pint32) |>> (Choose << List.singleton)
-    let pUndef = stringReturn strUNDEF Undef
-
-    choice [pChoose; pRange; pSingle; pUndef] |> ws
-
-/// Parses a single init definition.
-let pinitdef loc =
-    (pvar loc) .>>. ((ws COLON) >>. pinit)
-    |>> fun (var, init) -> {var with init=init}
-
+        
 let inline byName v =
    (^T : (member name : string) v)
-
-let pkeys loc = 
-    //let lbl = function I -> "interface" | L _ -> "stigmergy" | E -> "environment"
-    ws (sepbysemis (ws (pinitdef loc)))
-    >>= toSet byName byName 
 
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)

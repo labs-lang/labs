@@ -1,0 +1,52 @@
+system {
+    extern = _n, _delta, _x, _y
+    spawn = Landmark: _n, Finder: 1, Worker: 1
+}
+
+stigmergy Following {
+    link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+        ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta * _delta
+        and hop of c1 < hop of c2 - 1
+
+    gotoX, gotoY, gotoHop: undef, undef, undef
+}
+
+agent Landmark {
+    interface = x: 0..10; y: 0..10; hop: 1000
+    stigmergies = Following
+    
+    Behavior =
+        gotoHop < hop - 1 ->
+            (hop <- gotoHop + 1;
+            gotoX, gotoY, gotoHop <~ x, y, hop); Behavior
+
+}
+
+agent Finder {
+    interface = x: _x; y: _y
+    stigmergies = Following
+    
+    Behavior = gotoX, gotoY, gotoHop <~ x, y, 0; Behavior
+}
+
+agent Worker {
+    interface = x: 0; y: 0; hop: 1000
+
+    Behavior = 
+        gotoHop < hop - 1 -> hop <- gotoHop; Move; Behavior
+
+    Move = 
+        (gotoX = x and gotoY = y -> Skip)
+        ++ (
+        ((gotoX > x -> (x <- x + 1))
+        ++
+        (gotoX < x -> (x <- x - 1))
+        ++
+        (gotoY > y -> (y <- y + 1))
+        ++
+        (gotoY < y -> (y <- y - 1))); Move)
+}
+
+check {
+    Reached = finally exists Worker w, x of w = _x and y of w = _y
+}

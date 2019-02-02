@@ -2,7 +2,7 @@
 open FParsec
 open Types
 open Processes
-open Common
+open Init
 
 let pcomp = 
     pipe2

@@ -1,0 +1,73 @@
+system {
+    extern = _birds, _grid, _delta
+    spawn = Bird: _birds   
+}
+
+stigmergy Cohesion {
+    link = (count of c1 >= count of c2)
+    
+    leader, posX, posY, count: id, -1, -1, 1
+}
+
+stigmergy Separation {
+    link = abs(x of c1 - x of c2) < 2 and abs(y of c1 - y of c2) < 2
+
+    repX, repY: -1, -1
+}
+
+stigmergy Alignment {
+    link =
+        (((x of c1 - x of c2) * (x of c1 - x of c2)) + 
+                 ((y of c1 - y of c2) * (y of c1 - y of c2))) <= _delta * _delta
+
+    dirX, dirY: [-1, 1], [-1, 1]
+}
+
+
+agent Bird {
+    interface = x: 0.._grid; y: 0.._grid
+    stigmergies = Cohesion; Alignment; Separation
+    
+    # At first, every agent is the leader of their own swarm.
+    # Exchange of stigmergic messages naturally leads to the
+    # election of a leader for each group of connected birds
+    Behavior = Move; Attract; Behavior
+
+
+    # Only move if there is no agent on the destination position
+    # And not on edges
+    Move = (
+            (x + dirx % _grid = repX and y + diry % _grid = repY ->
+                Skip)
+            ++
+            (x + dirx % _grid != repX  or y + diry % _grid != repy ->
+                x, y <- (x + dirx) % _grid, (y + diry) % _grid)
+        );
+        repX, repY <~ x, y
+        
+
+    Attract = (
+        # Leaders only signal their own position
+        (leader = id -> posX, posY <~ x, y)
+        ++
+        # Followers upgrade the count of their swarm
+        # Followers that are close to (posX,posY) ignore it
+        # The others adapt dirX and/or dirY to point toward (posX, posY)
+        (leader != id -> 
+            count <~ count + 1; (
+                (abs(x - posX) > _delta -> dirX <~ (posX-x) / abs(posX-x))
+                ++
+                (abs(x - posX) <= _delta -> Skip)
+            ); (
+                (abs(y - posY) > _delta -> dirY <~ (posY-y) / abs(posY-y))
+                ++
+                (abs(y - posY) <= _delta -> Skip)
+            )
+        )
+    )
+}
+
+check {
+    OneLeader = finally forall Bird b1, forall Bird b2, 
+        leader of b1 = leader of b2
+}

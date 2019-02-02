@@ -1,8 +1,6 @@
 system {
-    extern = _birds, _grid, _delta
+    extern = _birds, _grid, _delta, _k
     spawn = Bird: _birds
-
-    
 }
 
 stigmergy Alignment {
@@ -14,31 +12,13 @@ stigmergy Alignment {
 
 }
 
-stigmergy Cohesion {
-    link =
-        ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
-        ((y of c1 - y of c2) * (y of c1 - y of c2)) > _delta * _delta
-
-    posx, posy: undef, undef
-}
-
 agent Bird {
-    interface = x: 0.._grid; y: 0.._grid
-    stigmergies = Alignment; Cohesion
+    interface = x: _k..(_grid - _k); y: _k..(_grid - _k)
+    stigmergies = Alignment
     
-    # "Local" processes (can only be used by component Bird)
-    Behavior = (Move || Attract); Behavior
+    Behavior = Move; Behavior
+    Move = x, y <- (x + dirx) % _grid, (y + diry) % _grid
 
-    Move = x <- (x + dirx) % _grid ++ y <- (y + diry) % _grid
-
-    Attract = 
-        posx, posy <~ x, y;
-        ((posx != x -> dirx <~ (x - posx) / abs(x-posx))
-        ++
-        (posy != y -> diry <~ (y - posy) / abs(y-posy))
-        ++
-        (posx = x and posy = y -> Skip)
-        )
 }
 
 check {

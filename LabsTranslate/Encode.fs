@@ -7,90 +7,152 @@ open Expressions
 open Properties
 open Liquid
 
-type NodeType = Basic of Action<Var * int> | Goto | Stop
+type NodeType = Goto | Stop
 
 type Node = {
     nodeType:NodeType
+    action : Action<Var * int> option
     label:string
     guards:Set<BExpr<Var * int, unit>>
-    pc:int
-    entry: Map<int, int>
-    exit: Map<int,int>
+    entry: Set<int*int>
+    exit: Set<int*int>
 } with 
     member this.lbl = 
-        let pc = this.entry |> Map.keys |> Set.maxElement
+        let pc = 
+            this.entry
+            |> Set.map (fun (pc, v) -> sprintf "%i_%i" pc v)
+            |> String.concat "_"
         match this.nodeType with
-        | Basic _
-        | Goto _ -> sprintf "%s_%i" this.label this.entry.[pc]
-        | Stop _ -> sprintf "Stop_%i" this.entry.[pc]
+        | Goto _ -> sprintf "%s_%s" this.label pc
+        | Stop _ -> sprintf "Stop_%A" pc
 
-let baseVisit (procs:Map<string, Process<Var*int>>) counter rootName =
-
+let rec getEntryPoints (procs:Map<string, Process<_,_>>) counter name =
     let pccount = makeCounter -1
-    let rec visit visited cnt pc guards entry exit proc lbl =
-        let vs = visit visited cnt pc
+    let rec visit visited pc cnt parent p =
+        let v = visit visited pc cnt parent
+        match p with
+        | Nil -> Map.empty
+        | Skip _ 
+        | Base _ -> [p, Set.add (pc, cnt()) parent] |> Map.ofList
+        | Seq(p1, p2) //-> Map.merge (visit pc cnt parent p1) (visit pc cnt Set.empty p2)
+        | Choice(p1, p2) -> Map.mergeIfDisjoint (v p1) (v p2)
+        | Par(p1, p2) -> 
+            let leftPc, leftCnt = pccount(), makeCounter -1
+            let rightPc, rightCnt = pccount(), makeCounter -1
+            let par = parent.Add (pc, cnt())
+            Map.merge (visit visited leftPc leftCnt par p1) (visit visited rightPc rightCnt par p2)
+            // Add entry point for join node
+            |> Map.add p ([leftPc, leftCnt(); rightPc, rightCnt()] |> Set.ofList |> Set.union parent)
+        | Await(_,p) -> v p
+        | Name (s, _) when Set.contains s visited -> Map.empty
+        | Name (s, _) ->
+            visit (Set.add s visited) pc cnt parent procs.[s]
 
-        let node = {guards=guards; pc=pc; entry=entry; nodeType=Goto; exit=exit; label=lbl}
+    let entryMap = visit (Set.singleton name) (pccount()) counter Set.empty procs.[name]
 
+    let rec entryOf p =
+        match p with
+        | Nil -> Set.empty
+        | Skip _
+        | Base _ -> 
+            entryMap.[p]
+        | Await(_, p)
+        | Seq(p, _) -> entryOf p
+        | Choice(p1, p2)
+        | Par(p1, p2) ->
+            Set.union (entryOf p1) (entryOf p2)
+        | Name (s, _) -> entryOf procs.[s]
+
+    let rec joinOf proc = 
         match proc with
-        | Base a -> 
-            Set.singleton {node with nodeType=Basic a}
-        | Name s when Map.containsKey s visited ->
-            Set.singleton {node with exit=visited.[s]}
-        | Name s -> 
-            let newVisited = Map.add s entry visited
-            visit newVisited cnt pc guards entry exit procs.[s] lbl
-        | Await(b, p) -> 
-            vs (guards.Add b) entry exit p lbl
-        | Choice(p, q) -> 
-            let pnodes = vs guards entry exit p (lbl+"_L")
-            let qnodes = vs guards entry exit q (lbl+"_R")
-            Set.union pnodes qnodes
-        | Seq(p, q) ->
-            let pexit = Map.empty.Add(pc, cnt())
-            let pnodes = vs guards entry pexit p lbl
-            let qnodes = vs Set.empty pexit exit q lbl
-            Set.union pnodes qnodes
-        | Par(p, q) ->
-            let leftPc, rightPc = pccount(), pccount()
-            let lCount, rCount = makeCounter -1, makeCounter -1
-            let pentry = entry.Add(leftPc, lCount())
-            let pexit = exit.Add(leftPc, lCount()).Remove(pc)
-            let qentry = entry.Add(rightPc, rCount())
-            let qexit = exit.Add(rightPc, rCount()).Remove(pc)
+        | Par(_,_) ->
+            entryMap.[proc]
+        | _ -> Set.empty
 
-            let pnodes = visit visited lCount leftPc guards pentry pexit p (lbl + "_L")
-            let qnodes = visit visited rCount rightPc guards qentry qexit q (lbl + "_R")
+    entryOf, joinOf
 
-            let joinEntry = Map.merge pexit qexit
-            let joinExit = joinEntry |> Map.mapValues (fun _ -> 0) |> Map.merge exit
-            Set.union pnodes qnodes
-            |> Set.add {node with entry=joinEntry; exit=joinExit; nodeType=Goto}
+let encodeProcess (procs:Map<string, Process<_,_>>) counter rootName =
+    let entryOf, joinOf = getEntryPoints procs counter rootName
 
-        | Process.Skip -> 
-            Set.singleton node
-        | Nil -> 
-            Set.singleton {node with nodeType=Stop}
+    let rec visit visited guards p =
+        let node = 
+            {
+                action=None
+                guards=guards
+                entry=Set.empty
+                nodeType=Goto
+                exit=Set.empty; label=rootName
+            }
+        match p with
+        | Nil -> Set.empty
+        | Skip _ -> Set.singleton {node with entry=entryOf p}
+        | Base (a, _) -> 
+            {node with action=Some a; entry=entryOf p} |> Set.singleton
+        | Seq(p1, p2) ->
+            let p1exit = entryOf p2
+            let visitP2 = visit visited Set.empty p2
+            visit visited guards p1
+            |> Set.map (fun n -> if n.exit = Set.empty then {n with exit=p1exit} else n)
+            |> Set.union visitP2
+        | Choice(p1, p2) ->
+            visit visited guards p1 
+            |> Set.union (visit visited guards p2)
+        | Par(p1, p2) ->
+            let joinEntry = joinOf p
+            let mapToJoin n =
+                if n.exit = Set.empty then
+                    // n must only set its own program counter
+                    let pcs = n.entry |> Set.map fst
+                    let ex = Set.filter (fun (p, _) -> pcs.Contains p) joinEntry
+                    {n with exit=ex}
+                else n
+            let leftVisit = 
+                visit visited guards p1 |> Set.map mapToJoin
+            let rightVisit =
+                visit visited guards p2 |> Set.map mapToJoin
+            leftVisit
+            |> Set.union rightVisit
+            |> Set.add {node with entry=joinEntry}
+            
+        | Name (s, _) when Map.containsKey s visited ->
+            Set.empty
+        | Name (s, _) ->
+            let e = entryOf procs.[s]
+            let newVisited = Map.add s e visited
+            visit newVisited guards procs.[s]
+         | Await(b, p) ->
+             visit visited (Set.add b guards) p
 
-    let pc = pccount()
-    let enM = Map.empty.Add(pc, counter())
-    let exM = Map.empty.Add(pc, counter())
-    let visited = Map.ofList [rootName, enM]
+    visit Map.empty Set.empty procs.[rootName], (entryOf procs.[rootName])
 
-    (visit visited counter pc Set.empty enM exM (procs.[rootName] ^. Nil) rootName), enM.[pc]
-
-let encode (sys:SystemDef<Var*int>) = 
+let encode (sys:SystemDef<_>) = 
     if sys.SpawnedComps.IsEmpty then failwith "No components have been spawned!"
     let counter = makeCounter -1
 
     sys.SpawnedComps
     |> Map.mapValues (fun def -> (def, Map.merge sys.processes def.processes))
-    |> Map.mapValues (fun (_, procs) -> baseVisit procs counter "Behavior")
+    |> Map.mapValues (fun (_, procs) -> encodeProcess procs counter "Behavior")
     |> fun x -> Ok (sys, x)
 
-let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, maxE), bound) =
+let translateHeader isSimulation noBitvectors bound (sys, trees, mapping:KeyMapping, maxI, maxL, maxE) =
 
-    let tupleStart, tupleEnd =
+    let getTypedef num = 
+        let getStandardTypes = 
+            function
+            | a, b when a >= 0     && b < 256      -> "unsigned char"
+            | a, b when a > -128   && b < 128      -> "char"
+            | a, b when a >= 0     && b < 65536    -> "unsigned short"
+            | a, b when a > -32768 && b < 32768    -> "short"
+            | a, _ when a >= 0                     -> "unsigned int"
+            | _ -> "int "
+        let bitwidth num = 
+            System.Math.Log(float num, 2.) |> int |> (+) 1
+        if noBitvectors
+        then getStandardTypes (0, num)
+        else sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth num)
+
+    
+    let (tupleStart, tupleEnd), maxTuple =
         /// Finds the min and max indexes of the given tuple.
         let extrema (tup:Set<Var>) =
             let indexes = 
@@ -107,19 +169,21 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
             (Seq.min indexes, Seq.max endIndexes)
         let makeTuple (tup: Set<Var>) =
             let min, max = extrema tup
-            List.replicate (max-min+1) (min, max)
-        
+            List.replicate (max-min+1) (min, max), max-min
+
+        if sys.stigmergies.IsEmpty then ([0], [0]), 0
+        else
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
         |> Seq.collect (List.map (makeTuple))
-        |> List.concat
-        |> List.unzip
+        |> Seq.reduce (fun (l1,s1) (l2,s2) -> List.append l1 l2, max s1 s2)
+        |> fun (lst, size) -> List.unzip lst, size+1
 
     // Find the number of PCs used in the program
     let maxPc =
         let getPc node = 
-            node.entry |> Map.keys |> Set.maxElement
+            node.entry |> Set.map fst |> Set.maxElement
 
         trees
         |> Map.values
@@ -131,6 +195,8 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
     let maxcomps = 
         Map.fold (fun state _ (_, cmax) -> max state cmax) 0 sys.spawn
 
+
+
     let defines = 
         [
             "BOUND", bound; 
@@ -139,9 +205,23 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
             "MAXKEYI", maxI
             "MAXKEYL", maxL
             "MAXKEYE", maxE
+            "MAXTUPLE", maxTuple
         ]
         |> (if isSimulation then fun l -> ("SIMULATION", 1)::l else id)
         |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Int b])
+
+    let typedefs =
+        [
+            "TYPEOFVALUES", "short"
+            "TYPEOFPC", "unsigned char"
+            "TYPEOFTIME", "unsigned char" 
+            "TYPEOFAGENTID", getTypedef maxcomps
+            "TYPEOFKEYIID", getTypedef maxI
+            "TYPEOFKEYLID", getTypedef maxL
+            "TYPEOFKEYEID", getTypedef maxE
+            "Bool", getTypedef 1
+        ]
+        |> List.map (fun (a,b) -> Dict ["name", Str a; "value", Str b])
 
     let links =
         let makeLink (s:Stigmergy<Var*int>) = 
@@ -163,6 +243,7 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
 
     [
         "defines", Lst defines
+        "typedefs", Lst typedefs
         "links", Lst links
         "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
         "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst
@@ -171,18 +252,28 @@ let translateHeader isSimulation ((sys, trees, mapping:KeyMapping, maxI, maxL, m
 
 let translateGuard = procExpr.BExprTranslator
 
+
+let liquidGuards tid node = 
+    node.guards 
+    |> Seq.map ((customProcExpr tid).BExprTranslator node.label)
+    |> Seq.map Str
+
+let liquidEntry tid node = 
+    let translatePc = sprintf "(pc[%s][%i] == %i)" tid
+    node.entry 
+    |> Set.map (fun (a, b) -> translatePc a b)
+    |> Seq.map Str
+
 let translateCanProceed trees =
-    let translatePc = sprintf "(pc[tid][%i] == %i)"
+    let liquidAll tid n = 
+        liquidEntry tid n
+        |> Seq.append (liquidGuards tid n)
+        |> Lst
+
     trees
     |> Map.values
     |> Seq.collect fst
-    |> Seq.map (fun n -> 
-        n.guards 
-        |> Seq.map (procExpr.BExprTranslator n.label)
-        |> Seq.append (n.entry |> Map.map translatePc |> Map.values)
-        |> Seq.map Str
-        |> Lst
-    )
+    |> Seq.map (liquidAll "tid")
     |> Seq.distinct
     |> fun x -> seq ["guards", Lst x]
     |> renderFile "templates/canProceed.c"
@@ -192,17 +283,25 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>) =
         | Some e -> procExpr.ExprTranslator "" e |> Str
         | None -> Int 0
 
-    let liquid a guards =
+    let liquid guards a =
         let template =
             match a.actionType with
             | I -> "attr"
             | L _ -> "lstig"
             | E -> "env"
 
+        let rec guardkeys = function
+            | False | True -> Set.empty
+            | Neg b -> guardkeys b
+            | Compound(b1,_,b2) -> guardkeys b1 |> Set.union (guardkeys b2)
+            | Compare(e1,_,e2) -> (getLstigVars e1) |> Set.union (getLstigVars e2)
+            
+
         let qrykeys =
             a.updates
             |> List.map (getLstigVars << snd)
             |> Set.unionMany
+            |> Set.union (guards |> Set.map guardkeys |> Set.unionMany)
             |> Seq.map (Int << snd)
             |> Lst
 
@@ -232,18 +331,21 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>) =
 
     let newTranslate (n:Node) = 
 
-        let liquidPcs map =
-            map
-            |> Map.map (fun p v -> Dict ["pc", Int p; "value", Int v]) 
-            |> Map.values
-            
-        let template, list = 
+        let template = 
             match n.nodeType with
-            | Basic a -> transition, liquid a n.guards
-            | Goto -> goto, List.empty
-            | Stop -> stop, List.empty
+            //| Basic a -> transition, liquid a n.guards
+            | Goto -> goto
+            | Stop -> stop
 
-        [
+        let liquidPcs pcset =
+            pcset |> Set.toList |> List.groupBy fst
+            |> Seq.map (fun (pc, vals) -> Dict[ "pc", Int pc; "values", Lst (List.map (Int << snd) vals) ]) 
+
+
+        n.action
+        |> Option.map (liquid n.guards)
+        |> Option.defaultValue List.empty
+        |> List.append [
             "label", Str n.lbl
             "entrypoints", liquidPcs n.entry |> Lst
             "exitpoints", liquidPcs n.exit |> Lst
@@ -253,7 +355,6 @@ let translateAll (trees:Map<'b, (Set<Node> * 'c)>) =
                 |> Seq.map Str
                 |> Lst
         ]
-        |> Seq.append list
         |> strRender
         |> fun x -> Result.bind x template |> Result.mapError (failwith)
 
@@ -280,9 +381,18 @@ let translateMain fair (sys:SystemDef<Var*int>, trees:Map<string, Set<Node> * 'a
         |> Map.values
         |> String.concat "\n"
 
+
+    let scheduleElement (n:Node) =
+        Dict [
+            "name", Str n.lbl
+            "entry", liquidEntry "firstAgent" n |> Lst
+            "guards", liquidGuards "firstAgent" n |> Lst
+        ]
+
     [
+        "firstagent", if sys.spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair;
-        "schedule", nodes |> Seq.map (fun n -> Str n.lbl) |> Lst
+        "schedule", nodes |> Seq.map scheduleElement |> Lst
         "alwaysasserts",
             alwaysP
             |> translateProperties
