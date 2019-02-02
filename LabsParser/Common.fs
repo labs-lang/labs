@@ -1,7 +1,6 @@
 ﻿[<AutoOpen>]
 module internal Common
 open FParsec
-open Types
 
 type Parser<'t> = Parser<'t, unit>
 
