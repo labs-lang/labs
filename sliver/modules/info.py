@@ -4,8 +4,60 @@ about a LAbS system
 import platform
 from subprocess import check_output
 from random import choice
+from ast import NodeVisitor, parse
+
+
+class LabsExprVisitor(NodeVisitor):
+    def visit_string(self, s):
+        return self.visit(parse(s))
+
+    def visit_Module(self, node):
+        return self.visit(node.body[0])
+
+    def visit_Expr(self, node):
+        return self.visit(node.value)
+
+    def visit_Num(self, node):
+        return node.n
+
+    def visit_BinOp(self, node):
+        lvalue, rvalue = self.visit(node.left), self.visit(node.right)
+        return self.visit(node.op)(lvalue, rvalue)
+
+    def visit_UnaryOp(self, node):
+        return self.visit(node.op)(self.visit(node.operand))
+
+    def visit_Mod(self, node):
+        return lambda x, y: x % y
+
+    def visit_Add(self, node):
+        return lambda x, y: x + y
+
+    def visit_Sub(self, node):
+        return lambda x, y: x - y
+
+    def visit_Mult(self, node):
+        return lambda x, y: x * y
+
+    def visit_Div(self, node):
+        return lambda x, y: x // y
+
+    def visit_USub(self, node):
+        return lambda x: -x
+
+    def visit_UAdd(self, node):
+        return lambda x: +x
+
+    def visit_Call(self, node):
+        if node.func.id == "abs":
+            return abs(self.visit(node.args[0]))
+        else:
+            print("????")
+            raise ValueError
+
 
 SYS = platform.system()
+visitor = LabsExprVisitor()
 
 if "Linux" in SYS:
     env = {"LD_LIBRARY_PATH": "labs/libunwind"}
@@ -122,18 +174,27 @@ class Variable:
         """
         self.index = int(index)
         self.size = 1
+        print(">>>", index, name, init)
         if "[" in name:
             self.name, size = name.split("[")
             self.size = int(size[:-1])
         else:
             self.name = name
-        # if init[0] == "[":
-        #     self.values = [(v) for v in init[1:-1].split(",")]
-        # elif ".." in init:
-        #     low, up = init.split("..")
-        #     self.values = range(int(low), int(up))
-        # elif init == "undef":
-        #     self.values = [-32767]  # UNDEF
+        if init[0] == "[":
+            self.values = [
+                visitor.visit_string(v)
+                for v in init[1:-1].split(",")]
+        elif ".." in init:
+            low, up = init.split("..")
+            print("low", low, "up", up)
+            self.values = range(
+                visitor.visit_string(low),
+                visitor.visit_string(up))
+        elif init == "undef":
+            self.values = [-32767]  # UNDEF
+        else:
+            self.values = [visitor.visit_string(init)]
+        print("values", list(self.values))
 
     def rnd_value(self):
         """Returns a random, feasible initial value for the variable.
