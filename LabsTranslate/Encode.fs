@@ -150,8 +150,8 @@ let translateHeader isSimulation noBitvectors bound (sys, trees, mapping:KeyMapp
         if noBitvectors
         then getStandardTypes (0, num)
         else sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth num)
-    
 
+    
     let (tupleStart, tupleEnd), maxTuple =
         /// Finds the min and max indexes of the given tuple.
         let extrema (tup:Set<Var>) =
@@ -171,6 +171,8 @@ let translateHeader isSimulation noBitvectors bound (sys, trees, mapping:KeyMapp
             let min, max = extrema tup
             List.replicate (max-min+1) (min, max), max-min
 
+        if sys.stigmergies.IsEmpty then ([0], [0]), 0
+        else
         sys.stigmergies
         |> Map.values
         |> Seq.map (fun s -> s.vars)
