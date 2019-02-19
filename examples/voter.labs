@@ -1,21 +1,21 @@
-# "Global" processes
-Listen = !(op = opinion) -> opinion <- op
-Talk = op := opinion
+system {
+    environment = op: [0,1]
+    spawn = Voter: 10
+    # "Global" processes
+    Listen = op != opinion -> opinion <- op
+    Talk = op <-- opinion
 
-comp Voter {
-    interface = [opinion {0,1}]
-    stigmergy = []
-    behavior = VoterModel
+}
 
+agent Voter {
+    interface = opinion: [0,1]
+
+    Behavior = VoterModel
     VoterModel = (Listen | Talk); VoterModel
 }
 
-system {
-    environment = [op {0,1}]
-    spawn = [Voter 10]
-    link = true
-}
-
 check {
-    Pr1 = Finally All Voter v1, All Voter v2, opinion of v1 = opinion of v2
+    Consensus = 
+        finally forall Voter v1, forall Voter v2,
+        opinion of v1 = opinion of v2
 }
