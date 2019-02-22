@@ -14,11 +14,11 @@ let test p str =
     | Success(result, _, _)   -> printfn "Success: %A" result
     | Failure(errorMsg, _, _) -> printfn "Failure: %s" errorMsg
 
-let example = File.ReadAllText "/Users/luca/Projects/labs/examples/flock.labs"
-run Parser.pre example
-let strip = run Parser.stripComments example
-match strip with
-| Success (result, _, _) -> run Parser.parse result
-| _ -> failwith "aaa"
+//let example = File.ReadAllText "/Users/luca/Projects/labs/examples/flock.labs"
+//run Parser.pre example
+//let strip = run Parser.stripComments example
+//match strip with
+//| Success (result, _, _) -> run Parser.parse result
+//| _ -> failwith "aaa"
 
 ;;

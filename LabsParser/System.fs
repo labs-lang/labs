@@ -23,7 +23,7 @@ let psys =
         (pipe4
             (opt (pstringEq "extern" (ws (skipRestOfLine true))))
             (opt (pstringEq "environment" (pkeys E)))
-            (pstringEq "spawn" pspawn)
+            (pstringEq "spawn" pspawn <!> "SPAWN")
             (processes)
             (fun _ env spawn procs -> {
                 processes = procs;

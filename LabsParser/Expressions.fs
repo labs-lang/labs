@@ -23,12 +23,12 @@ let rec makeExprParser pref pid =
 
     let pexprTerm = 
         choice [
-            betweenParen pexpr <!> "paren"
             followedBy (skipString "abs(") >>.
                 (skipString "abs") >>. betweenParen pexpr |>> Abs
             followedBy pint32 >>. pint32 |>> Const <!> "const"
             followedBy pid >>. pid |>> Expr.Id <!> "id"
             attempt (pref pexpr) |>> Ref <!> "ref"
+            attempt (betweenParen pexpr <!> "paren")
         ]
     do pexprRef :=
         maybeTuple2 (ws pexprTerm <!> "term") 
@@ -62,9 +62,9 @@ let makeBExprParser pexpr =
         choice [
             followedBy NEG >>. pbexprNeg <!> "bneg"
             attempt pbexprCompare <!> "bcompare"
-            followedBy (skipChar '(') >>. betweenParen pbexpr <!> "bparen"
-            stringReturn "true" True
-            stringReturn "false" False
+            stringReturn "true" True <!> "btrue"
+            stringReturn "false" False <!> "bfalse"
+            attempt (followedBy (skipChar '(') >>. betweenParen pbexpr <!> "bparen")
         ]
     do pbexprRef := 
         maybeTuple2 (ws pbexprTerm) ((ws pbop)  .>>. pbexpr)

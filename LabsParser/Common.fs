@@ -13,6 +13,9 @@ let EQ : Parser<_> =            (skipChar '=')
 let GUARD : Parser<_> =         (skipString "->")
 let NEG : Parser<_> =           (skipChar '!')
 let RANGE : Parser<_> =         (skipString "..")
+let TSEQ : Parser<_> =          (skipString ";")
+let TCHOICE : Parser<_> =       (skipString "++")
+let TPAR : Parser<_> =          (skipString "||")
 let strUNDEF =                  "undef"
 //-----------------------------------------
 

@@ -23,36 +23,32 @@ let paction =
         | :? System.ArgumentException -> 
             fail "A multiple assignment should contain the same number of variables and expressions.")
 
+
+// We need a recursive parser for LAbS processes
+// (see pGuarded and pParen)
 let pproc, pprocRef = createParserForwardedToRef()
-let pprocTerm, pprocTermRef = createParserForwardedToRef()
 
-do pprocTermRef :=
-    let pguard = makeBExprParser pexpr
-    let pNil = stringReturn "Nil" Nil
-    let pSkip = skipString "Skip" >>. getPosition |>> Skip
-    let pGuarded = (ws pguard) .>>. ((ws GUARD) >>. pproc)
-    choice [
-        followedBy (skipChar '(') >>. betweenParen pproc <!> "pparen"
-        attempt pGuarded <!> "Guarded" |>> Await;
-        attempt pNil <!> "Nil"; 
-        attempt pSkip <!> "Skip";
-        IDENTIFIER .>>. getPosition |>> Name; 
-        paction .>>. getPosition |>> Base;
-    ]
-
-do pprocRef := 
-    // Turns a syntactic operator into a process composition
-    let OP : Parser<_> = 
+do pprocRef :=
+    let pBase =
+        let pguard = makeBExprParser pexpr
+        let pNil = skipString "Nil" >>. getPosition |>> Nil
+        let pSkip = skipString "Skip" >>. getPosition |>> Skip
+        let pGuarded = tuple3 (ws pguard) ((ws GUARD) >>. pproc) getPosition |>> BASE.Guard
+        let pParen = followedBy (skipChar '(') >>. betweenParen pproc .>>. getPosition |>> Paren
+        //let stops = (skipString ";" <|> skipString "||" <|> skipString "++") 
         choice [
-            (stringReturn "++" (^+));
-            (stringReturn "||" (^|));
-            (charReturn ';' (^.));
-        ]
-    maybeTuple2 
-        (ws pprocTerm)
-        ((ws OP) .>>. (ws pproc))
-        (fun (a, (b, c)) -> b a c)
-    
+             attempt pGuarded <!> "Guarded"
+             attempt pNil <!> "Nil"
+             attempt pSkip <!> "Skip"
+             IDENTIFIER .>>. getPosition |>> Name <!> "Name"
+             paction .>>. getPosition |>> Act <!> "Action"
+             pParen <!> "Paren"
+         ] <!> "BASE"
+
+    let pseq = sepBy1 (ws pBase) (ws TSEQ) <!> "SEQ"
+    let pchoice = sepBy (ws pseq) (ws TCHOICE) <!> "CHOICE"
+    sepBy (ws pchoice) (ws TPAR) <!> "PAR"
+
 let processes = 
-    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc <!> "PPROC"))
+    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (pproc <!> "PROC"))
     ws (many pdef) >>= toMap
