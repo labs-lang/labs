@@ -34,10 +34,13 @@ let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
 /// Parse p and skip whitespace after.
 let ws p = p .>> spaces
-let betweenBrackets p = between (ws (skipChar '[')) (skipChar ']') p
-let betweenBraces p = between (ws (skipChar '{')) (skipChar '}') p
-let betweenParen p = between (ws (skipChar '(')) (skipChar ')') p
-let betweenAng p = between (ws (skipChar '<')) (skipChar '>') p
+
+let enclose startc endc = between (ws (skipChar startc)) (skipChar endc)
+
+let betweenBrackets p = enclose '[' ']' p
+let betweenBraces p = enclose '{' '}' p
+let betweenParen p = enclose '(' ')' p
+let betweenAng p = enclose '<' '>' p
 let sepbycommas p = sepBy1 p (ws COMMA)
 let sepbysemis p = sepBy1 p (ws (skipChar ';'))
 
