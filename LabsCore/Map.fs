@@ -25,7 +25,7 @@ let mergeIfDisjoint map1 map2 =
         intersect
         |> Set.map (sprintf "%O")
         |> String.concat ", "
-        |> sprintf "Duplicate variable definitions for %s"
+        |> sprintf "Duplicate definitions for %s"
         |> failwith
 
 /// Builds a new collection whose elements are the result of
