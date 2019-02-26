@@ -7,9 +7,8 @@ let refTypeCheck v (offset:'a option) =
     let test, msg = 
         match v.vartype with
         | Scalar -> offset.IsSome, (sprintf "Scalar %s treated as Array")
-        | Array(_) -> offset.IsNone, (sprintf "Array %s treated as Scalar")
+        | Array _ -> offset.IsNone, (sprintf "Array %s treated as Scalar")
     if test then failwith (msg v.name) else ()
-
 
 let getVars filter (expr:Expr<_,_>) =
     let rec getvars = function
@@ -34,7 +33,7 @@ let rec private translate trRef trId location =
     | Expr.Id i -> 
         try (trId i) with
         | :? System.Collections.Generic.KeyNotFoundException ->
-            sprintf "%s: Undefined component %s" location (i.ToString())
+            sprintf "%s: Undefined agent %O" location i
             |> failwith 
     | Const i -> sprintf "%i" i
     | Abs e -> sprintf "__abs(%s)" (translate trRef trId location e)
