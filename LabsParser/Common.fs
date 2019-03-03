@@ -21,17 +21,33 @@ let PAR : Parser<_> =           (skipString tPAR)
 
 let isAlphanum x = isAsciiLetter x || isDigit x
 
+let reserved : Parser<_> = 
+    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID]
+    |> List.map pstring 
+    |> choice
+    .>> notFollowedBy (satisfy isAlphanum)
+
+let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum) >>. spaces
+
+let safeStrReturn str ret =
+    (skipString str .>> notInIdentifier) >>% ret
+
+let safeIdentifier options =
+    (notFollowedBy reserved >>. identifier options)
+    <|> (followedBy reserved >>. reserved >>= (fail << (sprintf "Unexpected keyword '%s'")))
+    
 let KEYNAME : Parser<_> =
     IdentifierOptions(
         isAsciiIdStart=isAsciiLower,
         isAsciiIdContinue=isAlphanum)
-    |> identifier
+    |> safeIdentifier
 
 let IDENTIFIER : Parser<_> = 
     IdentifierOptions(
         isAsciiIdStart=isAsciiUpper,
         isAsciiIdContinue=isAlphanum)
-    |> identifier
+    |> safeIdentifier
+
 
 let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
