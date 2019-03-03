@@ -109,38 +109,6 @@ type Action<'a> = {
                 (this.updates |> List.map (string << fst) |> String.concat ",")
                 (this.updates  |> List.map (string << snd) |> String.concat ",")
 
-type Process<'a, 'b> = 
-    | Nil
-    | Skip of 'b
-    | Base of Action<'a> * 'b
-    | Seq of Process<'a, 'b> * Process<'a, 'b>
-    | Choice of Process<'a, 'b> * Process<'a, 'b>
-    | Par of Process<'a, 'b> * Process<'a, 'b>
-    | Await of BExpr<'a, unit> * Process<'a, 'b>
-    | Name of string * 'b
-    static member private monoid left right op = 
-        match left,right with
-        | _, Skip _ -> left
-        | Skip _, _ -> right
-        | _ -> op(left, right)
-    static member ( ^. )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
-        Seq(left, right)
-    static member ( ^+ )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
-        Choice(left, right)
-    static member ( ^| )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
-        Process<'a, 'b>.monoid left right Par
-    override this.ToString() =
-        match this with
-        | Nil -> "0"
-        | Skip _ -> "√"
-        | Base (a, _) -> string a
-        | Seq(p, q) -> sprintf "%O; %O" p q
-        | Choice(p, q) -> sprintf "%O + %O" p q
-        | Par(p, q) -> sprintf "%O | %O" p q
-        | Await(b, p) -> sprintf "%A -> %O" b p
-        | Name (s, _) -> s
-
-
 type VarType = 
     | Scalar
     | Array of size:int
@@ -163,3 +131,25 @@ type Var = {
     init:Init
 }
 with override this.ToString() = this.name
+type Composition =
+    | Seq
+    | Choice
+    | Par
+
+type Stmt<'a, 'b> = 
+    | Nil 
+    | Skip
+    | Act of 'a Action
+    | Name of string
+    | Paren of Process<'a, 'b>
+
+and Base<'a, 'b> =
+    {
+        stmt : Stmt<'a, 'b>
+        pos : 'b
+    }
+
+and Process<'a, 'b> =
+    | BaseProcess of Base<'a, 'b>
+    | Guard of BExpr<'a, unit> * Process<'a, 'b> * 'b
+    | Comp of Composition * Process<'a, 'b> list
