@@ -68,22 +68,13 @@ let sepbysemis p = sepBy1 p (ws (skipChar ';'))
 let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
     #if DEBUG
     fun stream ->
-        eprintfn "%A: Entering %s" stream.Position label
+        eprintfn "%A: Entering %s (char: %O)" stream.Position label (stream.Peek())
         let reply = p stream
-        eprintfn "%A: Leaving %s (%A: %O)" stream.Position label reply.Status reply.Result
+        eprintfn "%A: Leaving %s (%A, %O)" stream.Position label reply.Status reply.Result
         reply
     #else
     p
     #endif
-
-/// Apply parser p1, then apply optional parser p2.
-/// If p2 succeeds, pass both results to if2.
-/// Otherwise return the result of p1.
-let maybeTuple2 p1 p2 if2 =
-    p1 .>>. (opt p2 <!> "p2") |>> 
-    function
-    | a, Some b -> if2(a, b)
-    | a, None -> a
 
 let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
     
