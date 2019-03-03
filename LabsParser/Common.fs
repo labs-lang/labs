@@ -1,5 +1,6 @@
 ﻿[<AutoOpen>]
 module internal Common
+open Tokens
 open FParsec
 
 type Parser<'t> = Parser<'t, unit>
@@ -10,13 +11,12 @@ let COMMENT : Parser<_> =       (skipChar '#')
 let COLON : Parser<_> =         (skipChar ':')
 let COMMA : Parser<_> =         (skipChar ',')
 let EQ : Parser<_> =            (skipChar '=')
-let GUARD : Parser<_> =         (skipString "->")
-let NEG : Parser<_> =           (skipChar '!')
 let RANGE : Parser<_> =         (skipString "..")
-let TSEQ : Parser<_> =          (skipString ";")
-let TCHOICE : Parser<_> =       (skipString "++")
-let TPAR : Parser<_> =          (skipString "||")
-let strUNDEF =                  "undef"
+let GUARD : Parser<_> =         (skipString tGUARD)
+let NEG : Parser<_> =           (skipString tNEG)
+let SEQ : Parser<_> =           (skipString tSEQ)
+let CHOICE : Parser<_> =        (skipString tCHOICE)
+let PAR : Parser<_> =           (skipString tPAR)
 //-----------------------------------------
 
 let isAlphanum x = isAsciiLetter x || isDigit x

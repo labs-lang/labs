@@ -18,7 +18,7 @@ type ArithmOp =
     | Mod
     override this.ToString() = 
         match this with
-        | Plus -> "+" | Minus -> "-" | Times -> "*" | Div -> "/" | Mod -> "%" 
+        | Plus -> tPLUS | Minus -> tMINUS | Times -> tMUL | Div -> tDIV | Mod -> tMOD 
 
 type UnaryOp = 
     | Abs
@@ -39,8 +39,7 @@ type Expr<'a, 'b> =
         | Const v -> string v
         | Ref r -> string r
         | Unary(op, e) -> 
-            match op with Abs -> "abs" | UnaryMinus -> "-"
-            |> fun s -> sprintf "%s(%O)" s e
+            let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in sprintf "%s(%O)" s e
         | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
 
     member this.visit fn compose =
@@ -80,7 +79,7 @@ type Bop =
     | Conj
     | Disj
     override this.ToString() = 
-        match this with Conj -> "and" | Disj -> "or"
+        match this with Conj -> tCONJ | Disj -> tDISJ
 
 ///<summmary>Boolean expressions.</summary>
 type BExpr<'a, 'b> =
@@ -91,8 +90,8 @@ type BExpr<'a, 'b> =
     | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
     override this.ToString() =
         match this with
-        | True -> "true" | False -> "false"
-        | Neg b -> sprintf "!(%O)" b
+        | True -> tTRUE | False -> tFALSE
+        | Neg b -> sprintf "%s(%O)" tNEG b
         | Compare(e1, op, e2) -> sprintf "(%O) %O (%O)" e1 op e2
         | Compound(b1, op, b2) -> sprintf "(%O) %O (%O)" b1 op b2
 
