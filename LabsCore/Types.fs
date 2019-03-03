@@ -27,30 +27,27 @@ type UnaryOp =
         match this with
         | Abs -> "__abs"
         | UnaryMinus -> "-"
-type Expr<'a, 'b> =
+
+type LeafExpr<'b> =
     | Id of 'b
     | Const of int
+    override this.ToString() = 
+        match this with
+        | Id _ -> "id"
+        | Const v -> string v
+and Expr<'a, 'b> =
+    | Leaf of LeafExpr<'b>
     | Ref of Ref<'a, 'b>
     | Unary of UnaryOp * Expr<'a, 'b>
     | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
     override this.ToString() = 
         match this with
-        | Id _ -> "id"
-        | Const v -> string v
+        | Leaf l -> string l
         | Ref r -> string r
         | Unary(op, e) -> 
             let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in sprintf "%s(%O)" s e
         | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
 
-    member this.visit fn compose =
-        let rec visit x =
-            match x with
-            | Id _ 
-            | Const _ 
-            | Ref _ -> fn x
-            | Abs e -> visit e
-            | Arithm (e1, _, e2) -> compose (visit e1) (visit e2)
-        visit this
 
 and Ref<'a, 'b> = 
     {var:'a; offset: Expr<'a, 'b> option}
@@ -140,7 +137,6 @@ type Stmt<'a, 'b> =
     | Skip
     | Act of 'a Action
     | Name of string
-    | Paren of Process<'a, 'b>
 
 and Base<'a, 'b> =
     {
