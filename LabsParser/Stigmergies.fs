@@ -5,6 +5,7 @@ open Types
 open Link
 open Init
 open Expressions
+open Tokens
 
 let plink =
     let pc1orc2 = 
@@ -15,7 +16,7 @@ let plink =
             (ws KEYNAME) (opt (betweenBrackets p)) pc1orc2
             (fun a b c -> {var=a,c; offset=b})
     let linkId = 
-        (ws (skipString "id")) >>. pc1orc2
+        (ws (skipString tID)) >>. pc1orc2
     makeBExprParser (makeExprParser linkref linkId)
 
 let plstig =
