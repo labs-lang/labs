@@ -1,6 +1,7 @@
 ﻿module internal Init
 
 open FParsec
+open Tokens
 open Types
 open Common
 open Expressions
@@ -27,9 +28,8 @@ let pinit =
         >>. ((ws pconstexpr) .>>. (RANGE >>. (ws pconstexpr)) 
         |>> Range)
     let pSingle = (ws pconstexpr) |>> (Choose << List.singleton)
-    let pUndef = stringReturn strUNDEF Undef
-
-    choice [pChoose; pRange; pSingle; pUndef] |> ws
+    let UNDEF = stringReturn tUNDEF Undef
+    choice [pChoose; pRange; pSingle; UNDEF] |> ws
 
 /// Parses a single init definition.
 let pinitdef loc =
