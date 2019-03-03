@@ -81,7 +81,7 @@ let makeBExprParser pexpr =
 
     opp.AddOperator(PrefixOperator("!", spaces, 3, false, ParseBExpr.mapB Neg))
 
-    expr
+    expr >>= ParseBExpr.getB
 
 let makeExprParser pref pid : Parser<_,_> =
     let pexpr, pexprRef = createParserForwardedToRef()
