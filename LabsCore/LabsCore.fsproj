@@ -14,7 +14,9 @@
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="List.fs" />
     <Compile Include="Map.fs" />
+    <Compile Include="Tokens.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="Process.fs" />
     <Compile Include="Link.fs" />
   </ItemGroup>
 </Project>
