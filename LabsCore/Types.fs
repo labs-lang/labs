@@ -20,18 +20,27 @@ type ArithmOp =
         match this with
         | Plus -> "+" | Minus -> "-" | Times -> "*" | Div -> "/" | Mod -> "%" 
 
+type UnaryOp = 
+    | Abs
+    | UnaryMinus
+    override this.ToString() =
+        match this with
+        | Abs -> "__abs"
+        | UnaryMinus -> "-"
 type Expr<'a, 'b> =
     | Id of 'b
     | Const of int
     | Ref of Ref<'a, 'b>
-    | Abs of Expr<'a, 'b>
+    | Unary of UnaryOp * Expr<'a, 'b>
     | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
     override this.ToString() = 
         match this with
         | Id _ -> "id"
         | Const v -> string v
         | Ref r -> string r
-        | Abs e -> sprintf "abs(%O)" e
+        | Unary(op, e) -> 
+            match op with Abs -> "abs" | UnaryMinus -> "-"
+            |> fun s -> sprintf "%s(%O)" s e
         | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
 
     member this.visit fn compose =
