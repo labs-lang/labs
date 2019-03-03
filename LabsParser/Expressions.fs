@@ -58,17 +58,15 @@ let makeBExprParser pexpr =
         choice [
             safeStrReturn tTRUE (B True)
             safeStrReturn tFALSE (B False)
+            pexpr |>> E
         ] <!> "bterm"
 
-    let paren = 
-        followedBy (skipChar '(')
-        >>. choice [
-            attempt (betweenParen pexpr) |>> E <!> "eparen"
-            (betweenParen expr) <!> "bparen"
-        ] |> ws
-
-    opp.TermParser <- paren <|> (ws pexpr <!> "pexpr" |>> E) <|> (ws term)
-
+    opp.TermParser <- choice [
+        attempt <| ws term
+        attempt <| ws pexpr <!> "pexpr" |>> E
+        ws (betweenParen expr) <!> "bparen"
+    ]
+    
     opp.AddOperator(InfixOperator(tCONJ, notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Conj))
     opp.AddOperator(InfixOperator(tDISJ, notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Disj))
     
@@ -90,8 +88,8 @@ let makeExprParser pref pid : Parser<_,_> =
 
     let term =
         choice [
-            followedBy pint32 >>. pint32 |>> Const <!> "const"
-            followedBy pid >>. pid |>> Expr.Id <!> "id"
+            followedBy pint32 >>. pint32 |>> Const |>> Leaf <!> "const"
+            followedBy pid >>. pid |>> Id |>> Leaf <!> "id"
             attempt (pref expr) |>> Ref <!> "ref"
         ]
 
