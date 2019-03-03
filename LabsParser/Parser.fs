@@ -12,13 +12,14 @@ let parse =
         psys 
         (ws ((plstig |> ws |> many) >>= toMap))
         (ws ((pcomp |> ws |> many) >>= toMap))
-        pproperties
+        (pproperties <!> "PROPERTIES")
         (fun sys lstigs comps props -> 
             {sys with
                 components = comps
                 properties = props
                 stigmergies = lstigs
-            })
+            }) 
+    <!> "PARSER"
 
 let stripComments = 
     stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>% "")
