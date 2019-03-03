@@ -1,16 +1,17 @@
-module Processes
+module internal Processes
 
 open FParsec
 open Types
+open Tokens
 open Expressions    
 
-let pexpr = makeExprParser simpleRef (skipString "id" >>. notFollowedBy (skipSatisfy isAlphanum))
+let pexpr = makeExprParser simpleRef (skipString tID .>> notInIdentifier)
 
 /// Parses elementary processes ("actions")
 let paction =
     let parseArrow =
         skipChar '<' >>. choice [
-            followedBy (skipString "--") >>. stringReturn "--" E; 
+            followedBy (skipString "--") >>. stringReturn "--" Location.E; 
             charReturn '-' I;
             charReturn '~' (L "")
         ]
@@ -29,26 +30,35 @@ let paction =
 let pproc, pprocRef = createParserForwardedToRef()
 
 do pprocRef :=
-    let pBase =
+    let doBase (stmt, pos) = {stmt=stmt; pos=pos} |> BaseProcess
+    let compose a b = Comp(a, b)
+
+    let pGuarded = 
         let pguard = makeBExprParser pexpr
-        let pNil = skipString "Nil" >>. getPosition |>> Nil
-        let pSkip = skipString "Skip" >>. getPosition |>> Skip
-        let pGuarded = tuple3 (ws pguard) ((ws GUARD) >>. pproc) getPosition |>> BASE.Guard
-        let pParen = followedBy (skipChar '(') >>. betweenParen pproc .>>. getPosition |>> Paren
-        //let stops = (skipString ";" <|> skipString "||" <|> skipString "++") 
+        followedBy ((ws pguard) >>. (ws GUARD))
+        >>. tuple3 (ws pguard) ((ws GUARD) >>. pproc) getPosition |>> Guard <!> "Guard"
+        
+    let pBase =
+        let pNil = safeStrReturn "Nil" Nil .>>. getPosition |>> doBase
+        let pSkip = stringReturn "Skip" Skip .>>. getPosition |>> doBase
+        let pParen = followedBy (skipChar '(') >>. (betweenParen pproc |>> Paren) .>>. getPosition |>> doBase
+
         choice [
              attempt pGuarded <!> "Guarded"
              attempt pNil <!> "Nil"
              attempt pSkip <!> "Skip"
-             IDENTIFIER .>>. getPosition |>> Name <!> "Name"
-             paction .>>. getPosition |>> Act <!> "Action"
+             (IDENTIFIER |>> Name) .>>. getPosition |>> doBase <!> "Name"
+             (paction |>> Act) .>>. getPosition |>> doBase <!> "Action"
              pParen <!> "Paren"
          ] <!> "BASE"
 
-    let pseq = sepBy1 (ws pBase) (ws TSEQ) <!> "SEQ"
-    let pchoice = sepBy (ws pseq) (ws TCHOICE) <!> "CHOICE"
-    sepBy (ws pchoice) (ws TPAR) <!> "PAR"
+    let pseq = 
+        sepBy1 (ws pBase) (ws SEQ) |>> (compose Seq) <!> "SEQ"
+    let pchoice = 
+        sepBy (ws pseq) (ws CHOICE) |>> (compose Choice) <!> "CHOICE"
+
+    sepBy (ws pchoice) (ws PAR) |>> (compose Par) <!> "PAR"
 
 let processes = 
-    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (pproc <!> "PROC"))
+    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc <!> "PPROC"))
     ws (many pdef) >>= toMap
