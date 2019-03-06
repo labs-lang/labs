@@ -51,9 +51,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Update="Microsoft.NETCore.App" />
+    <PackageReference Include="FSharpPlus" Version="1.0.0" />
   </ItemGroup>
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
+    <Compile Include="Result.fs" />
     <Compile Include="Base.fs" />
     <Compile Include="Liquid.fs" />
     <Compile Include="Templates.fs" />
