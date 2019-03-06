@@ -1,4 +1,5 @@
 ﻿module internal Expressions
+open LabsCore
 open Types
 open Link
 open Templates
@@ -15,28 +16,20 @@ let getLstigVars expr =
     Expr.getVars expr
     |> Set.filter (fun (v, _) -> match v.location with L _ -> true | _ -> false)
 
-let rec private translate trRef trId location =
-    let translateAOp op e1 e2 = 
-        match op with
-        | Plus | Minus | Times | Div -> sprintf "( %s %O %s )" e1 op e2
-        | Mod -> sprintf "mod( %s, %s )" e1 e2
-    function
-    | Expr.Id i -> 
-        try (trId i) with
-        | :? System.Collections.Generic.KeyNotFoundException ->
-            sprintf "%s: Undefined agent %O" location i
-            |> failwith 
-    | Const i -> sprintf "%i" i
-    | Abs e -> sprintf "__abs(%s)" (translate trRef trId location e)
-    | Ref r ->
-        try
-            (trRef r.var (r.offset |> Option.map (translate trRef trId location)))
-        with
-        | :? System.Collections.Generic.KeyNotFoundException ->
-            sprintf "%s: Undefined name %s" location (string r)
-            |> failwith
-    | Arithm(e1, op, e2) -> 
-        ((translateAOp op) (translate trRef trId location e1) (translate trRef trId location e2))
+let private translate trRef trId =
+    let leaf_ = function
+        | Id i -> trId i
+        | Const i -> string i
+    let arithm_ = function
+        | Plus -> sprintf "(%s) + (%s)"
+        | Minus -> sprintf "(%s) - (%s)"
+        | Times -> sprintf "(%s) * (%s)"
+        | Div -> sprintf "(%s) / (%s)"
+        | Mod -> sprintf "mod(%s, %s)"
+    let unary_ = function
+        | UnaryMinus -> sprintf "-(%s)"
+        | Abs -> sprintf "__abs(%s)"
+    Expr.cata leaf_ arithm_ unary_ trRef
 
 /// Translates a variable reference.
 let trref cmp (v:Var, i:int) offset =
