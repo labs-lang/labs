@@ -1,7 +1,6 @@
 ﻿module internal Liquid
-
-open Base
 open DotLiquid
+open System.IO
 
 type LiquidDict =
     (string * LiquidVal) seq
@@ -43,14 +42,13 @@ let strRender v t = internalRender id v t
 
 let parse path =
     Template.FileSystem <- fs
-    readFile path
-    |> Result.map Template.Parse
+    File.ReadAllText path
+    |> Template.Parse
 
 ///<summmary>Opens a template file and renders it using the specified
 ///local variables.</summary>
 let renderFile path (vals:LiquidDict) =
-    parse path
-    |> Result.bind (strRender vals)
+    (strRender vals (parse path))
 
 // Reusable templates, we only parse them once
 let goto = parse "templates/goto.c"
