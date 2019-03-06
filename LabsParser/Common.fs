@@ -29,8 +29,7 @@ let reserved : Parser<_> =
 
 let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum) >>. spaces
 
-let safeStrReturn str ret =
-    (skipString str .>> notInIdentifier) >>% ret
+let safeStrReturn str ret = (skipString str .>> notInIdentifier) >>% ret
 
 let safeIdentifier options =
     (notFollowedBy reserved >>. identifier options)
@@ -102,8 +101,7 @@ let toSet dupFn formatOnFail lst =
     else
         preturn (Set.ofList lst)
         
-let inline byName v =
-   (^T : (member name : string) v)
+let inline byName v = (^T : (member name : string) v)
 
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)

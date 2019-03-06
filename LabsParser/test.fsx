@@ -5,7 +5,6 @@
 #r "bin/Debug/netstandard2.0/LabsParser.dll"
 
 open FParsec
-open System.IO
 
 let run = FParsec.CharParsers.run
 

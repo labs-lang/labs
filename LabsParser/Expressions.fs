@@ -31,8 +31,7 @@ module ParseBExpr =
     
     let compose op p1 p2 = 
         match p1, p2 with 
-        | B b1, B b2 -> 
-            Compound(b1, op, b2) |> B
+        | B b1, B b2 -> Compound(b1, op, b2) |> B
         | _ -> failwith "?"
     let mapE f = function
         | E e -> E (f e)
