@@ -72,8 +72,8 @@ type TranslateFactory<'a, 'b> when 'a:comparison and 'b:comparison = {
     filterUndef: 'a -> bool
 }
 with
-    member this.BExprTranslator loc = translateBExpr this.filterUndef this.refTranslator (this.ExprTranslator loc)
-    member this.ExprTranslator l = translate this.refTranslator this.idTranslator l
+    member this.BExprTranslator = translateBExpr this.filterUndef this.refTranslator this.ExprTranslator
+    member this.ExprTranslator = translate this.refTranslator this.idTranslator
 
 let customProcExpr name = {
     refTranslator= trref name

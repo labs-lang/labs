@@ -5,8 +5,11 @@ open Expressions
 
 let translateProp sys (p:Property<Var*int>) =
 
-    let trId (sub:Map<string, int>) name = 
-        string sub.[name]
+    let trId (sub:Map<_,_>) name =
+        match sub.TryFind name with
+        | Some e -> string e
+        | None -> failwith "Undefined agent %s" name
+        
 
     //Given a substitution table, resolves references to quantified
     //component names.
@@ -34,7 +37,7 @@ let translateProp sys (p:Property<Var*int>) =
         |> failwithf "Property %s: alternating quantifiers are currently not supported"
 
     let translateSub sub =
-        (predExpr sub).BExprTranslator ("Property " + p.name)
+        (predExpr sub).BExprTranslator
 
     let rec trProp subs prop =
         if not prop.quantifiers.IsEmpty then
