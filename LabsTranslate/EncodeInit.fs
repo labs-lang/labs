@@ -6,7 +6,7 @@ open Liquid
 open Expressions
 
 let initVar (mapping:KeyMapping) tid (var:Var) =
-    let constExprTranslator = (constExpr tid).ExprTranslator "init"
+    let constExprTranslator = (constExpr tid).ExprTranslator
     let baseIndex = mapping.[var.name]
     let cVarName s = "_" + (translateLocation var.location tid s)
 
@@ -21,7 +21,7 @@ let initVar (mapping:KeyMapping) tid (var:Var) =
             |> Seq.map (sprintf "(%s == (%s))" v << constExprTranslator)
             |> String.concat " | "
             |> assume
-        | Range(minE, maxE) -> //assumeIntRange index minI maxI
+        | Range(minE, maxE) ->
             sprintf "(%s >= (%s)) & (%s < (%s))" 
                 v (constExprTranslator minE) v (constExprTranslator maxE)
             |> assume
