@@ -14,7 +14,6 @@ type ParseBExpr<'a, 'b> =
 
 module ParseBExpr =
     let getB p =
-        eprintfn "getB>>>>>>>> %A" p
         match p with
         | B b -> preturn b
         | E e -> fail (sprintf "%O is not a boolean expression" e)
@@ -23,18 +22,15 @@ module ParseBExpr =
         | B b -> fail (sprintf "%O is not an expression" b)
         | E e -> preturn e
     let compare op p1 p2 = 
-        eprintfn ">>>>>>>> %O %O" p1 p2
         match p1, p2 with 
         | E e1, E e2 -> Compare(e1, op, e2) |> B
         | _ -> failwith "?"
     let arithm op p1 p2 = 
-        eprintfn ">>>>>>>> %O %O" p1 p2
         match p1, p2 with 
         | E e1, E e2 -> Arithm(e1, op, e2) |> E
         | _ -> failwith "?"
     
     let compose op p1 p2 = 
-        eprintfn ">>>>>>>> %O %O" p1 p2
         match p1, p2 with 
         | B b1, B b2 -> 
             Compound(b1, op, b2) |> B
@@ -56,8 +52,8 @@ let makeBExprParser pexpr =
     
     let term : Parser<_> = 
         choice [
-            safeStrReturn tTRUE (B True)
-            safeStrReturn tFALSE (B False)
+            safeStrReturn tTRUE (BLeaf true |> B)
+            safeStrReturn tFALSE (BLeaf false |> B)
             pexpr |>> E
         ] <!> "bterm"
 
@@ -82,7 +78,6 @@ let makeBExprParser pexpr =
     expr >>= ParseBExpr.getB
 
 let makeExprParser pref pid : Parser<_,_> =
-    let pexpr, pexprRef = createParserForwardedToRef()
     let opp = new OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser
 
