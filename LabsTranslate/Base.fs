@@ -11,6 +11,7 @@ let withcommas x = (String.concat ", " x)
 let parse text (placeholders:Map<string, string>) =
     let checkPlaceholders s =
         (Map.keys placeholders)
+        |> Set.ofSeq
         |> Set.difference s
         |> fun z -> 
             if (Set.isEmpty z)

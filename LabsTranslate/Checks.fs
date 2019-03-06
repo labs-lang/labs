@@ -46,7 +46,7 @@ let checkNames sys =
         |> fun x -> if x = "" then Ok() else Error x
         
     let checkAgent (a:ComponentDef<_>) =
-        check (Map.merge sys.processes a.processes)
+        check (Map.union a.processes sys.processes)
 
     Map.mapValues checkAgent sys.components
     |> Map.values
@@ -71,12 +71,9 @@ let analyzeKeys sys =
             else List.exists (fun v -> v.vartype <> l.Head.vartype) l)
         |> Map.filter (fun _ -> snd)
         |> Map.keys
-        |> fun x -> 
-            if x.IsEmpty then seqOfVars else 
-                x
-                |> Set.map (sprintf "Variable %s cannot be both Scalar and Array") 
-                |> String.concat "\n"
-                |> failwith
+        |> Seq.map (sprintf "Variable %s cannot be both Scalar and Array") 
+        |> String.concat "\n"
+        |> fun msg -> if msg = "" then seqOfVars else failwith msg
 
     /// Makes a dictionary with information about each 
     /// variable in setOfVars.
@@ -106,7 +103,7 @@ let analyzeKeys sys =
         |> Seq.fold 
             (fun (map, i) vars -> 
                 let newInfo, newI = makeInfo i (seq vars)
-                (Map.merge map newInfo, newI)
+                (Map.union newInfo map, newI)
             )
             (Map.empty, 0)
 
@@ -114,12 +111,13 @@ let analyzeKeys sys =
         sys.environment
         |> Seq.singleton
         |> makeInfo 0
-
+    
+    let failOnDuplicate k _ _ = failwithf "Duplicate key found: %s" k
+    
     attrKeys
-    |> Map.mergeIfDisjoint lstigkeys
-    |> Map.mergeIfDisjoint envKeys
+    |> Map.unionWith failOnDuplicate lstigkeys
+    |> Map.unionWith failOnDuplicate envKeys
     |> fun x -> Ok (sys, x, max maxI 1, max maxL 1, max maxE 1)
-
 
 /// Binds all references in the system to the corresponding variable.
 let toVarSystem (sys:SystemDef<string>) (mapping:KeyMapping) =
