@@ -48,24 +48,18 @@ let checkUndef filter trref expr =
     |> fun s -> if Seq.isEmpty s then "" else String.concat " & " s
 
 let rec private translateBExpr filter trref trExpr bexpr =
-    let translateBOp = function
-    | Conj -> sprintf "((%s) & (%s))"
-    | Disj -> sprintf "((%s) | (%s))"
-
-    let trB = translateBExpr filter trref trExpr
-
-    match bexpr with
-    | True -> "1"
-    | False -> "0"
-    | Neg b -> sprintf "(!(%s))" (trB b)
-    | Compound(b1, op, b2) -> 
-        (translateBOp op) (trB b1) (trB b2)
-    | Compare(e1, op, e2) ->
+    let bleaf_ b = if b then "1" else "0"
+    let neg_ = sprintf "(!(%s))"
+    let compound_ = function
+        | Conj -> sprintf "((%s) & (%s))"
+        | Disj -> sprintf "((%s) | (%s))"
+    let compare_ op e1 e2 = 
         let undef1, undef2 = (checkUndef filter trref e1), (checkUndef filter trref e2)
         sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2)
         |> (if undef1 <> "" then sprintf "(%s) & (%s)" undef1 else id)
         |> (if undef2 <> "" then sprintf "(%s) & (%s)" undef2 else id)
-
+    BExpr.cata bleaf_ neg_ compare_ compound_ bexpr
+    
 type TranslateFactory<'a, 'b> when 'a:comparison and 'b:comparison = {
     refTranslator: 'a -> (string option) -> string
     idTranslator: 'b -> string
