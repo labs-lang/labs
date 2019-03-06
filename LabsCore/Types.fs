@@ -1,4 +1,10 @@
 module Types
+open Tokens
+
+
+
+type HasCRepr =
+    abstract member Crepr : string
 
 type Location = 
     | I 
@@ -9,20 +15,15 @@ type Location =
             | I -> "Interface" | E -> "Environment"
             | L n -> sprintf "Stigmergy (%s)" n 
 
-
 type ArithmOp =
-    | Plus
-    | Minus
-    | Times
-    | Div
-    | Mod
+    | Plus | Minus
+    | Times | Div | Mod
     override this.ToString() = 
         match this with
         | Plus -> tPLUS | Minus -> tMINUS | Times -> tMUL | Div -> tDIV | Mod -> tMOD 
 
 type UnaryOp = 
-    | Abs
-    | UnaryMinus
+    | Abs | UnaryMinus
     override this.ToString() =
         match this with
         | Abs -> "__abs"
@@ -80,14 +81,13 @@ type Bop =
 
 ///<summmary>Boolean expressions.</summary>
 type BExpr<'a, 'b> =
-    | True
-    | False
+    | BLeaf of bool
     | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
     | Neg of BExpr<'a, 'b>
     | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
     override this.ToString() =
         match this with
-        | True -> tTRUE | False -> tFALSE
+        | BLeaf true -> tTRUE | BLeaf false -> tFALSE
         | Neg b -> sprintf "%s(%O)" tNEG b
         | Compare(e1, op, e2) -> sprintf "(%O) %O (%O)" e1 op e2
         | Compound(b1, op, b2) -> sprintf "(%O) %O (%O)" b1 op b2
@@ -104,6 +104,11 @@ type Action<'a> = {
             | E -> sprintf "%O <-- %O")
                 (this.updates |> List.map (string << fst) |> String.concat ",")
                 (this.updates  |> List.map (string << snd) |> String.concat ",")
+
+module Action =
+    let updates_ =
+        (fun a -> a.updates),
+        (fun u a -> {actionType=a.actionType; updates=u})
 
 type VarType = 
     | Scalar
@@ -126,25 +131,7 @@ type Var = {
     location:Location
     init:Init
 }
-with override this.ToString() = this.name
-type Composition =
-    | Seq
-    | Choice
-    | Par
+with
+    static member name_ = (fun v -> v.name), (fun v n -> {v with name = n}) 
+    override this.ToString() = this.name
 
-type Stmt<'a, 'b> = 
-    | Nil 
-    | Skip
-    | Act of 'a Action
-    | Name of string
-
-and Base<'a, 'b> =
-    {
-        stmt : Stmt<'a, 'b>
-        pos : 'b
-    }
-
-and Process<'a, 'b> =
-    | BaseProcess of Base<'a, 'b>
-    | Guard of BExpr<'a, unit> * Process<'a, 'b> * 'b
-    | Comp of Composition * Process<'a, 'b> list
