@@ -7,7 +7,6 @@ let simpleRef p =
     KEYNAME .>>. (opt (betweenBrackets p))
     |>> fun (str, offset) -> {var=str; offset=offset}
 
-
 type ParseBExpr<'a, 'b> = 
     | E of Expr<'a, 'b>
     | B of BExpr<'a, 'b>

@@ -15,8 +15,7 @@ let translateProp sys (p:Property<Var*int>) =
         | None -> 
             if v.location <> E then
                 v.name
-                |> sprintf "Property %s: %s is not an environment variable" p.name
-                |> failwith 
+                |> failwithf "Property %s: %s is not an environment variable" p.name
             trref "" (v, i) offset
         | Some c ->
             (trref (trId sub c) (v, i) offset)
@@ -32,8 +31,7 @@ let translateProp sys (p:Property<Var*int>) =
 
     if (ex && fa) then 
         p.name
-        |> sprintf "Property %s: alternating quantifiers are currently not supported"
-        |> failwith
+        |> failwithf "Property %s: alternating quantifiers are currently not supported"
 
     let translateSub sub =
         (predExpr sub).BExprTranslator ("Property " + p.name)
