@@ -41,7 +41,8 @@ let trref cmp (v:Var, i:int) offset =
     (translateLocation v.location) cmp index
 
 let checkUndef filter trref expr =
-    (getVars filter expr)
+    Expr.getVars expr
+    |> Set.filter filter
     |> Seq.map (fun x -> trref x None)
     |> Seq.map (sprintf "(%s != undef_value)")
     |> fun s -> if Seq.isEmpty s then "" else String.concat " & " s
