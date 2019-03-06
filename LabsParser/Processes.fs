@@ -3,6 +3,7 @@ module internal Processes
 open FParsec
 open Types
 open Tokens
+open LabsCore
 open Expressions    
 
 let pexpr = makeExprParser simpleRef (skipString tID .>> notInIdentifier)
@@ -37,12 +38,11 @@ do pprocRef :=
         let pguard = makeBExprParser pexpr
         followedBy ((ws pguard) >>. (ws GUARD))
         >>. tuple3 (ws pguard) ((ws GUARD) >>. pproc) getPosition |>> Guard <!> "Guard"
-        
     let pBase =
         let pNil = safeStrReturn "Nil" Nil .>>. getPosition |>> doBase
-        let pSkip = stringReturn "Skip" Skip .>>. getPosition |>> doBase
-        let pParen = followedBy (skipChar '(') >>. (betweenParen pproc |>> Paren) .>>. getPosition |>> doBase
-
+        let pSkip = safeStrReturn tSKIP Skip .>>. getPosition |>> doBase
+        let pParen = followedBy (skipChar '(') >>. (betweenParen pproc)
+        
         choice [
              attempt pGuarded <!> "Guarded"
              attempt pNil <!> "Nil"
@@ -57,7 +57,7 @@ do pprocRef :=
     let pchoice = 
         sepBy (ws pseq) (ws CHOICE) |>> (compose Choice) <!> "CHOICE"
 
-    sepBy (ws pchoice) (ws PAR) |>> (compose Par) <!> "PAR"
+    sepBy (ws pchoice) (ws PAR) |>> (compose Par) <!> "PAR" 
 
 let processes = 
     let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc <!> "PPROC"))

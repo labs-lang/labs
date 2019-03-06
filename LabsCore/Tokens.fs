@@ -15,6 +15,8 @@ let tNEG = "!"
 let tCONJ = "and"
 let tDISJ = "or"
 
+let tSKIP = "Skip"
+
 let tSEQ = ";"
 let tCHOICE = "++"
 let tPAR = "||"
