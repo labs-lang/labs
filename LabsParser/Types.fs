@@ -1,5 +1,6 @@
 ﻿[<AutoOpen>]
 module Types
+open LabsCore
 open Types
 open Link
 
