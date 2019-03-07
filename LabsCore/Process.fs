@@ -22,16 +22,8 @@ type Process<'a, 'b> =
     | Comp of Composition * Process<'a, 'b> list
 
 module Process =
-    let rec fold fbase acc proc = 
-        match proc with
-        | BaseProcess b ->
-            fbase acc b
-        | Guard(_, p, _) -> fold fbase acc p
-        | Comp(_, l) -> 
-            Seq.fold (fold fbase) acc l
-
-    let rec mfold fbase fguard fcomp acc proc =
-        let recurse = mfold fbase fguard fcomp
+    let rec fold fbase fguard fcomp acc proc =
+        let recurse = fold fbase fguard fcomp
         match proc with
         | BaseProcess b ->
             fbase acc b
@@ -44,7 +36,7 @@ module Process =
         let recurse = cata fbase fguard fcomp
         match proc with
         | BaseProcess b -> fbase b
-        | Guard(g, p, _) -> fguard g (recurse p)
+        | Guard(g, p, pos) -> fguard g pos (recurse p)
         | Comp(typ, l) -> fcomp typ (l |> List.map recurse)
 
     let rec map fbase fguard proc =
@@ -61,7 +53,7 @@ module Process =
             | Skip -> "√"
             | Act a -> string a
             | Name s -> s
-        let printGuard_ g =
+        let printGuard_ g _ =
             sprintf "%O %s %s" g tGUARD
         let rec printComp_ typ l = 
             let sep = 
