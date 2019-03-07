@@ -17,7 +17,6 @@ let translateLocation = function
     | L _ -> sprintf "Lvalue[%s][%O]"
     | E -> (fun _ -> sprintf "E[%O]")
 
-
 let assign var cVarName index =
     sprintf "%s = %s;" (translateLocation var.location "i" index) cVarName
     + (match var.location with 
@@ -54,3 +53,11 @@ let serializeInfo (sys, mapping:KeyMapping) =
     |> ignore
 
     Result.Ok 0
+    
+/// Returns a C function name created from the given set.    
+let funcName pcs =
+    pcs
+    |> Map.map (sprintf "%i_%i")
+    |> Map.values
+    |> String.concat "_"
+    |> (+) "_"
