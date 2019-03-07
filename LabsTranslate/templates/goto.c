@@ -1,7 +1,11 @@
 void {{label}}(int tid) {
     {% if labs %}//{{labs}}
     {%- endif -%}
-{% include "templates/entry" %}
+    
+    {%- for item in entrypoints -%}
+    assume(pc[tid][{{ item.pc }}] == {{ item.values.first }});
+    {%- endfor -%}
+    {% include "templates/entry" %}
 
     {%- if assignments -%}{%- for item in assignments -%}
     TYPEOFVALUES val{{forloop.index0}} = {{item.expr}};
@@ -25,7 +29,7 @@ void {{label}}(int tid) {
     __VERIFIER_assume(HinCnt[tid] == 0);
     {%- endif -%}
 
-    {%- for item in exitpoints -%}
+    {%- for item in mypcexit -%}
     {%- if item.values.size == 1-%}
     pc[tid][{{ item.pc }}] = {{ item.values.first }};
     {%- else -%}
@@ -34,4 +38,19 @@ void {{label}}(int tid) {
     pc[tid][{{ item.pc }}] = pc{{ item.pc }};
     {%-endif-%}{%- endfor -%}
 
+    {%- if parcheck.size > 0 -%}
+    if ({%- for item in parcheck -%}pc[{{item}}] == 0 {% unless forloop.last %} & {% endunless %}{%-endfor-%}){
+    {%- endif -%}
+    {%- for item in otherexits -%}
+    {%- if item.values.size == 1-%}
+    pc[tid][{{ item.pc }}] = {{ item.values.first }};
+    {%- else -%}
+    TYPEOFPC pc{{item.pc}};
+    LABSassume({%- for val in item.values -%} (pc{{ item.pc }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    pc[tid][{{ item.pc }}] = pc{{ item.pc }};
+    {%-endif-%}{%- endfor -%}
+
+    {%- if parcheck.size > 0 -%}
+    }
+    {%- endif -%}
 }

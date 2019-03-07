@@ -23,12 +23,10 @@ void init() {
 
     {%- for p in item.pcs -%}
     {%- if p.values.size == 1 -%}
-    _pc[{{i}}][{{ p.pc }}] = {{ p.values.first }};{%- else -%}
+    _pc[{{i}}][{{ p.pc }}] = {{ p.values.first }};
+    {%- else -%}
     LABSassume({%- for val in p.values -%} (_pc[{{i}}][{{ p.pc }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
-    {%- endif -%}
-    {% endfor %}
-
-    {%- endfor -%}{%- endfor -%}
+    {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
         
     {{- initenv -}}
 

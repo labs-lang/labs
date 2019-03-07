@@ -25,12 +25,9 @@ int main(void) {
             LABSassume(firstAgent < MAXCOMPONENTS);
 
             {%- for item in schedule -%}
-            {%- if forloop.first -%}
-            if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
-            {%- else -%}
-            else if LABScheck({{ item.entry | join: " & " }}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
-            {%- endif -%}
-            {%- endfor -%}
+            {% unless forloop.first %}else {% endunless %}if LABScheck({%- for pc in item.entry -%}
+pc[firstAgent][{{pc.pc}}] == {{pc.values}}{% unless forloop.last %} & {% endunless %}{%- endfor -%}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
+{%- endfor -%}
             
             {%- if fair -%}
             if (firstAgent == MAXCOMPONENTS - 1) {
