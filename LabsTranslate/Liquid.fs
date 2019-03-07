@@ -1,4 +1,5 @@
 ﻿module internal Liquid
+open System
 open DotLiquid
 open System.IO
 
@@ -37,7 +38,7 @@ let private internalRender strfun vals (template:Template) =
 /// Renders a given template to standard output
 let render v t = internalRender (printfn "%s") v t
 
-/// Renders a given template to string
+/// Renders a given template to a string.
 let strRender v t = internalRender id v t
 
 let parse path =
@@ -50,7 +51,10 @@ let parse path =
 let renderFile path (vals:LiquidDict) =
     (strRender vals (parse path))
 
-// Reusable templates, we only parse them once
+// Reusable template, we only parse it once
 let goto = parse "templates/goto.c"
-let transition = parse "templates/transition.c"
-let stop = parse "templates/stop.c"
+
+let liquidPcs pcset =
+    pcset
+    |> Map.toSeq
+    |> Seq.map (fun (pc, vals) -> Dict["pc", Int pc; "values", Lst (Seq.map (Int) vals)])
