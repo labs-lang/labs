@@ -1,11 +1,6 @@
 module Types
 open Tokens
 
-
-
-type HasCRepr =
-    abstract member Crepr : string
-
 type Location = 
     | I 
     | L of name:string 
@@ -26,8 +21,8 @@ type UnaryOp =
     | Abs | UnaryMinus
     override this.ToString() =
         match this with
-        | Abs -> "__abs"
-        | UnaryMinus -> "-"
+        | Abs -> tABS
+        | UnaryMinus -> tMINUS
 
 type LeafExpr<'b> =
     | Id of 'b
@@ -131,7 +126,6 @@ type Var = {
     location:Location
     init:Init
 }
-with
-    static member name_ = (fun v -> v.name), (fun v n -> {v with name = n}) 
+with 
     override this.ToString() = this.name
 

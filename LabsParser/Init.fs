@@ -37,6 +37,5 @@ let pinitdef loc =
     |>> fun (var, init) -> {var with init=init}
 
 let pkeys loc = 
-    //let lbl = function I -> "interface" | L _ -> "stigmergy" | E -> "environment"
     ws (sepbysemis (ws (pinitdef loc)))
     >>= toSet byName byName 
