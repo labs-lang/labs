@@ -92,8 +92,3 @@ module Process =
 
     let exit proc = entryOrExit List.last proc
 
-    let name_ x = match x.stmt with Name n -> n | _ -> ""
-    let isRecursive procs name =
-        recUsedNames procs name
-        |> Set.map name_
-        |> Set.contains name
