@@ -6,6 +6,46 @@ open Parser
 
 type KeyMapping = Map<string, int>
 
+// An entrypoint contains:
+// * A mapping from pcs to their required value
+// * A set of "sibling" pcs (when inside a parallel process)
+// * The process' own pc
+type EntryPoint<'a when 'a : comparison> =
+    Map<Base<'a, Position>, Map<int, int> * Set<int> * int>
+type EntryPointInfo<'a when 'a : comparison> = {
+    mypc : int
+    maxpc : int
+    pcs : Map<int, int>
+    entrypoints : EntryPoint<'a>
+    par : Set<int>
+}
+with 
+    member this.increment =
+        let newpc = this.pcs.TryFind this.mypc |> Option.defaultValue 0 |> (+) 1 
+        {this with pcs = Map.add this.mypc newpc this.pcs}
+    member this.spawnpc n = {
+        this with 
+            mypc = this.mypc + n
+            maxpc = this.mypc + n
+            pcs = Map.add (this.mypc + n) 0 this.pcs
+    }
+    static member init : EntryPointInfo<'a> = {
+        mypc = 0
+        maxpc = 0
+        pcs = [(0, 0)] |> Map.ofList
+        entrypoints = Map.empty
+        par = Set.empty
+    }
+
+let joinEntrypoints s =
+    Seq.fold (
+        Map.fold (fun (st:Map<_,_>) k v ->
+            match st.TryFind k with
+            | Some oldset -> Map.add k (Set.add v oldset) st
+            | None -> Map.add k (Set.singleton v) st
+        )    
+    ) Map.empty s
+
 let withcommas x = (String.concat ", " x)
 
 let parse text (placeholders:Map<string, string>) =
@@ -66,3 +106,10 @@ let makeCounter (start: int) =
         !x
     incr
 
+let chStreamName name b =
+    let (p: Position)=b.pos in let newPos = Position(name, p.Index, p.Line, p.Column)
+    {b with pos = newPos}
+
+// Keep track of the unfolded process
+let chpos name pos (b:Base<_,Position>) =
+    chStreamName (sprintf "%s@%O" name pos) b
