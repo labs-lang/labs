@@ -98,5 +98,20 @@ module Process =
     /// Returns the entry base processes of proc.
     let entry proc = entryOrExit List.head proc
 
+    /// Returns the entry base processes of proc.
     let exit proc = entryOrExit List.last proc
 
+    /// Replace (non-recursive) Name processes with their definitions.
+    // tagfn is a function that inserts information about the
+    // Name process into its expansion's elements.
+    let expand tagfn (procs: Map<_, _>) name =
+        let rec expand_ visited name = 
+            let base_ b = 
+                match b.stmt with
+                | Name n when n=name || n="Behavior" -> BaseProcess b
+                | Name n when (not (Set.contains b visited)) -> 
+                    expand_ (visited.Add b) n 
+                    |> map ((tagfn n b.pos) >> BaseProcess) id
+                | _ -> BaseProcess b
+            map base_ id procs.[name]
+        expand_ Set.empty name

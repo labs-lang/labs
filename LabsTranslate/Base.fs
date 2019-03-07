@@ -66,19 +66,3 @@ let makeCounter (start: int) =
         !x
     incr
 
-let unfold (procs: Map<_, _>) name =
-    // Keep track of the unfolded process
-    let chpos name pos (b:Base<_,FParsec.Position>) =
-        let p = b.pos in let newPos = Position(sprintf "%s@%O" name pos, p.Index, p.Line, p.Column)
-        BaseProcess {b with pos = newPos}
-        
-    let rec unfold_ visited name = 
-        let base_ b = 
-            match b.stmt with
-            | Name n when n=name || n="Behavior" -> BaseProcess b
-            | Name n when (not (Set.contains b visited)) -> 
-                unfold_ (visited.Add b) n 
-                |> Process.map (chpos n b.pos) id
-            | _ -> BaseProcess b
-        Process.map base_ id procs.[name]
-    unfold_ Set.empty name
