@@ -117,12 +117,12 @@ let analyzeKeys sys =
     attrKeys
     |> Map.unionWith failOnDuplicate lstigkeys
     |> Map.unionWith failOnDuplicate envKeys
-    |> fun x -> Ok (sys, x, max maxI 1, max maxL 1, max maxE 1)
+    |> fun mapping -> Ok (sys, mapping, max maxI 1, max maxL 1, max maxE 1)
 
 /// Binds all references in the system to the corresponding variable.
 let toVarSystem (sys:SystemDef<string>) (mapping:KeyMapping) =
 
-    let addUndefs (cmp:ComponentDef<_>) =
+    let addUndefs cmp =
         let vname_ (v:Var) = v.name
         let undefs : Set<Var> = 
             let names = Set.map vname_ cmp.iface
