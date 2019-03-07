@@ -8,7 +8,7 @@ let translateProp sys (p:Property<Var*int>) =
     let trId (sub:Map<_,_>) name =
         match sub.TryFind name with
         | Some e -> string e
-        | None -> failwith "Undefined agent %s" name
+        | None -> failwithf "Undefined agent %s" name
         
 
     //Given a substitution table, resolves references to quantified
