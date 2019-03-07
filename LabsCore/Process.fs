@@ -70,21 +70,22 @@ module Process =
             match b.stmt with
             | Name n -> Set.add n acc
             | _ -> acc
-        fold used_ Set.empty proc
+        fold used_ (fun x _ -> x) (fun _ -> Seq.fold) Set.empty proc
 
     let recUsedNames (procs: Map<_, _>) name =
+        let id2 x _ = x
         let rec used_ acc b = 
             match b.stmt with 
             | Name n when not <| Set.contains b acc -> 
-                fold used_ (Set.add b acc) procs.[n]
+                fold used_ id2 (fun _ -> Seq.fold)  (Set.add b acc) procs.[n]
             | _ -> acc
-        fold used_ Set.empty procs.[name]
+        fold used_ id2 (fun _ -> Seq.fold) Set.empty procs.[name]
 
     let private entryOrExit fn =
         let entrycomp_ = function
         | Seq -> fn
         | Choice | Par -> Set.unionMany
-        cata Set.singleton (fun _ -> id) entrycomp_
+        cata Set.singleton (fun _ _ -> id) entrycomp_
 
     /// Returns the entry base processes of proc.
     let entry proc = entryOrExit List.head proc
