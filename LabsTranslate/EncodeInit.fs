@@ -4,6 +4,8 @@ open Base
 open Templates
 open Liquid
 open Expressions
+open LabsCore
+open FSharpPlus.Lens
 
 let initVar (mapping:KeyMapping) tid (var:Var) =
     let constExprTranslator = (constExpr tid).ExprTranslator
@@ -36,23 +38,27 @@ let initVar (mapping:KeyMapping) tid (var:Var) =
         |> Seq.map initAssumption
         |> String.concat ""
 
-let translateInit (sys, trees, mapping:KeyMapping) =
-
-    let initPc =
-        trees
-        |> Map.map (fun n (_, entry) -> 
-            let minI, maxI = sys.spawn.[n]
-            let entries = 
-                entry |> Set.toList |> List.groupBy fst
-                |> Seq.map (fun (pc, vals) -> Dict[ "pc", Int pc; "values", Lst (List.map (Int << snd) vals) ]) 
-
-            seq [
+    
+let translateInit sys (entrypoints:EntryPoint<_>) (mapping:KeyMapping) =
+    // Find the initial PC values for each agent
+    let initPcs =
+        sys.components
+        |> Map.mapValues (fun a -> Process.entry a.processes.["Behavior"])
+        |> Map.mapValues (Set.map (fun x -> entrypoints.[x]^._1))
+        |> Map.map (fun name entry ->
+            let minI, maxI = sys.spawn.[name]
+            let entries =
+                joinEntrypoints entry
+                |> Map.map (fun pc values ->
+                    Dict ["pc", Int pc; "values", values |> Seq.map Int |> Lst])
+                |> Map.values
+            Dict [
                 "start", Int minI
                 "end", Int maxI
                 "pcs", Lst entries
-            ] |> Dict)
+            ])
         |> Map.values
-
+        
     let initMap tid m = 
         m
         |> Set.map (initVar mapping tid)
@@ -76,10 +82,10 @@ let translateInit (sys, trees, mapping:KeyMapping) =
         |> Map.map initRange
         |> Map.values
         |> String.concat "\n"
-        
+
     [
         "initenv", sys.environment |> initMap "" |> indent 4 |> Str
         "initvars", initAll |> indent 4 |> Str
-        "initpcs", initPc |> Lst
+        "initpcs", initPcs |> Lst
     ]
     |> renderFile "templates/init.c"    
