@@ -64,7 +64,15 @@ module Process =
             String.concat sep l
             |> if (Seq.length l) > 1 then (sprintf "(%s)") else id
         cata print_ printGuard_ printComp_ proc
-
+    
+    /// Simplifies the process by removing Comp
+    /// elements with only one child.
+    let simplify proc =
+        let comp_ typ l =
+            if List.length l = 1 then l.Head
+            else Comp(typ, l)
+        cata (BaseProcess) (fun g pos p -> Guard(g, p, pos)) comp_ proc
+    
     let usedNames proc = 
         let used_ acc b = 
             match b.stmt with
