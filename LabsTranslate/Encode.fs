@@ -147,7 +147,6 @@ let encode (entry:EntryPoint<_>) (exit:Map<_,_>) (guards:Map<_,_>) =
             
         let mypcExit, otherExits = Map.partition (fun k _ -> k = mypc) exits            
             
-        eprintfn "%A" entry.[b]
         [
             "label", funcName (entry.[b]^._1) |> Str
             "entrypoints", liquidPcs (entry.[b]^._1 |> Map.mapValues Set.singleton) |> Lst

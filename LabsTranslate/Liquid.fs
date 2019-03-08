@@ -1,5 +1,4 @@
 ﻿module internal Liquid
-open System
 open DotLiquid
 open System.IO
 
