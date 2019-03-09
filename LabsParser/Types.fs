@@ -40,14 +40,9 @@ type SystemDef<'a> = {
             |> Map.mapValues (fun c -> c.iface)
             |> Map.values
             |> Set.unionMany
-            //|> Seq.reduce Map.merge
     member this.lstigVars =
         lazy
             this.stigmergies
             |> Map.mapValues (fun s -> s.vars |> Set.unionMany)
             |> Map.values
             |> Set.unionMany
-
-    member this.SpawnedComps = 
-        this.components
-        |> Map.filter (fun n _ -> this.spawn.ContainsKey n)

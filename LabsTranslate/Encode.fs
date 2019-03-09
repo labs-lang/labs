@@ -10,8 +10,6 @@ open Liquid
 open FSharpPlus.Operators
 open FSharpPlus.Lens
 
-type NodeType = Goto | Stop
-
 /// Computes a unique entry point for each base process in the input process.
 let setentry info =
     let base_ (info: EntryPointInfo<_>) b =
@@ -80,7 +78,7 @@ let setExit (entrypoints:EntryPoint<_>) (procs:Map<_,_>) proc =
         let findRecursion name (pos:FParsec.Position) =
             Process.entry procs.[name]
             |> Set.map (if name = "Behavior" then id else chStreamName pos.StreamName)
-            |> Set.map (fun b -> try e' b with | _ -> failwithf "rec?%A" b)
+            |> Set.map e' 
             |> joinEntrypoints
 
         let exits =
