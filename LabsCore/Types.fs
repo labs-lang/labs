@@ -13,9 +13,12 @@ type Location =
 type ArithmOp =
     | Plus | Minus
     | Times | Div | Mod
+    | Min | Max
     override this.ToString() = 
         match this with
-        | Plus -> tPLUS | Minus -> tMINUS | Times -> tMUL | Div -> tDIV | Mod -> tMOD 
+        | Plus -> tPLUS | Minus -> tMINUS
+        | Times -> tMUL | Div -> tDIV | Mod -> tMOD
+        | Min -> tMIN | Max -> tMAX
 
 type UnaryOp = 
     | Abs | UnaryMinus
@@ -29,7 +32,7 @@ type LeafExpr<'b> =
     | Const of int
     override this.ToString() = 
         match this with
-        | Id _ -> "id"
+        | Id _ -> tID
         | Const v -> string v
 and Expr<'a, 'b> =
     | Leaf of LeafExpr<'b>
@@ -42,7 +45,10 @@ and Expr<'a, 'b> =
         | Ref r -> string r
         | Unary(op, e) -> 
             let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in sprintf "%s(%O)" s e
-        | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
+        | Arithm(e1, op, e2) ->
+            match op with
+            | Min | Max -> sprintf "%O(%O, %O)" op e1 e2 
+            | _ -> sprintf "%O %O %O" e1 op e2
 
 
 and Ref<'a, 'b> = 

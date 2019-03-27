@@ -8,6 +8,9 @@ let tMOD = "%"
 let tUNDEF = "undef"
 let tABS = "abs"
 let tID = "id"
+let tMIN = "min"
+let tMAX = "max"
+
 
 let tTRUE = "true"
 let tFALSE = "false"
