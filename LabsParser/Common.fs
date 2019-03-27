@@ -21,8 +21,9 @@ let PAR : Parser<_> =           (skipString tPAR)
 
 let isAlphanum x = isAsciiLetter x || isDigit x
 
+// Parses reserved keyword so they are not parsed as identifiers or names
 let reserved : Parser<_> = 
-    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID]
+    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX]
     |> List.map pstring 
     |> choice
     .>> notFollowedBy (satisfy isAlphanum)
