@@ -21,6 +21,9 @@ TYPEOFVALUES __abs(TYPEOFVALUES x) {
   return (x>0) ? x : -x;
 }
 
+TYPEOFVALUES __max(TYPEOFVALUES x, TYPEOFVALUES y) { return (x > y) ? x : y; }
+TYPEOFVALUES __min(TYPEOFVALUES x, TYPEOFVALUES y) { return (x < y) ? x : y; }
+
 TYPEOFVALUES mod(TYPEOFVALUES n, TYPEOFVALUES m) {
   return n >= 0 ? n % m : m + (n % m);
 }
