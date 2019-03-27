@@ -26,6 +26,8 @@ let private translate trRef trId =
         | Times -> sprintf "(%s) * (%s)"
         | Div -> sprintf "(%s) / (%s)"
         | Mod -> sprintf "mod(%s, %s)"
+        | Max -> sprintf "__max(%s, %s)"
+        | Min -> sprintf "__min(%s, %s)"
     let unary_ = function
         | UnaryMinus -> sprintf "-(%s)"
         | Abs -> sprintf "__abs(%s)"
