@@ -78,24 +78,40 @@ let makeBExprParser pexpr =
 let makeExprParser pref pid : Parser<_,_> =
     let opp = new OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser
-
+    let arithm op x y = Arithm(x, op, y)
+    
     let term =
         choice [
             followedBy pint32 >>. pint32 |>> Const |>> Leaf <!> "const"
             followedBy pid >>. pid |>> Id |>> Leaf <!> "id"
             attempt (pref expr) |>> Ref <!> "ref"
         ]
+    
+    let pprefixbinary tok op =
+        followedBy (skipString tok)
+        >>.(ws (skipString tok))
+        >>. betweenParen ( pipe2 (expr) ((ws COMMA) >>. expr) (arithm op))
+    let pmax = pprefixbinary tMAX Max
+    let pmin = pprefixbinary tMIN Min
+    opp.TermParser <- [
+            term
+            pmax
+            pmin
+            (betweenParen expr) <!> "paren"
+        ]
+        |> List.map ws
+        |> choice
 
-    opp.TermParser <- (ws term) <|> (ws (betweenParen expr) <!> "paren")
+    
 
     // Same precedence rules as in C
-    opp.AddOperator(InfixOperator(tPLUS, spaces, 1, Associativity.Left, fun x y -> Arithm(x, Plus, y)))
-    opp.AddOperator(InfixOperator(tMINUS, notFollowedBy (skipChar '>') >>. spaces, 1, Associativity.Left, fun x y -> Arithm(x, Minus, y)))
+    opp.AddOperator(InfixOperator(tPLUS, notFollowedBy (skipChar '+') >>. spaces, 1, Associativity.Left, arithm Plus))
+    opp.AddOperator(InfixOperator(tMINUS, notFollowedBy (skipChar '>') >>. spaces, 1, Associativity.Left, arithm Minus))
 
-    opp.AddOperator(InfixOperator(tMUL, spaces, 2, Associativity.Left, fun x y -> Arithm(x, Times, y)))   
-    opp.AddOperator(InfixOperator(tDIV, spaces, 2, Associativity.Left, fun x y -> Arithm(x, Div, y)))   
-    opp.AddOperator(InfixOperator(tMOD, spaces, 2, Associativity.Left, fun x y -> Arithm(x, Mod, y)))   
-
+    opp.AddOperator(InfixOperator(tMUL, spaces, 2, Associativity.Left, arithm Times))   
+    opp.AddOperator(InfixOperator(tDIV, spaces, 2, Associativity.Left, arithm Div))   
+    opp.AddOperator(InfixOperator(tMOD, spaces, 2, Associativity.Left, arithm Mod))   
+    
     opp.AddOperator(PrefixOperator(tABS, followedBy (skipChar '('), 3, false, fun x -> Unary(Abs, x)))
     opp.AddOperator(PrefixOperator(tMINUS, notFollowedBy (skipChar '>') >>. spaces, 3, false, fun x -> Unary(UnaryMinus, x)))
 
