@@ -10,6 +10,7 @@ let tABS = "abs"
 let tID = "id"
 let tMIN = "min"
 let tMAX = "max"
+let tCOMMENT = "#"
 
 
 let tTRUE = "true"

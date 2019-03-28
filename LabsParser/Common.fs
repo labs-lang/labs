@@ -7,7 +7,7 @@ type Parser<'t> = Parser<'t, unit>
 
 // Tokens
 //-----------------------------------------
-let COMMENT : Parser<_> =       (skipChar '#')
+let COMMENT : Parser<_> =       (skipString tCOMMENT)
 let COLON : Parser<_> =         (skipChar ':')
 let COMMA : Parser<_> =         (skipChar ',')
 let EQ : Parser<_> =            (skipChar '=')
@@ -19,6 +19,13 @@ let CHOICE : Parser<_> =        (skipString tCHOICE)
 let PAR : Parser<_> =           (skipString tPAR)
 //-----------------------------------------
 
+
+let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
+
+/// Parse p and skip whitespace/comments after.
+let ws p = p .>> spaces .>> skipMany lineComment .>> spaces
+let ws_ = ws (preturn ())
+
 let isAlphanum x = isAsciiLetter x || isDigit x
 
 // Parses reserved keyword so they are not parsed as identifiers or names
@@ -28,7 +35,7 @@ let reserved : Parser<_> =
     |> choice
     .>> notFollowedBy (satisfy isAlphanum)
 
-let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum) >>. spaces
+let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum) |> ws
 
 let safeStrReturn str ret = (skipString str .>> notInIdentifier) >>% ret
 
@@ -51,9 +58,6 @@ let IDENTIFIER : Parser<_> =
 
 let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
-/// Parse p and skip whitespace after.
-let ws p = p .>> spaces
-
 let enclose startc endc = between (ws (skipChar startc)) (skipChar endc)
 
 let betweenBrackets p = enclose '[' ']' p
@@ -75,8 +79,6 @@ let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
     #else
     p
     #endif
-
-let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
     
 let toMapF formatonFail lst =
     let dup = lst |> List.map fst |> List.duplicates
