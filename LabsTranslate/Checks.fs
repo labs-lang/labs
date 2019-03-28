@@ -144,7 +144,7 @@ let toVarSystem (sys:SystemDef<string>) (mapping:KeyMapping) =
     let toVarRef f r o =
         {var=f r.var; offset=o}
     let toVarExpr f e = 
-        Expr.map (Leaf) (fun r o -> Ref(toVarRef f r o)) e
+        Expr.map id (toVarRef f) e
     
     let toVarBase f b =    
         match b.stmt with 
