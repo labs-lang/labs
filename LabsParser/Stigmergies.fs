@@ -15,8 +15,7 @@ let plink =
         pipe3
             (ws KEYNAME) (opt (betweenBrackets p)) pc1orc2
             (fun a b c -> {var=a,c; offset=b})
-    let linkId = 
-        (ws (skipString tID)) >>. pc1orc2
+    let linkId = (ws (skipString tID)) >>. pc1orc2
     makeBExprParser (makeExprParser linkref linkId)
 
 let plstig =

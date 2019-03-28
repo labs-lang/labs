@@ -7,8 +7,8 @@ open System
 open Stigmergies
 open Properties
  
-let parse = 
-    spaces >>. pipe4
+let parse (externs: Map<string, int>) =
+    ws_ >>. pipe4
         psys 
         (ws ((plstig |> ws |> many) >>= toMap))
         (ws ((pcomp |> ws |> many) >>= toMap))

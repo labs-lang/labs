@@ -8,8 +8,7 @@ let pcomp =
     pipe2
         ((ws (skipString "agent")) >>. ws IDENTIFIER)
         (betweenBraces (
-            spaces
-            >>. tuple3
+            tuple3
                 (opt (pstringEq "interface" (pkeys I)))
                 (opt (pstringEq "stigmergies" (ws IDENTIFIER |> sepbysemis)))
                 processes <!> "PROCESSES"))

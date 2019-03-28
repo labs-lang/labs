@@ -46,7 +46,7 @@ let makeBExprParser pexpr =
     let opp = new OperatorPrecedenceParser<_, _, _>()
     let expr = opp.ExpressionParser
     
-    let notInArrow = notFollowedBy (anyOf ['-'; '~']) >>. spaces
+    let notInArrow = notFollowedBy (anyOf ['-'; '~']) |> ws
     
     let term : Parser<_> = 
         choice [
@@ -65,13 +65,13 @@ let makeBExprParser pexpr =
     opp.AddOperator(InfixOperator(tDISJ, notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Disj))
     
     opp.AddOperator(InfixOperator("<", notInArrow, 2, Associativity.Left, ParseBExpr.compare Less))
-    opp.AddOperator(InfixOperator(">", spaces, 2, Associativity.Left, ParseBExpr.compare Greater))
-    opp.AddOperator(InfixOperator("=", spaces, 2, Associativity.Left, ParseBExpr.compare Equal))
-    opp.AddOperator(InfixOperator("!=", spaces, 2, Associativity.Left, ParseBExpr.compare Neq))
-    opp.AddOperator(InfixOperator("<=", spaces, 2, Associativity.Left, ParseBExpr.compare Leq))
-    opp.AddOperator(InfixOperator(">=", spaces, 2, Associativity.Left, ParseBExpr.compare Geq))
+    opp.AddOperator(InfixOperator(">", ws_, 2, Associativity.Left, ParseBExpr.compare Greater))
+    opp.AddOperator(InfixOperator("=", ws_, 2, Associativity.Left, ParseBExpr.compare Equal))
+    opp.AddOperator(InfixOperator("!=", ws_, 2, Associativity.Left, ParseBExpr.compare Neq))
+    opp.AddOperator(InfixOperator("<=", ws_, 2, Associativity.Left, ParseBExpr.compare Leq))
+    opp.AddOperator(InfixOperator(">=", ws_, 2, Associativity.Left, ParseBExpr.compare Geq))
 
-    opp.AddOperator(PrefixOperator("!", spaces, 3, false, ParseBExpr.mapB Neg))
+    opp.AddOperator(PrefixOperator("!", ws_, 3, false, ParseBExpr.mapB Neg))
 
     expr >>= ParseBExpr.getB
 
@@ -105,15 +105,15 @@ let makeExprParser pref pid : Parser<_,_> =
     
 
     // Same precedence rules as in C
-    opp.AddOperator(InfixOperator(tPLUS, notFollowedBy (skipChar '+') >>. spaces, 1, Associativity.Left, arithm Plus))
-    opp.AddOperator(InfixOperator(tMINUS, notFollowedBy (skipChar '>') >>. spaces, 1, Associativity.Left, arithm Minus))
+    opp.AddOperator(InfixOperator(tPLUS, notFollowedBy (skipChar '+') |> ws, 1, Associativity.Left, arithm Plus))
+    opp.AddOperator(InfixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 1, Associativity.Left, arithm Minus))
 
-    opp.AddOperator(InfixOperator(tMUL, spaces, 2, Associativity.Left, arithm Times))   
-    opp.AddOperator(InfixOperator(tDIV, spaces, 2, Associativity.Left, arithm Div))   
-    opp.AddOperator(InfixOperator(tMOD, spaces, 2, Associativity.Left, arithm Mod))   
+    opp.AddOperator(InfixOperator(tMUL, ws_, 2, Associativity.Left, arithm Times))   
+    opp.AddOperator(InfixOperator(tDIV, ws_, 2, Associativity.Left, arithm Div))   
+    opp.AddOperator(InfixOperator(tMOD, ws_, 2, Associativity.Left, arithm Mod))   
     
     opp.AddOperator(PrefixOperator(tABS, followedBy (skipChar '('), 3, false, fun x -> Unary(Abs, x)))
-    opp.AddOperator(PrefixOperator(tMINUS, notFollowedBy (skipChar '>') >>. spaces, 3, false, fun x -> Unary(UnaryMinus, x)))
+    opp.AddOperator(PrefixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 3, false, fun x -> Unary(UnaryMinus, x)))
 
     expr
 

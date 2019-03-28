@@ -47,9 +47,9 @@ let pproperty =
             predicate=pred
             })
 
-let pproperties = 
-    pproperty |> many >>= toMap
-    |> (>>.) spaces
+let pproperties =
+    ws_
+    >>. pproperty |> many >>= toMap
     |> ws
     |> betweenBraces
     |> (>>.) (ws (skipString "check"))
