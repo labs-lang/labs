@@ -61,8 +61,8 @@ let makeBExprParser pexpr =
         ws (betweenParen expr) <!> "bparen"
     ]
     
-    opp.AddOperator(InfixOperator(tCONJ, notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Conj))
-    opp.AddOperator(InfixOperator(tDISJ, notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Disj))
+    opp.AddOperator(InfixOperator(tCONJ, ws notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Conj))
+    opp.AddOperator(InfixOperator(tDISJ, ws notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Disj))
     
     opp.AddOperator(InfixOperator("<", notInArrow, 2, Associativity.Left, ParseBExpr.compare Less))
     opp.AddOperator(InfixOperator(">", ws_, 2, Associativity.Left, ParseBExpr.compare Greater))
@@ -76,6 +76,7 @@ let makeBExprParser pexpr =
     expr >>= ParseBExpr.getB
 
 let makeExprParser pref pid : Parser<_,_> =
+let makeExprParser pref pid : Parser<_> =
     let opp = new OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser
     let arithm op x y = Arithm(x, op, y)
