@@ -1,7 +1,7 @@
 ﻿module internal Encode
 open LabsCore
+
 open Types
-open Link
 open Base
 open Templates
 open Expressions

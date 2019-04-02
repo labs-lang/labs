@@ -7,31 +7,25 @@ open System
 open Stigmergies
 open Properties
  
-let parse (externs: Map<string, int>) =
-    ws_ >>. pipe4
-        psys 
-        (ws ((plstig |> ws |> many) >>= toMap))
-        (ws ((pcomp |> ws |> many) >>= toMap))
+let parse =
+    ws_ >>. tuple4
+        (ws psys) 
+        ((plstig |> ws |> many))
+        ((pcomp |> ws |> many))
         (pproperties <!> "PROPERTIES")
-        (fun sys lstigs comps props -> 
-            {sys with
-                components = comps
-                properties = props
-                stigmergies = lstigs
-            }) 
     <!> "PARSER"
 
-let stripComments = 
-    stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>% "")
-
-let pre =
-    attempt (skipMany1Till skipAnyChar (eof <|> followedBy (pstring "extern"))
-    >>. (pstringEq "extern" (ws pextern))
-    .>> skipMany1Till skipAnyChar (eof)) <|> preturn Set.empty
-
-let allPlaceholders =
-    let pplaceholder = (skipChar '_') >>. KEYNAME
-    manyTill
-        (skipMany1Till skipAnyChar (eof <|> followedBy pplaceholder) >>. 
-        ((followedBy eof >>. preturn "") <|> pplaceholder))
-        (followedBy eof)
+//let stripComments = 
+//    stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>% "")
+//
+//let pre =
+//    attempt (skipMany1Till skipAnyChar (eof <|> followedBy (pstring "extern"))
+//    >>. (pstringEq "extern" (ws pextern))
+//    .>> skipMany1Till skipAnyChar (eof)) <|> preturn Set.empty
+//
+//let allPlaceholders =
+//    let pplaceholder = (skipChar '_') >>. KEYNAME
+//    manyTill
+//        (skipMany1Till skipAnyChar (eof <|> followedBy pplaceholder) >>. 
+//        ((followedBy eof >>. preturn "") <|> pplaceholder))
+//        (followedBy eof)

@@ -8,7 +8,7 @@ let propertyRef p =
         (ws KEYNAME)
         (opt (betweenBrackets p))
         (choice [
-            followedBy (skipString "of") >>. (ws (skipString "of") >>. (ws KEYNAME)) |>> Some
+            followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
             preturn None
         ])
         (fun k offset y -> {var=(k, y); offset=offset})
@@ -25,9 +25,9 @@ let pquantifier =
 
 let pproperty = 
     let propertyLink = 
-        (ws (skipString "id")) >>.
-        (ws (skipString "of")) >>.
-        (ws KEYNAME)
+        (ws (skipString "id"))
+        >>. (ws OF)
+        >>.(ws KEYNAME)
 
     let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink)
     let pmodality = 
@@ -35,21 +35,23 @@ let pproperty =
             stringReturn "finally" Finally;
             stringReturn "always" Always]
         |> ws
-    pipe4 
+    pipe5
+        (followedBy IDENTIFIER >>. getPosition)
         (ws IDENTIFIER .>> (ws EQ))
         pmodality
         ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
         pbaseprop
-        (fun n m qs pred -> n, {
-            name=n;
-            modality=m;
-            quantifiers=qs;
+        (fun pos n m qs pred -> {
+            pos=pos
+            name=n
+            modality=m
+            quantifiers=qs
             predicate=pred
-            })
+        })
 
 let pproperties =
     ws_
-    >>. pproperty |> many >>= toMap
+    >>. pproperty |> many
     |> ws
     |> betweenBraces
     |> (>>.) (ws (skipString "check"))

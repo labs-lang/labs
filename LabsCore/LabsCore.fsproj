@@ -18,6 +18,5 @@
     <Compile Include="Types.fs" />
     <Compile Include="Expression.fs" />
     <Compile Include="Process.fs" />
-    <Compile Include="Link.fs" />
   </ItemGroup>
 </Project>

@@ -1,11 +1,16 @@
 ﻿module internal EncodeInit
+
+open FSharpPlus.Lens
+
+open LabsCore
+
 open Types
 open Base
 open Templates
 open Liquid
 open Expressions
-open LabsCore
-open FSharpPlus.Lens
+
+
 
 let initVar (mapping:KeyMapping) tid (var:Var) =
     let constExprTranslator = (constExpr tid).ExprTranslator
@@ -46,7 +51,7 @@ let translateInit sys (entrypoints:EntryPoint<_>) (mapping:KeyMapping) =
         |> Map.mapValues (fun a -> Process.entry a.processes.["Behavior"])
         |> Map.mapValues (Set.map (fun x -> entrypoints.[x]^._1))
         |> Map.map (fun name entry ->
-            let minI, maxI = sys.spawn.[name]
+            let minI, maxI = sys.spawn.[name] // TODO
             let entries =
                 joinEntrypoints entry
                 |> Map.map (fun pc values ->

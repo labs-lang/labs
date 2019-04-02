@@ -14,7 +14,7 @@ let paction =
         skipChar '<' >>. choice [
             followedBy (skipString "--") >>. stringReturn "--" Location.E; 
             charReturn '-' I;
-            charReturn '~' (L "")
+            charReturn '~' (L("",0))
         ]
     tuple3 
         (ws (simpleRef pexpr) |> sepbycommas)
@@ -31,24 +31,24 @@ let paction =
 let pproc, pprocRef = createParserForwardedToRef()
 
 do pprocRef :=
-    let doBase (stmt, pos) = {stmt=stmt; pos=pos} |> BaseProcess
+    let doBase (pos, stmt) = {stmt=stmt; pos=pos} |> BaseProcess
     let compose a b = Comp(a, b)
 
     let pGuarded = 
         let pguard = makeBExprParser pexpr
         followedBy ((ws pguard) >>. (ws GUARD))
-        >>. tuple3 (ws pguard) ((ws GUARD) >>. pproc) getPosition |>> Guard <!> "Guard"
+        >>. tuple3 getPosition (ws pguard) ((ws GUARD) >>. pproc) |>> Guard <!> "Guard"
     let pBase =
-        let pNil = safeStrReturn "Nil" Nil .>>. getPosition |>> doBase
-        let pSkip = safeStrReturn tSKIP Skip .>>. getPosition |>> doBase
+        let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase
+        let pSkip = getPosition .>>. safeStrReturn tSKIP Skip |>> doBase
         let pParen = followedBy (skipChar '(') >>. (betweenParen pproc)
         
         choice [
              attempt pGuarded <!> "Guarded"
              attempt pNil <!> "Nil"
              attempt pSkip <!> "Skip"
-             (IDENTIFIER |>> Name) .>>. getPosition |>> doBase <!> "Name"
-             (paction |>> Act) .>>. getPosition |>> doBase <!> "Action"
+             attempt (getPosition  .>>. (IDENTIFIER |>> Name)) |>> doBase <!> "Name"
+             attempt (getPosition .>>. (paction |>> Act)) |>> doBase <!> "Action"
              pParen <!> "Paren"
          ] <!> "BASE"
 
@@ -60,5 +60,10 @@ do pprocRef :=
     sepBy (ws pchoice) (ws PAR) |>> (compose Par) <!> "PAR" 
 
 let processes = 
-    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc <!> "PPROC"))
-    ws (many pdef) >>= toMap
+    let pdef =
+        pipe3
+            ((followedBy IDENTIFIER) >>. getPosition) 
+            (ws IDENTIFIER)
+            ((ws EQ) >>. (ws pproc) <!> "PPROC")
+            (fun pos name proc -> {name=name; pos=pos; proc=proc})
+    ws (many pdef)

@@ -1,4 +1,6 @@
 ﻿module internal Expressions
+
+open LabsCore
 open Types
 open Tokens
 open FParsec
@@ -73,9 +75,8 @@ let makeBExprParser pexpr =
 
     opp.AddOperator(PrefixOperator("!", ws_, 3, false, ParseBExpr.mapB Neg))
 
-    expr >>= ParseBExpr.getB
+    expr >>= ParseBExpr.getB 
 
-let makeExprParser pref pid : Parser<_,_> =
 let makeExprParser pref pid : Parser<_> =
     let opp = new OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser
@@ -83,9 +84,10 @@ let makeExprParser pref pid : Parser<_> =
     
     let term =
         choice [
+            pextern |>> Extern |>> Leaf <!> "extern"
             followedBy pint32 >>. pint32 |>> Const |>> Leaf <!> "const"
             followedBy pid >>. pid |>> Id |>> Leaf <!> "id"
-            attempt (pref expr) |>> Ref <!> "ref"
+            attempt (ws (pref expr)) |>> Ref <!> "ref"
         ]
     
     let pprefixbinary tok op =

@@ -3,7 +3,7 @@ open Types
 open Templates
 open Expressions
 
-let translateProp sys (p:Property<Var*int>) =
+let translateProp (sys:SystemDef<_>) (p:Property<Var*int>) =
 
     let trId (sub:Map<_,_>) name =
         match sub.TryFind name with

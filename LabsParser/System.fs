@@ -1,15 +1,29 @@
 ﻿module internal System
 open FParsec
+
+open LabsCore
+open Tokens
 open Init
 open Types
 open Processes
+open Expressions
 
-let pspawn = 
-    ws ((ws IDENTIFIER) .>>. (ws COLON >>. pint32)) |> sepbycommas >>= toMap
+let pspawn =
+    let pspawnexpr:Parser<Expr<unit,unit>> = 
+        makeExprParser 
+            (fun _ -> fail "unexpected variable in constant expression") 
+            (skipString tID >>. notInIdentifier >>. fail "unexpected id in constant expression")
+    
+    (tuple3
+        (followedBy IDENTIFIER >>. getPosition)
+        (ws IDENTIFIER .>> (ws (skipChar ':')))
+        (ws pspawnexpr))
+    |> sepbycommas
 
-let pextern = ws ((sepbycommas (skipChar '_' >>. KEYNAME))) |>> Set.ofList
+let pextern = (sepbycommas ((skipChar '_' >>. KEYNAME) |> ws) |> ws)
 
-let psys = 
+let psys =
+    // TODO move away from here
     let makeRanges (mp: Map<'a, int>) =
         mp 
         |> Map.fold 
@@ -21,17 +35,15 @@ let psys =
     ws (skipString "system")
     >>. 
         (pipe4
-            (opt (pstringEq "extern" (ws (skipRestOfLine true))))
-            (opt (pstringEq "environment" (pkeys E)))
+            (opt (pstringEq "extern" pextern))
+            (opt (pstringEq "environment" (pkeys Location.E)))
             (pstringEq "spawn" pspawn <!> "SPAWN")
-            (processes)
-            (fun _ env spawn procs -> {
-                processes = procs;
-                environment = (env |> Option.defaultValue Set.empty);
-                spawn = (makeRanges spawn);
-                components = Map.empty;
-                properties = Map.empty;
-                stigmergies = Map.empty;
+            processes
+            (fun ext env spawn procs -> {
+                processes = procs
+                externals = Option.defaultValue [] ext
+                environment = Option.defaultValue [] env
+                spawn = spawn
             })
         |> betweenBraces)
         |> ws

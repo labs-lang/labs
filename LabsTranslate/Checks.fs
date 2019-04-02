@@ -1,57 +1,12 @@
 ﻿module internal Checks
-open Types
-open LabsCore
-open Link
-open Base
+
 open FSharpPlus
 
-/// Performs several checks related to components
-let checkComponents sys =
-    let undefBehaviors = 
-        sys.components
-        |> Map.filter (fun _ def -> not <| Map.containsKey "Behavior" def.processes)
-    if sys.components.IsEmpty then
-        Result.Error "No agents defined"
-    else
-        if undefBehaviors.IsEmpty then
-            Result.Ok ()
-        else
-            undefBehaviors
-            |> Map.map (fun name _ -> sprintf "%s: Behavior is undefined" name)
-            |> Map.values
-            |> String.concat "\n"
-            |> Result.Error
+open LabsCore
+open Types
+open Base
+open Link
 
-
-
-/// Verifies that all process names in the program have been defined.
-let checkNames sys =
-    let check definitions =
-        let formatErrorMsg where n =
-            sprintf "%s: Undefined name %s" where n
-        let isDefined n = Map.containsKey n definitions
-        definitions
-        |> Map.mapValues Process.usedNames
-        |> Map.map (fun k used ->
-            let undefs = Set.filter (not << isDefined) used
-            if undefs.IsEmpty then Ok()
-            else 
-                undefs
-                |> Set.map (formatErrorMsg k)
-                |> String.concat "\n"
-                |> Error
-        )
-        |> Map.values
-        |> Result.foldErrors (sprintf "%s\n%s") ""
-        |> fun x -> if x = "" then Ok() else Error x
-        
-    let checkAgent (a:ComponentDef<_>) =
-        check (Map.union a.processes sys.processes)
-
-    Map.mapValues checkAgent sys.components
-    |> Map.values
-    |> if sys.processes.IsEmpty then id else Seq.append (Seq.singleton (check sys.processes))
-    |> Seq.reduceBack (fun a b -> a >>= fun _ -> b)
 
 let analyzeKeys sys = 
     let comps = Map.values sys.components

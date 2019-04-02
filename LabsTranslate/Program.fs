@@ -1,4 +1,5 @@
-﻿open Base
+﻿open System
+open Base
 open Types
 open Checks 
 open Encode
@@ -15,7 +16,7 @@ let main argv =
 
     let checks sys = 
         async {
-            let! t1 = async { return checkNames sys } |> Async.StartChild
+//            let! t1 = async { return checkNames sys } |> Async.StartChild
             let! t2 = async { return checkComponents sys } |> Async.StartChild
             let! t3 = async { return analyzeKeys sys } |> Async.StartChild
             let! r1 = t1
@@ -58,7 +59,6 @@ let main argv =
 //            ]
 //            |> List.map ((Result.map (printfn "%s")) >> logErr)
 //            |> List.reduce (<&&>)
-
             
         let setEntryAgent info _ (agent:ComponentDef<_>) =
             setentry info agent.processes.["Behavior"]

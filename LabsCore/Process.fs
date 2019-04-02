@@ -18,7 +18,7 @@ type Composition =
 
 type Process<'a, 'b> =
     | BaseProcess of Base<'a, 'b>
-    | Guard of BExpr<'a, unit> * Process<'a, 'b> * 'b
+    | Guard of 'b * BExpr<'a, unit> * Process<'a, 'b>
     | Comp of Composition * Process<'a, 'b> list
 
 module Process =
@@ -27,7 +27,7 @@ module Process =
         match proc with
         | BaseProcess b ->
             fbase acc b
-        | Guard(g, p, _) ->
+        | Guard(_, g, p) ->
             recurse (fguard acc g) p
         | Comp(typ, l) -> 
             fcomp typ recurse acc l
@@ -36,14 +36,14 @@ module Process =
         let recurse = cata fbase fguard fcomp
         match proc with
         | BaseProcess b -> fbase b
-        | Guard(g, p, pos) -> fguard g pos (recurse p)
+        | Guard(pos, g, p) -> fguard g pos (recurse p)
         | Comp(typ, l) -> fcomp typ (l |> List.map recurse)
 
     let rec map fbase fguard proc =
         let recurse = map fbase fguard
         match proc with
         | BaseProcess b -> fbase b
-        | Guard(g, p, pos) -> Guard(fguard g, (recurse p), pos)
+        | Guard(pos, g, p) -> Guard(pos, fguard g, (recurse p))
         | Comp(typ, l) -> Comp(typ, List.map recurse l)
 
     let rec print proc =
@@ -71,12 +71,12 @@ module Process =
         let comp_ typ l =
             if List.length l = 1 then l.Head
             else Comp(typ, l)
-        cata (BaseProcess) (fun g pos p -> Guard(g, p, pos)) comp_ proc
+        cata (BaseProcess) (fun g pos p -> Guard(pos, g, p)) comp_ proc
     
     let usedNames proc = 
         let used_ acc b = 
             match b.stmt with
-            | Name n -> Set.add n acc
+            | Name n -> Set.add (n, b.pos) acc
             | _ -> acc
         fold used_ (fun x _ -> x) (fun _ -> Seq.fold) Set.empty proc
 

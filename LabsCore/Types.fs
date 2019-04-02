@@ -1,14 +1,14 @@
 module Types
 open Tokens
 
-type Location = 
+type Location =
     | I 
-    | L of name:string 
+    | L of name:string * tupleIndex: int
     | E
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
-            | L n -> sprintf "Stigmergy (%s)" n 
+            | L(n, _) -> sprintf "Stigmergy (%s)" n 
 
 type ArithmOp =
     | Plus | Minus
@@ -30,10 +30,12 @@ type UnaryOp =
 type LeafExpr<'b> =
     | Id of 'b
     | Const of int
+    | Extern of string
     override this.ToString() = 
         match this with
         | Id _ -> tID
         | Const v -> string v
+        | Extern s -> "_" + s
 and Expr<'a, 'b> =
     | Leaf of LeafExpr<'b>
     | Ref of Ref<'a, 'b>
@@ -111,9 +113,6 @@ module Action =
         (fun a -> a.updates),
         (fun u a -> {actionType=a.actionType; updates=u})
 
-type VarType = 
-    | Scalar
-    | Array of size:int
  /// Initialization values
  type Init =
      | Choose of Expr<unit,unit> list
@@ -124,14 +123,3 @@ type VarType =
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> sprintf "%O..%O" min max
         | Undef -> "undef"
-
-
-type Var = {
-    name:string
-    vartype:VarType
-    location:Location
-    init:Init
-}
-with 
-    override this.ToString() = this.name
-

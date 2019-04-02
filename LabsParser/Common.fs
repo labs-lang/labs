@@ -1,5 +1,7 @@
 ﻿[<AutoOpen>]
 module internal Common
+
+open LabsCore
 open Tokens
 open FParsec
 
@@ -12,6 +14,7 @@ let COLON : Parser<_> =         (skipChar ':')
 let COMMA : Parser<_> =         (skipChar ',')
 let EQ : Parser<_> =            (skipChar '=')
 let RANGE : Parser<_> =         (skipString "..")
+let OF : Parser<_> =            (skipString "of")
 let GUARD : Parser<_> =         (skipString tGUARD)
 let NEG : Parser<_> =           (skipString tNEG)
 let SEQ : Parser<_> =           (skipString tSEQ)
@@ -27,17 +30,17 @@ let ws p = p .>> spaces .>> skipMany lineComment .>> spaces
 let ws_ = ws (preturn ())
 
 let isAlphanum x = isAsciiLetter x || isDigit x
+let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum)
 
 // Parses reserved keyword so they are not parsed as identifiers or names
 let reserved : Parser<_> = 
     [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX]
     |> List.map pstring 
     |> choice
-    .>> notFollowedBy (satisfy isAlphanum)
+    .>> notInIdentifier
 
-let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum) |> ws
-
-let safeStrReturn str ret = (skipString str .>> notInIdentifier) >>% ret
+let safeSkip str = skipString str .>> notInIdentifier
+let safeStrReturn str ret = safeSkip str >>% ret
 
 let safeIdentifier options =
     (notFollowedBy reserved >>. identifier options)
@@ -54,7 +57,6 @@ let IDENTIFIER : Parser<_> =
         isAsciiIdStart=isAsciiUpper,
         isAsciiIdContinue=isAlphanum)
     |> safeIdentifier
-
 
 let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
@@ -108,3 +110,5 @@ let inline byName v = (^T : (member name : string) v)
 
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)
+    
+let pextern : Parser<_> = ((skipChar '_') >>. (KEYNAME))

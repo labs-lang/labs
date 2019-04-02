@@ -1,6 +1,7 @@
 ﻿module internal Expressions
 open LabsCore
 open Types
+
 open Link
 open Templates
 
@@ -20,6 +21,7 @@ let private translate trRef trId =
     let leaf_ = function
         | Id i -> trId i
         | Const i -> string i
+        | Extern s -> s (*THIS SHOULD NEVER MATCH *)
     let arithm_ = function
         | Plus -> sprintf "(%s) + (%s)"
         | Minus -> sprintf "(%s) - (%s)"
@@ -32,6 +34,7 @@ let private translate trRef trId =
         | UnaryMinus -> sprintf "-(%s)"
         | Abs -> sprintf "__abs(%s)"
     Expr.cata leaf_ arithm_ unary_ trRef
+
 
 /// Translates a variable reference.
 let trref cmp (v:Var, i:int) offset =

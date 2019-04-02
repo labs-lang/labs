@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Types.fs" />
+        <Compile Include="Duplicate.fs" />
+        <Compile Include="Library.fs" />
+        <Compile Include="Undefined.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FSharpPlus" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
+      <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
+    </ItemGroup>
+
+</Project>

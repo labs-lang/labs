@@ -68,31 +68,32 @@ let parse text (placeholders:Map<string, string>) =
         with
             ex -> Result.Error ex.Message
 
-    let stripped =
-        CharParsers.run stripComments text
-        |> function | Success(a, _, _) -> a | Failure(msg,_,_) -> failwith msg
+//    let stripped =
+//        CharParsers.run stripComments text
+//        |> function | Success(a, _, _) -> a | Failure(msg,_,_) -> failwith msg
 
-    let defPlaceholders =    
-        stripped
-        |> (wrapParserResult pre)
-        |>> (Set.filter ((<>) ""))
-        >>= checkPlaceholders
-        >>= fun def ->
-            // Check for undefined external variables
-            wrapParserResult allPlaceholders stripped
-            |>> Set.ofList |>> (Set.filter ((<>) ""))
-            |>> fun all -> (Set.difference all def)
-            >>= (fun diff ->
-                if Set.isEmpty diff then Result.Ok def else 
-                diff
-                |> Set.map ((+) "_")
-                |> withcommas
-                |> sprintf "External variables %s have not been defined in the 'extern' section." 
-                |> Result.Error)
+//    let defPlaceholders =    
+//        stripped
+//        |> (wrapParserResult pre)
+//        |>> (Set.filter ((<>) ""))
+//        >>= checkPlaceholders
+//        >>= fun def ->
+//            // Check for undefined external variables
+//            wrapParserResult allPlaceholders stripped
+//            |>> Set.ofList |>> (Set.filter ((<>) ""))
+//            |>> fun all -> (Set.difference all def)
+//            >>= (fun diff ->
+//                if Set.isEmpty diff then Result.Ok def else 
+//                diff
+//                |> Set.map ((+) "_")
+//                |> withcommas
+//                |> sprintf "External variables %s have not been defined in the 'extern' section." 
+//                |> Result.Error)
 
-    defPlaceholders
-    |>> ((Set.fold (fun (txt:string) ph -> txt.Replace("_"+ph, placeholders.[ph])) stripped))
-    >>= (wrapParserResult Parser.parse)
+    wrapParserResult Parser.parse text
+//    defPlaceholders
+//    |>> ((Set.fold (fun (txt:string) ph -> txt.Replace("_"+ph, placeholders.[ph])) stripped))
+//    >>= (wrapParserResult Parser.parse)
 
 let enumerate s = 
     s
