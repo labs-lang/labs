@@ -9,6 +9,7 @@ open Properties
 open Liquid
 open FSharpPlus.Operators
 open FSharpPlus.Lens
+open Tokens
 
 /// Computes a unique entry point for each base process in the input process.
 let setentry info =
@@ -112,9 +113,9 @@ let encode (entry:EntryPoint<_>) (exit:Map<_,_>) (guards:Map<_,_>) =
                 let compare_ _ e1 e2 = Set.union (getLstigVars e1) (getLstigVars e2)
                 BExpr.cata (fun _ -> Set.empty) id compare_ (fun _ -> Set.union)
             action
-            |>> (fun a -> a.updates)
-            |>> List.map (getLstigVars << snd)
+            |>> (fun a -> List.map (getLstigVars << snd) a.updates)
             |>> Set.unionMany
+            |> Option.orElse (Some Set.empty)
             |>> Set.union (guards.[b] |> Set.map getLstigVarsBExpr |> Set.unionMany)
             |>> Seq.map (Int << snd)
             |> Option.defaultValue (Seq.empty)
@@ -157,7 +158,11 @@ let encode (entry:EntryPoint<_>) (exit:Map<_,_>) (guards:Map<_,_>) =
                 |> Seq.map Str
                 |> Lst
                 
-            "labs", Str (action |>> string |> Option.defaultValue "")
+            "labs",
+                (action |>> string |> Option.defaultValue "Skip")
+                |> (+) tGUARD
+                |> (+) (guards.[b] |> Set.map string |> String.concat " and ")
+                |> Str
             "type", (action
                 |>> fun a -> a.actionType
                 |>> function | I -> "attr" | L _ -> "lstig" | E -> "env"
@@ -230,7 +235,7 @@ let translateHeader isSimulation noBitvectors bound sys (mapping:KeyMapping) (en
     let maxPc =
         entrypoints
         |> Map.values
-        |> Seq.map (flip (^.) _3)
+        |> Seq.map (view _3)
         |> Seq.max
 
     let maxcomps = 
