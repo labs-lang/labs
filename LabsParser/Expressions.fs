@@ -75,7 +75,6 @@ let makeBExprParser pexpr =
 
     expr >>= ParseBExpr.getB
 
-let makeExprParser pref pid : Parser<_,_> =
 let makeExprParser pref pid : Parser<_> =
     let opp = new OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser

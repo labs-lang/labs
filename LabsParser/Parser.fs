@@ -7,7 +7,7 @@ open System
 open Stigmergies
 open Properties
  
-let parse (externs: Map<string, int>) =
+let parse =
     ws_ >>. pipe4
         psys 
         (ws ((plstig |> ws |> many) >>= toMap))
