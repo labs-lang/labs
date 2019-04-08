@@ -36,6 +36,8 @@ pc[firstAgent][{{pc.pc}}] == {{pc.values}}{% unless forloop.last %} & {% endunle
             else {
                 firstAgent++;
             }
+            {%- else -%}
+            firstAgent = nondet();
             {%- endif -%}
         }
         else {
