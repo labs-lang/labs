@@ -48,17 +48,6 @@ let main argv =
             {toVar with components = Map.mapValues unfoldedBehavior toVar.components}
 
         let bound = cli.GetResult (Bound, defaultValue=1)
-//            let sys, trees, _, _, _, _ = x
-//            [
-//                translateHeader (cli.Contains Simulation) (cli.Contains No_Bitvector)  bound x
-//                translateInit (sys, trees, m)
-//                translateAll trees
-//                translateCanProceed trees
-//                translateMain (cli.Contains Fair) (sys, trees)
-//            ]
-//            |> List.map ((Result.map (printfn "%s")) >> logErr)
-//            |> List.reduce (<&&>)
-
             
         let setEntryAgent info _ (agent:ComponentDef<_>) =
             setentry info agent.processes.["Behavior"]
