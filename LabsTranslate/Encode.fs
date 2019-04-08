@@ -103,7 +103,7 @@ let setExit (entrypoints:EntryPoint<_>) (procs:Map<_,_>) proc =
     |> snd
 
 /// Returns a C encoding for a process
-let encode (entry:EntryPoint<_>) (exit:Map<_,_>) (guards:Map<_,_>) =
+let encode sync (entry:EntryPoint<_>) (exit:Map<_,_>) (guards:Map<_,_>) =
     let base_ (b:Base<_,_>) =
         let action = match b.stmt with | Act a -> Some a | _ -> None
         
@@ -169,6 +169,7 @@ let encode (entry:EntryPoint<_>) (exit:Map<_,_>) (guards:Map<_,_>) =
                 |> Option.defaultValue ""
                 |> Str)
             "qrykeys", qrykeys
+            "sync", sync |> Bool
             "assignments", (action
                 |>> fun a -> a.updates
                 |>> Seq.map liquidAssignment

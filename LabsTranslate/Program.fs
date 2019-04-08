@@ -76,7 +76,7 @@ let main argv =
         let exit = mapAgents (fun v -> setExit entrypoints (mergeProcesses v)) s'.components
     
         let translateAgents = 
-            mapAgents (fun v -> encode entrypoints exit.[v.name] guards) s'.components
+            mapAgents (fun v -> encode (cli.Contains Sync) entrypoints exit.[v.name] guards) s'.components
             |> Map.values
         // Allons-y!    
         [

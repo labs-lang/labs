@@ -37,6 +37,8 @@ HELPMSG = {
 
     "steps": "Number of system evolutions.",
 
+    "sync": "Force synchronous stigmergy messages",
+
     "timeout": """configure time limit (seconds). If 0, no timeout"""
 }
 
@@ -78,25 +80,27 @@ else:
     TIMEOUT_CMD = "/usr/local/bin/gtimeout"
 
 
-def parse_linux(file, values, bound, fair, simulate, bv):
+def parse_linux(file, values, bound, fair, simulate, bv, sync):
     call = [
         "labs/LabsTranslate",
         "--file", file,
         "--bound", str(bound)]
+    flags = [
+        (fair, "--fair"), (simulate, "--simulation"),
+        (not bv, "--no-bitvector"), (sync, "--sync")
+    ]
+
     if values:
         call.extend(["--values"] + list(values))
-    if fair:
-        call.append("--fair")
-    if simulate:
-        call.append("--simulation")
-    if not bv:
-        call.append("--no-bitvector")
+    for a, b in flags:
+        if a:
+            call.append(b)
     try:
         out = check_output(call, env=env)
-        fname = "".join((
-            file[:-5], "_",
+        fname = "_".join((
+            file[:-5], str(bound), ("fair" if fair else ""),
             "".join(v.replace("=", "") for v in values),
-            "_", str(uuid.uuid4())[:6], ".c"))
+            str(uuid.uuid4())[:6])) + ".c"
         with open(fname, 'wb') as out_file:
             out_file.write(out)
         return out.decode("utf-8"), fname, raw_info(call)
@@ -125,8 +129,9 @@ def DEFAULTS(name):
 @click.option('--simulate', default=0, type=int, **DEFAULTS("simulate"))
 @click.option('--show', default=False, is_flag=True, **DEFAULTS("show"))
 @click.option('--steps', default=1, type=int, **DEFAULTS("steps"))
+@click.option('--sync/--no-sync', default=False, **DEFAULTS("sync"))
 @click.option('--timeout', default=0, type=int, **DEFAULTS("timeout"))
-def main(file, backend, steps, fair, bv, simulate, show, values, timeout,
+def main(file, backend, steps, fair, bv, simulate, show, sync, values, timeout,
          debug):
     """
 * * *  SLiVER - Symbolic LAbS VERification. v1.1 (November 2018) * * *
@@ -138,7 +143,7 @@ VALUES -- assign values for parameterised specification (key=value)
 
     print("Encoding...", file=sys.stderr)
     c_program, fname, info = parse_linux(
-        file, values, steps, fair, simulate, bv)
+        file, values, steps, fair, simulate, bv, sync)
     info = info.decode().replace("\n", "|")[:-1]
     if fname:
         if show:
