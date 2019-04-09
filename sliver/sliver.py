@@ -10,7 +10,6 @@ import uuid
 from cex import translateCPROVER
 from modules.info import raw_info
 
-
 SYS = platform.system()
 
 
@@ -97,16 +96,33 @@ def parse_linux(file, values, bound, fair, simulate, bv, sync):
             call.append(b)
     try:
         out = check_output(call, env=env)
-        fname = "_".join((
-            file[:-5], str(bound), ("fair" if fair else ""),
-            "".join(v.replace("=", "") for v in values),
-            str(uuid.uuid4())[:6])) + ".c"
+        fname = make_filename(file, values, bound, fair, sync)
         with open(fname, 'wb') as out_file:
             out_file.write(out)
         return out.decode("utf-8"), fname, raw_info(call)
     except CalledProcessError as e:
         print(e, file=sys.stderr)
         return None, None, None
+
+
+def make_filename(file, values, bound, fair, sync):
+    result = "_".join((
+        file[:-5],
+        str(bound), ("fair" if fair else "unfair"),
+        ("sync" if sync else ""),
+        "".join(v.replace("=", "") for v in values),
+        str(uuid.uuid4())[:6])) + ".c"
+    return result.replace("__", "_")
+
+
+def cleanup(fname, backend):
+    try:
+        remove(fname)
+        if backend == "cseq":
+            for suffix in ("", ".map", ".cbmc-assumptions.log"):
+                remove("_cs_" + fname + suffix)
+    except FileNotFoundError:
+        pass
 
 
 def DEFAULTS(name):
@@ -148,6 +164,7 @@ VALUES -- assign values for parameterised specification (key=value)
     if fname:
         if show:
             print(c_program)
+            cleanup(fname, backend)
             return
 
         if simulate:
@@ -211,13 +228,7 @@ VALUES -- assign values for parameterised specification (key=value)
                     print(translateCPROVER(out, fname, info))
                 else:
                     print(out)
-            try:
-                remove(fname)
-                if backend == "cseq":
-                    for suffix in ("", ".map", ".cbmc-assumptions.log"):
-                        remove("_cs_" + fname + suffix)
-            except FileNotFoundError:
-                pass
+            cleanup(fname, backend)
 
 
 if __name__ == "__main__":
