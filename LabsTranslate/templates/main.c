@@ -11,7 +11,7 @@ void finally() {
 
 int main(void) {
     init();
-    TYPEOFAGENTID firstAgent{% if firstagent == 0 %} = 0{% endif %};
+    TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0{% endif %};
     Bool sys_or_not[BOUND];
 
 
