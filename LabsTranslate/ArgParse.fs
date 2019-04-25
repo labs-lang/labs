@@ -5,7 +5,8 @@ type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string
     | [<Mandatory>] [<Unique>] Bound of int
     | Fair
-    | No_Bitvector 
+    | No_Bitvector
+    | Sync
     | Info
     | Simulation
     | [<Unique>] Values of string list
@@ -17,6 +18,7 @@ type Arguments =
             | No_Bitvector _ -> "disable bitvector optimizations"
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
+            | Sync _ -> "force syncronous sending of stigmergic messages"
             | Simulation _ -> "encode in simulation mode (default: verification mode)."
             | Fair -> "enforce fair interleaving of components."
 

@@ -29,6 +29,11 @@ void {{label}}(int tid) {
     __VERIFIER_assume(HinCnt[tid] == 0);
     {%- endif -%}
 
+    {%- if sync -%}
+    {% if qrykeys.size > 0 -%}confirm();{% endif %}
+    {% if type == "lstig" -%}propagate();{% endif %}
+    {%- endif -%}
+
     {%- for item in mypcexit -%}
     {%- if item.values.size == 1-%}
     pc[tid][{{ item.pc }}] = {{ item.values.first }};
@@ -36,7 +41,7 @@ void {{label}}(int tid) {
     TYPEOFPC pc{{item.pc}};
     LABSassume({%- for val in item.values -%} (pc{{ item.pc }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
     pc[tid][{{ item.pc }}] = pc{{ item.pc }};
-    {%-endif-%}{%- endfor -%}
+    {%- endif -%}{%- endfor -%}
 
     {%- if parcheck.size > 0 -%}
     if ({%- for item in parcheck -%}pc[{{item}}] == 0 {% unless forloop.last %} & {% endunless %}{%-endfor-%}){

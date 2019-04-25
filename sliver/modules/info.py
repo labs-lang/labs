@@ -8,6 +8,9 @@ from ast import NodeVisitor, parse
 
 
 class LabsExprVisitor(NodeVisitor):
+    def __init__(self, _id):
+        self.id = _id
+
     def visit_string(self, s):
         return self.visit(parse(s))
 
@@ -19,6 +22,9 @@ class LabsExprVisitor(NodeVisitor):
 
     def visit_Num(self, node):
         return node.n
+
+    def visit_Name(self, node):
+        return self.id if node.id == "id" else None
 
     def visit_BinOp(self, node):
         lvalue, rvalue = self.visit(node.left), self.visit(node.right)
@@ -57,7 +63,6 @@ class LabsExprVisitor(NodeVisitor):
 
 
 SYS = platform.system()
-visitor = LabsExprVisitor()
 
 if "Linux" in SYS:
     env = {"LD_LIBRARY_PATH": "labs/libunwind"}
@@ -174,6 +179,7 @@ class Variable:
         """
         self.index = int(index)
         self.size = 1
+        visitor = LabsExprVisitor(self.index)
         print(">>>", index, name, init)
         if "[" in name:
             self.name, size = name.split("[")

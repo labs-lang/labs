@@ -11,8 +11,8 @@ void finally() {
 
 int main(void) {
     init();
-    TYPEOFAGENTID firstAgent{% if firstagent == 0 %} = 0{% endif %};
-    _Bool sys_or_not[BOUND];
+    TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0{% endif %};
+    Bool sys_or_not[BOUND];
 
 
     unsigned __LABS_step;
@@ -36,10 +36,12 @@ pc[firstAgent][{{pc.pc}}] == {{pc.values}}{% unless forloop.last %} & {% endunle
             else {
                 firstAgent++;
             }
+            {%- else -%}
+            firstAgent = nondet();
             {%- endif -%}
         }
         else {
-            _Bool propagate_or_confirm; 
+            Bool propagate_or_confirm; 
 
             if (propagate_or_confirm) propagate();
             else confirm();
