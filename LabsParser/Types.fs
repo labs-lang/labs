@@ -57,30 +57,30 @@ type Var = {
             member this.Pos = this.position
             member this.Name = this.name
 
-type ProcDef<'a> =
+type ProcDef =
     {
         name: string
         pos: Position
-        proc: Process<'a, Position>
+        proc: Process<string, Position>
     }
     interface INode with
     member this.Pos = this.pos
     member this.Name = this.name
 
-type Sys<'a> = {
+type Sys = {
     environment: Var list
     externals: string list
     spawn: (Position * string * Expr<unit, unit>) list
-    processes: ProcDef<'a> list
+    processes: ProcDef list
 }
 
-type Agent<'a> =
+type Agent =
     {
         pos: Position
         name: string
         iface: Var list
         lstig: string list
-        processes: ProcDef<'a> list
+        processes: ProcDef list
     }
     interface INode with
         member this.Pos = this.pos
@@ -121,4 +121,4 @@ type Property<'a> =
         member this.Pos = this.pos
         member this.Name = this.name
 
-type Ast = Sys<string> * Stigmergy<string> list * Agent<string> list * Property<string> list
+type Ast = Sys * Stigmergy<string> list * Agent list * Property<string> list
