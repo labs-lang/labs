@@ -74,6 +74,8 @@ let setExit (entrypoints:EntryPoint<_>) (procs:Map<_,_>) proc =
         ) Map.empty s
     let toExits entrypoint = joinEntrypoints (Seq.singleton entrypoint)
     
+    // curExit accumulates the exitpoints for a BaseProcess.
+    // Acc is the map BaseProcess -> exitpoint
     let rec setExit_ (curExit, acc) = function
     | BaseProcess b ->
         let findRecursion name (pos:FParsec.Position) =
@@ -81,7 +83,8 @@ let setExit (entrypoints:EntryPoint<_>) (procs:Map<_,_>) proc =
             |> Set.map (if name = "Behavior" then id else chStreamName pos.StreamName)
             |> Set.map e' 
             |> joinEntrypoints
-
+        
+        // The entrypoint of b is (part of) the curExit for its predecessors 
         let exits =
             match b.stmt with
             | Name n -> findRecursion n b.pos
