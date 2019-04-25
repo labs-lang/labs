@@ -40,10 +40,14 @@ agent Bird {
             (x + dirX % _grid = repX and y + dirY % _grid = repY ->
                 Skip)
             ++
-            (x + dirX % _grid != repX  or y + dirY % _grid != repy ->
-                x, y <- (x + dirX) % _grid, (y + dirY) % _grid)
-        );
-        repX, repY <~ x, y
+            (x + dirX % _grid != repX  or y + dirY % _grid != repY ->
+                (x + dirX % _grid = x + dirX and (y + dirY % _grid) = y + dirY ->
+                    x, y <- (x + dirX), (y + dirY))
+                ++
+                (x + dirX % _grid != x + dirX or y + dirY % _grid != x + dirY ->
+                    Skip)
+            );
+        repX, repY <~ x, y)
         
 
     Attract = (

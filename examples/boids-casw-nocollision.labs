@@ -25,7 +25,7 @@ stigmergy Alignment {
 
 
 agent Bird {
-    interface = x: 0.._grid; y: 0.._grid
+    interface = x: (3*id)..(3*id + 2); y: (3*id)..(3*id + 2)
     stigmergies = Cohesion; Alignment; Separation
     
     # At first, every agent is the leader of their own swarm.
@@ -36,12 +36,12 @@ agent Bird {
 
     # Only move if there is no agent on the destination position
     Move = (
-            (x + dirX % _grid = repX and y + dirY % _grid = repY ->
+            ((x + dirX) % _grid = repX and (y + dirY) % _grid = repY ->
                 Skip)
             ++
-            (x + dirX % _grid != repX  or y + dirY % _grid != repy ->
-                x, y <- (x + dirX) % _grid, (y + dirY) % _grid)
-        );
+            ((x + dirX) % _grid != repX  or (y + dirY) % _grid != repY ->
+                    x, y <- (x + dirX) % _grid , (y + dirY) % _grid
+            ));
         repX, repY <~ x, y
         
 
@@ -67,6 +67,8 @@ agent Bird {
 }
 
 check {
-    OneLeader = finally forall Bird b1, forall Bird b2, 
-        leader of b1 = leader of b2
+    NoCollision = always forall Bird b1, forall Bird b2, 
+        id of b1 = id of b2 or
+        x of b1 != x of b2 or 
+        y of b1 != y of b2
 }

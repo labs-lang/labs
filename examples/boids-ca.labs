@@ -26,7 +26,7 @@ stigmergy Alignment {
 
 agent Bird {
     interface = x: 0.._grid; y: 0.._grid
-    stigmergies = Cohesion; Alignment; Separation
+    stigmergies = Cohesion; Alignment
     
     # At first, every agent is the leader of their own swarm.
     # Exchange of stigmergic messages naturally leads to the
@@ -34,15 +34,14 @@ agent Bird {
     Behavior = Move; Attract; Behavior
 
 
-    # Only move if there is no agent on the destination position
-    Move = (
-            (x + dirX % _grid = repX and y + dirY % _grid = repY ->
-                Skip)
-            ++
-            (x + dirX % _grid != repX  or y + dirY % _grid != repy ->
-                x, y <- (x + dirX) % _grid, (y + dirY) % _grid)
-        );
-        repX, repY <~ x, y
+    # Only move if not on edges
+    Move =
+        ((x + dirX) % _grid = x + dirX and (y + dirY % _grid) = y + dirY ->
+            x, y <- (x + dirX), (y + dirY))
+        ++
+        (x + dirX % _grid != x + dirX or y + dirY % _grid != x + dirY ->
+            Skip)
+    
         
 
     Attract = (
