@@ -109,9 +109,12 @@ module Process =
             let base_ b = 
                 match b.stmt with
                 | Name n when n=name || n="Behavior" -> BaseProcess b
-                | Name n when (not (Set.contains b visited)) -> 
-                    expand_ (visited.Add b) n 
-                    |> map ((tagfn n b.pos) >> BaseProcess) id
+                | Name n when (not (Set.contains b visited)) ->
+                    match procs.TryFind n with
+                    | Some _ -> 
+                        expand_ (visited.Add b) n 
+                        |> map ((tagfn n b.pos) >> BaseProcess) id
+                    | None -> failwith n
                 | _ -> BaseProcess b
             map base_ id procs.[name]
         expand_ Set.empty name
