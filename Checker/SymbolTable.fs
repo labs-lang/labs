@@ -1,10 +1,9 @@
 namespace Checker
-open FParsec
 open LabsCore
-open Checker
 open Types
-open Checks
-open CheckResult
+open Externs
+open Message
+open Outcome
 
 type Mapping = {
     map: Map<string, int * Location>
@@ -16,7 +15,7 @@ with
     static member empty = {map=Map.empty; nextI=0; nextE=0; nextL=0}
     member this.Item with get(key:string) = this.map.[key]
     member this.TryFind key = this.map.TryFind key
-    member this.mapvar (vardef:Def<Var>) = 
+    member this.mapvar (vardef:Node<Var>) = 
         if this.map.ContainsKey vardef.name then this
         else
             let updateMap index = Map.add vardef.name (index, vardef.def.location) this.map
@@ -36,11 +35,11 @@ type TableType =
 
 /// Represents information processed from a Def<>
 and SymbolTable = {
-    source: Def<unit>
+    source: Node<unit>
     tableType: TableType
     mapping: Mapping
     variables: Map<string, Var>
-    processes : Map<string, Def<Process<int*Location, Position>>>
+    processes : Map<string, Node<Process<int*Location, Position>>>
     children: Map<string, SymbolTable>
 }
 
@@ -56,8 +55,6 @@ with
         }
 
 module SymbolTable = 
-    open System
-    open System.Collections.Generic
 
     let rec walk fnode fmerge table =
         let recurse = walk fnode fmerge
@@ -67,18 +64,19 @@ module SymbolTable =
         | Agent t
         | Stigmergy(t, _) -> fmerge (fnode table) (recurse t)
     
-    let mapVar (v:Def<Var>) table =
+    let mapVar (v:Node<Var>) table =
         table.mapping.mapvar v
         <~> fun m' -> zero {table with mapping = m'}
         
-    let tryAddVar (vardef:Def<Var>) table =
+    let tryAddVar (vardef:Node<Var>) table =
         // TODO SOLVE EXTERNS IN DEF.INIT
         zero {table with variables = Map.add vardef.name vardef.def table.variables}
     
     /// Basic function to retrieve the mapping of variable named k
     let findString table k =
         let find_ t = t.mapping.TryFind k in walk find_ (Option.orElse) table
-        |> function Some x -> x | None -> raise (LabsException ({what=UndefRef k; where=[table.source.pos]})) //TODO add correct position
+        //TODO add correct position
+        |> function Some x -> x | None -> raise (LabsException ({what=UndefRef k; where=[table.source.pos]})) 
     
     let toVarRef f r o =
         {var=f r.var; offset=o}
@@ -87,7 +85,7 @@ module SymbolTable =
     let toVarBExpr f b =
         BExpr.map (BLeaf) (toVarExpr f) b
     
-    let toVarProcess proc table =
+    let toVarProcess table proc =
         let toVarBase f b =    
             match b.stmt with 
             | Act a ->
@@ -101,27 +99,29 @@ module SymbolTable =
             | Name s -> {stmt=Name s; pos=b.pos}
         Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
     
-    let tryAddProcess externs (p: Def<Process<_,_>>) table =
-        try
-            let proc = (Process.simplify >> toVarProcess) p.def table |> Process.replaceExterns externs 
-            let p' = {name=p.name; pos=p.pos; def=proc}
-            zero {table with SymbolTable.processes = Map.add p.name p' table.processes}
-        with | :? LabsException as err -> wrap table [] [err.Data0]
+    let tryAddProcess externs (p: Node<Process<_,_>>) table =
+        let p' = map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs) p
+        zero {table with SymbolTable.processes = Map.add p.name p' table.processes}
     
-    let tryAddStigmergy externs (s: Def<Stigmergy<string>>) table =
-        let link = (BExpr.replaceExterns externs) s.def.link |> toVarBExpr (fun (x,y) -> findString table x, y)
-        zero (SymbolTable.empty s (Stigmergy(table, link)))
+    let tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
+        let link = map (BExpr.replaceExterns externs >> toVarBExpr (fun (x,y) -> findString table x, y)) s.def.link 
+        zero (SymbolTable.empty s (Stigmergy(table, link.def)))
         <~> fun x -> zero {table with children= Map.add s.name x table.children}
     
-    let tryAddAgent externs (a:Def<Agent<_>>) table =    
+    let tryAddAgent externs (a:Node<Agent>) table =
+        // Keep track of the unfolded process
+        let chpos name pos (b:Base<_,Position>) =
+            let p=b.pos in let p' = Position((sprintf "%s@%O" name pos), p.Index, p.Line, p.Column)
+            {b with pos = p'}
+                
         zero (SymbolTable.empty a (Agent(table)))
-        <~> trFold tryAddVar a.def.iface
-        <~> trFold (tryAddProcess externs) a.def.processes
+        <~> fold tryAddVar a.def.iface
+        <~> fold (tryAddProcess externs) a.def.processes
         <?> fun x ->
             (* expand the Behavior process *)
             let procmap = walk (fun x -> x.processes |> Map.mapValues (fun x -> x.def)) (Map.union) x
             try 
                 let expandedBehavior = {x.processes.["Behavior"] with def = Process.expand chpos procmap "Behavior"}
                 zero {x with processes = x.processes.Add("Behavior", expandedBehavior)}
-            with err -> wrap table [] [{ErrorMessage.what=UndefProcess err.Message; where=[a.pos]}] //TODO add correct position
+            with err -> wrap table [] [{what=UndefProcess err.Message; where=[a.pos]}] //TODO add correct position
         <~> fun x -> zero {table with children = Map.add a.name x table.children} 

@@ -5,10 +5,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Types.fs" />
-        <Compile Include="Duplicate.fs" />
+        <Compile Include="Message.fs" />
+        <Compile Include="Outcome.fs" />
+        <Compile Include="Checks.fs" />
+        <Compile Include="Externs.fs" />
+        <Compile Include="SymbolTable.fs" />
         <Compile Include="Library.fs" />
-        <Compile Include="Undefined.fs" />
     </ItemGroup>
 
     <ItemGroup>
