@@ -1,7 +1,6 @@
 ﻿[<AutoOpen>]
 module internal Common
 
-open LabsCore
 open Tokens
 open FParsec
 

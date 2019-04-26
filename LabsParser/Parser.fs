@@ -14,18 +14,3 @@ let parse =
         ((pcomp |> ws |> many))
         (pproperties <!> "PROPERTIES")
     <!> "PARSER"
-
-//let stripComments = 
-//    stringsSepBy (manySatisfy ((<>) '#')) (lineComment >>% "")
-//
-//let pre =
-//    attempt (skipMany1Till skipAnyChar (eof <|> followedBy (pstring "extern"))
-//    >>. (pstringEq "extern" (ws pextern))
-//    .>> skipMany1Till skipAnyChar (eof)) <|> preturn Set.empty
-//
-//let allPlaceholders =
-//    let pplaceholder = (skipChar '_') >>. KEYNAME
-//    manyTill
-//        (skipMany1Till skipAnyChar (eof <|> followedBy pplaceholder) >>. 
-//        ((followedBy eof >>. preturn "") <|> pplaceholder))
-//        (followedBy eof)

@@ -1,7 +1,6 @@
 ﻿module internal System
 open FParsec
 
-open LabsCore
 open Tokens
 open Init
 open Types
@@ -14,26 +13,21 @@ let pspawn =
             (fun _ -> fail "unexpected variable in constant expression") 
             (skipString tID >>. notInIdentifier >>. fail "unexpected id in constant expression")
     
-    (tuple3
+    (pipe3
         (followedBy IDENTIFIER >>. getPosition)
         (ws IDENTIFIER .>> (ws (skipChar ':')))
-        (ws pspawnexpr))
+        (ws pspawnexpr)
+        (fun pos name expr -> {pos=pos; name=name; def=expr})
+    )
     |> sepbycommas
 
 let pextern = (sepbycommas ((skipChar '_' >>. KEYNAME) |> ws) |> ws)
 
 let psys =
-    // TODO move away from here
-    let makeRanges (mp: Map<'a, int>) =
-        mp 
-        |> Map.fold 
-            (fun (c, m) name num -> 
-                let newC = c + num
-                (newC, (Map.add name (c, newC) m) )) (0, Map.empty) 
-        |> snd
-
-    ws (skipString "system")
-    >>. 
+    (followedBy (skipString "system"))
+    >>. getPosition
+    .>> ws (skipString "system")
+    .>>. 
         (pipe4
             (opt (pstringEq "extern" pextern))
             (opt (pstringEq "environment" (pkeys Location.E)))
@@ -47,3 +41,4 @@ let psys =
             })
         |> betweenBraces)
         |> ws
+    |>> (fun (pos, sys) -> {name="system"; pos=pos; def=sys})

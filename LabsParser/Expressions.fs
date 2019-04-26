@@ -1,6 +1,5 @@
 ﻿module internal Expressions
 
-open LabsCore
 open Types
 open Tokens
 open FParsec

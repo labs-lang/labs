@@ -13,10 +13,11 @@ let pcomp =
             (opt (pstringEq "interface" (pkeys I)))
             (opt (pstringEq "stigmergies" (ws IDENTIFIER |> sepbysemis)))
             processes <!> "PROCESSES") |> betweenBraces)
-        (fun pos n (i, l, procs) ->
-            {
-                pos = pos
+        (fun pos n (i, l, procs) -> {
+            pos=pos; name=n;
+            def = {
                 name = n
                 iface = Option.defaultValue [] i
                 lstig = Option.defaultValue [] l 
-                processes = procs })
+                processes = procs
+        }})

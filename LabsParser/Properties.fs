@@ -41,13 +41,12 @@ let pproperty =
         pmodality
         ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
         pbaseprop
-        (fun pos n m qs pred -> {
-            pos=pos
+        (fun pos n m qs pred -> {pos=pos; name=n; def= {
             name=n
             modality=m
             quantifiers=qs
             predicate=pred
-        })
+        }})
 
 let pproperties =
     ws_

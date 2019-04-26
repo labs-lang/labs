@@ -65,5 +65,5 @@ let processes =
             ((followedBy IDENTIFIER) >>. getPosition) 
             (ws IDENTIFIER)
             ((ws EQ) >>. (ws pproc) <!> "PPROC")
-            (fun pos name proc -> {name=name; pos=pos; proc=proc})
+            (fun pos name proc -> {name=name; pos=pos; def=proc})
     ws (many pdef)
