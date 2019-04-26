@@ -1,90 +1,42 @@
 ﻿[<AutoOpen>]
 module Types
 open FParsec
-open FParsec
 open LabsCore
 open Types
 
-
-//    
-//type ComponentDef<'a> = { 
-//    name: string
-//    iface: Set<Var>
-//    lstig: string list
-//    processes: Map<string, Process<'a, FParsec.Position>>
-//}
-//
-//type SystemDef<'a> = {
-//    environment: Set<Var>
-//    stigmergies: Map<string,Stigmergy<'a>>
-//    components: Map<string, ComponentDef<'a>>
-//    processes: Map<string, Process<'a, FParsec.Position>>
-//    spawn: Map<string, int*int>
-//    properties: Map<string, Property<'a>>
-//} with
-//    member this.ifaceVars = 
-//        lazy
-//            this.components
-//            |> Map.mapValues (fun c -> c.iface)
-//            |> Map.values
-//            |> Set.unionMany
-//    member this.lstigVars =
-//        lazy
-//            this.stigmergies
-//            |> Map.mapValues (fun s -> s.vars |> Set.unionMany)
-//            |> Map.values
-//            |> Set.unionMany  
-
-
-type INode =
-    abstract member Pos: Position
-    abstract member Name: string
-
+type Node<'a> = {
+    name: string
+    pos: Position
+    def: 'a
+}
     
 type VarType = 
     | Scalar
     | Array of size:int
+
 type Var = {
         name: string
         vartype: VarType
         location: Location
-        position: Position
         init:Init
     }
     with 
         override this.ToString() = this.name
-        interface INode with
-            member this.Pos = this.position
-            member this.Name = this.name
-
-type ProcDef =
-    {
-        name: string
-        pos: Position
-        proc: Process<string, Position>
-    }
-    interface INode with
-    member this.Pos = this.pos
-    member this.Name = this.name
 
 type Sys = {
-    environment: Var list
+    environment: Node<Var> list
     externals: string list
-    spawn: (Position * string * Expr<unit, unit>) list
-    processes: ProcDef list
+    spawn: Node<Expr<unit, unit>> list
+    processes: Node<Process<string, Position>> list
 }
 
 type Agent =
     {
-        pos: Position
         name: string
-        iface: Var list
+        iface: Node<Var> list
         lstig: string list
-        processes: ProcDef list
+        processes: Node<Process<string, Position>> list
     }
-    interface INode with
-        member this.Pos = this.pos
-        member this.Name = this.name
 
 type LinkComponent = | C1 | C2
 
@@ -92,14 +44,10 @@ type Link<'a> = BExpr<'a * LinkComponent, LinkComponent>
 
 type Stigmergy<'a> =
     {
-        pos: Position
         name: string
-        vars: Set<Var> list
-        link: Link<'a>
+        vars: Set<Node<Var>> list
+        link: Node<Link<'a>>
     }
-    interface INode  with
-        member this.Pos = this.pos
-        member this.Name = this.name
 
 type Modality =
     | Always
@@ -111,14 +59,10 @@ type Quantifier =
 
 type Property<'a> =
     {
-        pos: Position
         name:string
         predicate:BExpr<'a * string option, string>
         modality:Modality
         quantifiers: Map<string, string * Quantifier>
     }
-    interface INode  with
-        member this.Pos = this.pos
-        member this.Name = this.name
 
-type Ast = Sys * Stigmergy<string> list * Agent list * Property<string> list
+type Ast = Node<Sys> * Node<Stigmergy<string>> list * Node<Agent> list * Node<Property<string>> list
