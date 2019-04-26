@@ -2,6 +2,7 @@
 open Types
 
 module Expr =
+
     let rec fold fleaf fref acc expr = 
         let recurse = fold fleaf fref
         match expr with
@@ -54,8 +55,6 @@ module Expr =
             | UnaryMinus -> fun x -> -x
             | Abs -> abs
         cata leaf_ arithm_ unary_ (fun _ _ -> failwith "Not a constexpr") expr
-
-
         
 module BExpr = 
     let rec map fleaf fexpr bexpr =
