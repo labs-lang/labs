@@ -57,7 +57,7 @@ let run externs (sys, lstigs, agents', properties) =
     <??> undefSpawned
     
     (* map non-interface variables *)
-    <~> fold tryAddVar envAndLstigVars
+    <~> fold (tryAddVar externs) envAndLstigVars
     <~> fold mapVar envAndLstigVars
     
     (*Map attributes; add stigmergies, global processes, agents*)

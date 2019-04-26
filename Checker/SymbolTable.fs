@@ -68,9 +68,9 @@ module SymbolTable =
         table.mapping.mapvar v
         <~> fun m' -> zero {table with mapping = m'}
         
-    let tryAddVar (vardef:Node<Var>) table =
-        // TODO SOLVE EXTERNS IN DEF.INIT
-        zero {table with variables = Map.add vardef.name vardef.def table.variables}
+    let tryAddVar externs (vardef:Node<Var>) table =
+        let vardef' = map (Var.replaceExterns externs) vardef
+        zero {table with variables = Map.add vardef.name vardef'.def table.variables}
     
     /// Basic function to retrieve the mapping of variable named k
     let findString table k =
@@ -115,7 +115,7 @@ module SymbolTable =
             {b with pos = p'}
                 
         zero (SymbolTable.empty a (Agent(table)))
-        <~> fold tryAddVar a.def.iface
+        <~> fold (tryAddVar externs) a.def.iface
         <~> fold (tryAddProcess externs) a.def.processes
         <?> fun x ->
             (* expand the Behavior process *)
