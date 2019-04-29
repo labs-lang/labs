@@ -26,11 +26,11 @@ module Outcome =
     let inline (<?>) x f = check f x
     let inline (<??>) x f = x <?> fun _ -> f
     
-    let inline (<~>) x f = transform f x 
+    let inline (<~>) x f = transform f x
     let inline (<~~>) x f = x <~> fun _ -> f 
     
     
     let traverse (fn: 'a -> Outcome<_>) lst = Result.traverse fn lst
     
     let fold fn lst state =
-        Seq.fold (fun s' x -> s' <~> (fn x)) (zero state) lst
+        Seq.fold (fun s x -> s <~> (fn x)) (zero state) lst
