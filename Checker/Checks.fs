@@ -1,4 +1,4 @@
-module Checker.Checks
+module internal Checker.Checks
 open LabsCore
 open Message
 open Outcome
