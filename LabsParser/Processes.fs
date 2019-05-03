@@ -31,13 +31,16 @@ let paction =
 let pproc, pprocRef = createParserForwardedToRef()
 
 do pprocRef :=
-    let doBase (pos, stmt) = {stmt=stmt; pos=pos} |> BaseProcess
+    let doBase (pos, stmt) = {def=stmt; pos=pos; name=string stmt} |> BaseProcess
     let compose a b = Comp(a, b)
 
     let pGuarded = 
         let pguard = makeBExprParser pexpr
         followedBy ((ws pguard) >>. (ws GUARD))
-        >>. tuple3 getPosition (ws pguard) ((ws GUARD) >>. pproc) |>> Guard <!> "Guard"
+        >>. pipe3
+            getPosition (ws pguard) ((ws GUARD) >>. pproc)
+            (fun pos g p -> Guard({pos=pos; name=""; def=(g,p)}))
+        <!> "Guard"
     let pBase =
         let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase
         let pSkip = getPosition .>>. safeStrReturn tSKIP Skip |>> doBase
