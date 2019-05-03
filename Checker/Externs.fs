@@ -23,8 +23,8 @@ module Process =
     open LabsCore.Process
     let replaceExterns externs =
         let base_ b =
-            match b.stmt with
-            | Act a -> BaseProcess {b with stmt= Act {a with updates = List.map (fun (x, e) -> x, Expr.replaceExterns externs e) a.updates}}
+            match b.def with
+            | Act a -> BaseProcess {b with def= Act {a with updates = List.map (fun (x, e) -> x, Expr.replaceExterns externs e) a.updates}}
             | _ -> BaseProcess b
         map base_ (BExpr.replaceExterns externs)
         
