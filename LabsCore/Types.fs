@@ -1,5 +1,26 @@
 module Types
 open Tokens
+open FParsec
+open FSharpPlus.Operators
+open FSharpPlus.Lens
+
+type Node<'a> = {
+    name: string
+    pos: Position
+    def: 'a
+}
+let inline _name x =
+    let getter {name=n; pos=p; def=d} = n
+    let setter {name=n; pos=p; def=d} n' = {name=n'; pos=p; def=d}
+    lens getter setter x
+let inline _def x =
+    let getter {name=n; pos=p; def=d} = d
+    let setter {name=n; pos=p; def=d} d' = {name=n; pos=p; def=d'}
+    lens getter setter x
+let inline _pos x =
+    let getter {name=n; pos=p; def=d} = p
+    let setter {name=n; pos=p; def=d} p' = {name=n; pos=p'; def=d}
+    lens getter setter x
 
 type Location =
     | I 

@@ -19,4 +19,8 @@
     <Compile Include="Expression.fs" />
     <Compile Include="Process.fs" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="FSharpPlus" Version="1.0.0" />
+  </ItemGroup>
 </Project>

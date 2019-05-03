@@ -4,11 +4,6 @@ open FParsec
 open LabsCore
 open Types
 
-type Node<'a> = {
-    name: string
-    pos: Position
-    def: 'a
-}
     
 type VarType = 
     | Scalar
@@ -27,7 +22,7 @@ type Sys = {
     environment: Node<Var> list
     externals: string list
     spawn: Node<Expr<unit, unit>> list
-    processes: Node<Process<string, Position>> list
+    processes: Node<Process<string>> list
 }
 
 type Agent =
@@ -35,7 +30,7 @@ type Agent =
         name: string
         iface: Node<Var> list
         lstig: string list
-        processes: Node<Process<string, Position>> list
+        processes: Node<Process<string>> list
     }
 
 type LinkComponent = | C1 | C2

@@ -93,10 +93,6 @@ module SymbolTable =
     
     let tryAddAgent externs (a:Node<Agent>) table =
         // Keep track of the unfolded process
-        let chpos name pos (b:Base<_,Position>) =
-            let p=b.pos in let p' = Position((sprintf "%s@%O" name pos), p.Index, p.Line, p.Column)
-            {b with pos = p'}
-        
         let iface = List.map (map (Var.replaceExterns externs)) a.def.iface |> List.map (fun x -> x.def)
         let processes =
             map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs)
