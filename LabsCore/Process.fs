@@ -111,10 +111,10 @@ module Process =
         cata Set.singleton (fun _ -> id) entrycomp_
 
     /// Returns the entry base processes of proc.
-    let entry proc = entryOrExit List.head proc
+    let initial proc = entryOrExit List.head proc
 
-    /// Returns the entry base processes of proc.
-    let exit proc = entryOrExit List.last proc
+    /// Returns the final base processes of proc.
+    let final proc = entryOrExit List.last proc
 
     let tag name pos def =
         let p=def.pos in let p' = Position((sprintf "%s@%O" name pos), p.Index, p.Line, p.Column)
