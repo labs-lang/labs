@@ -1,8 +1,10 @@
 module Checker.Message
+open Types
 
 type Position = FParsec.Position
 
 type Err =
+    | Parser of string
     | Duplicate of string
     | UndefProcess of string
     | UndefRef of string
@@ -22,9 +24,8 @@ type Message<'a> =
         where: Position list
     }
 
-exception LabsException of Message<Err>    
+exception LabsException of Message<Err>
 
 let map f (d:Node<_>) =
     try {pos=d.pos; name=d.name; def=f d.def}
     with :? LabsException as e -> raise (LabsException {e.Data0 with where=[d.pos]})
-   
