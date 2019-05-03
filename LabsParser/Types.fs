@@ -1,6 +1,5 @@
 ﻿[<AutoOpen>]
 module Types
-open FParsec
 open LabsCore
 open Types
 

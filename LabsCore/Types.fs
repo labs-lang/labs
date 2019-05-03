@@ -1,7 +1,6 @@
 module Types
 open Tokens
 open FParsec
-open FSharpPlus.Operators
 open FSharpPlus.Lens
 
 type Node<'a> = {
