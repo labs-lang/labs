@@ -32,8 +32,11 @@ module Var =
     let replaceExterns externs (v:Var) =
         let replace = Expr.replaceExterns externs
         let init' = match v.init with
-        | Range(e1, e2) -> Range(replace e1, replace e2)
-        | Choose(l) -> Choose(List.map replace l)
-        | Undef -> Undef
-        {v with init=init'}
+            | Range(e1, e2) -> Range(replace e1, replace e2)
+            | Choose(l) -> Choose(List.map replace l)
+            | Undef -> Undef
+        let vartype' = match v.vartype with
+            | Array e -> Array (replace e)
+            | Scalar -> Scalar
+        {v with init=init'; vartype=vartype'}
         

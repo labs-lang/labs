@@ -7,7 +7,7 @@ open Types
     
 type VarType = 
     | Scalar
-    | Array of size:int
+    | Array of size:Expr<unit, unit>
 
 type Var = {
         name: string

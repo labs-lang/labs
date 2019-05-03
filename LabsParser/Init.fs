@@ -31,11 +31,11 @@ let pconstexpr:Parser<Expr<unit,unit>> =
         (skipString "id" >>. notFollowedBy (skipSatisfy isAlphanum))
         
 let pvar loc = 
-    pipe3 (followedBy KEYNAME >>. getPosition) KEYNAME (opt (betweenBrackets puint32))
+    pipe3 (followedBy KEYNAME >>. getPosition) KEYNAME (opt (betweenBrackets pconstexpr))
         (fun pos name -> 
             let v = {vartype=Scalar; name=name; location=loc; init=Undef}
             function
-            | Some b -> {pos=pos; name=name; def={v with vartype=Array(int b)}}
+            | Some e -> {pos=pos; name=name; def={v with vartype=Array(e)}}
             | None -> {pos=pos; name=name; def=v})
 
 let pinit = 
