@@ -45,10 +45,10 @@ agent Searcher {
     stigmergies = Search; Pickup
     
     Behavior = (
-        (found = 0 -> (
-            x != posx or y != posy -> MoveUpDown; Behavior)
+        (found = 0 -> 
+            (x != posx or y != posy -> MoveUpDown; Behavior)
             ++
-            x = posx and y = posy -> found <~ 1)
+            x = posx and y = posy -> found <~ 1; Behavior)
         ++
         # found = 2 means the searcher has picked up the victim
         (found = 2 and (x != 0 or y != 0) -> GoHome)
