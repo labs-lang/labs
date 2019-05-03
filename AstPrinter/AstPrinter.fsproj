@@ -10,7 +10,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Checker\Checker.fsproj" />
+      <ProjectReference Include="..\Frontend\Frontend.fsproj" />
       <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
       <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
     </ItemGroup>

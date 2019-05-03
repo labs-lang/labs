@@ -1,33 +1,10 @@
-﻿module Checker.Transform
+﻿module Frontend.Transform
 open Checks
-open FSharpPlus.Lens
 open Types
 open SymbolTable
 open Outcome
 open Message
-open Externs
-open LabsCore
-
-let private makeSpawnRanges externs spawn table =
-    let makeRanges mp =
-        mp 
-        |> Map.fold (fun (c, m) name d -> let c' = c + d.def in (c', (Map.add name (c, c') m) )) (0, Map.empty) 
-        |> snd
-    
-    let spawn' =
-        spawn
-        |> List.map (fun (d:Node<_>) -> d.name, d)
-        |> Map.ofList
-        |> Map.mapValues (map (Expr.replaceExterns externs >> Expr.evalConstExpr))
-                 
-    let valid, others = Map.partition (fun _ d -> d.def > 0) spawn'
-    let zeroes, negatives = Map.partition (fun _ d -> d.def = 0) others 
-    let warnings =
-        zeroes |> Map.mapValues (fun d -> {what=SpawnZero d.name; where=[d.pos]}) |> Map.values
-    let errors =
-        negatives |> Map.mapValues (fun d -> {what=NegativeSpawn d.name; where=[d.pos]}) |> Map.values
-    
-    wrap {table with SymbolTable.spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
+open LTS
 
 // Duplicate attributes in different agents are legal.
 let private envAndLstigVars sys lstigs =
@@ -71,6 +48,8 @@ let run externs (sys, lstigs, agents', properties) =
     <~> fold (tryAddIface externs) agents
     <~> fold (tryAddStigmergy externs) lstigs
     <~> fold (tryAddProcess externs) sys.def.processes
-    <~> fold (tryAddAgent externs) agents
+    <~> fun x ->
+        let exit = [(0, Set.singleton 0)] |> Map.ofList
+        fold (tryAddAgent externs) agents (x, (Set.empty, (0, ExecPoint.empty, Map.empty, exit)))
+    <~> (fst >> zero)
     <~> (makeSpawnRanges externs) sys.def.spawn
-    

@@ -1,7 +1,7 @@
-namespace Checker
+namespace Frontend
 open FSharpPlus
 open FSharpPlus.Data
-open Checker.Message
+open Message
 
 type Outcome<'a> = Result<'a * Message<Warn> list, Message<Warn> list * Message<Err> list>
 
@@ -27,7 +27,7 @@ module Outcome =
     let inline (<??>) x f = x <?> fun _ -> f
     
     let inline (<~>) x f = transform f x
-    let inline (<~~>) x f = x <~> fun _ -> f 
+    let inline (<~~>) x f = x <~> fun _ -> f
     
     
     let traverse (fn: 'a -> Outcome<_>) lst = Result.traverse fn lst

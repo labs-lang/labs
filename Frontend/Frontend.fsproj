@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <RootNamespace>Checker</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -9,6 +10,7 @@
         <Compile Include="Outcome.fs" />
         <Compile Include="Checks.fs" />
         <Compile Include="Externs.fs" />
+        <Compile Include="LTS.fs" />
         <Compile Include="SymbolTable.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>

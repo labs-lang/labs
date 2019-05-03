@@ -1,4 +1,4 @@
-module Checker.Message
+module Frontend.Message
 open Types
 
 type Position = FParsec.Position

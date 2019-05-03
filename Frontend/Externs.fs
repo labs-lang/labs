@@ -1,10 +1,9 @@
-module Checker.Externs
+module Frontend.Externs
 open LabsCore
 open Message
 open Types
 
 module Expr =
-    open LabsCore.Expr
     let replaceExterns (externs:Map<_,_>) expr =
         let leaf_ = function
             | Id x -> Id x
@@ -16,7 +15,6 @@ module Expr =
         Expr.map leaf_ (fun r o -> {r with offset=o}) expr
         
 module BExpr =
-    open LabsCore.BExpr
     let replaceExterns externs = BExpr.map (BLeaf) (Expr.replaceExterns externs)
 
 module Process =
@@ -31,11 +29,13 @@ module Process =
 module Var =
     let replaceExterns externs (v:Var) =
         let replace = Expr.replaceExterns externs
-        let init' = match v.init with
+        let init' =
+            match v.init with
             | Range(e1, e2) -> Range(replace e1, replace e2)
             | Choose(l) -> Choose(List.map replace l)
             | Undef -> Undef
-        let vartype' = match v.vartype with
+        let vartype' =
+            match v.vartype with
             | Array e -> Array (replace e)
             | Scalar -> Scalar
         {v with init=init'; vartype=vartype'}

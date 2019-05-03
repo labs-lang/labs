@@ -1,4 +1,4 @@
-module internal Checker.Checks
+module internal Frontend.Checks
 open LabsCore
 open Types
 open Message
