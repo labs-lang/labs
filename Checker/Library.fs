@@ -1,5 +1,7 @@
 ﻿module Checker.Transform
 open Checks
+open FSharpPlus.Lens
+open Types
 open SymbolTable
 open Outcome
 open Message
@@ -25,7 +27,7 @@ let private makeSpawnRanges externs spawn table =
     let errors =
         negatives |> Map.mapValues (fun d -> {what=NegativeSpawn d.name; where=[d.pos]}) |> Map.values
     
-    wrap {table with spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
+    wrap {table with SymbolTable.spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
 
 // Duplicate attributes in different agents are legal.
 let private envAndLstigVars sys lstigs =
@@ -53,7 +55,6 @@ let check (sys, lstigs, agents', properties) =
     (* Check for undefined agents in spawn section *)
     <??> undefSpawned
     
-
 let run externs (sys, lstigs, agents', properties) =
     let vars = envAndLstigVars sys lstigs
     let (agents: Node<Agent> list) =
@@ -64,12 +65,12 @@ let run externs (sys, lstigs, agents', properties) =
     <??> check (sys, lstigs, agents', properties)
     (* map non-interface variables *)
     <~> fold (tryAddVar externs) vars
-    <~> fold mapVar vars
+    <~> fun x -> fold mapVar (Map.values x.variables) x
     
     (* map attributes; add stigmergies, global processes, agents*)
-    <~> fold (fun a t -> fold mapVar a.def.iface t) agents'
+    <~> fold (tryAddIface externs) agents
     <~> fold (tryAddStigmergy externs) lstigs
     <~> fold (tryAddProcess externs) sys.def.processes
     <~> fold (tryAddAgent externs) agents
-
     <~> (makeSpawnRanges externs) sys.def.spawn
+    
