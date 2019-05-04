@@ -1,4 +1,4 @@
-﻿module internal Liquid
+﻿module Frontend.Liquid
 open DotLiquid
 open System.IO
 
@@ -50,8 +50,8 @@ let parse path =
 let renderFile path (vals:LiquidDict) =
     (strRender vals (parse path))
 
-// Reusable template, we only parse it once
-let goto = parse "templates/goto.c"
+//// Reusable template, we only parse it once
+//let goto = parse "templates/goto.c"
 
 let liquidPcs pcset =
     pcset

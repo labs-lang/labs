@@ -1,9 +1,11 @@
-﻿module internal Expressions
+﻿module internal LabsToC.Expressions
 open LabsCore
 open Types
 
-open Link
-open Templates
+let translateLocation = function
+    | I -> sprintf "I[%s][%O]"
+    | L _ -> sprintf "Lvalue[%s][%O]"
+    | E -> (fun _ -> sprintf "E[%O]")
 
 let refTypeCheck v (offset:'a option) =
     let test, msg = 
@@ -37,7 +39,7 @@ let private translate trRef trId =
 
 
 /// Translates a variable reference.
-let trref cmp (v:Var, i:int) offset =
+let trref cmp (v:Var<int>, i:int) offset =
     do refTypeCheck v offset
     let index =
         match offset with

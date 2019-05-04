@@ -11,6 +11,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Frontend", "Frontend\Fronte
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AstPrinter", "AstPrinter\AstPrinter.fsproj", "{F6BEF90D-B47C-4887-AF3A-15AFC047B430}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LabsToC", "LabsToC\LabsToC.fsproj", "{9EE2759F-14D7-49C4-AB37-A4EDFEAC152F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +38,10 @@ Global
 		{F6BEF90D-B47C-4887-AF3A-15AFC047B430}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6BEF90D-B47C-4887-AF3A-15AFC047B430}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6BEF90D-B47C-4887-AF3A-15AFC047B430}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EE2759F-14D7-49C4-AB37-A4EDFEAC152F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EE2759F-14D7-49C4-AB37-A4EDFEAC152F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EE2759F-14D7-49C4-AB37-A4EDFEAC152F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EE2759F-14D7-49C4-AB37-A4EDFEAC152F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
