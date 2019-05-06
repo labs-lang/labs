@@ -27,7 +27,7 @@ module Process =
         map base_ (BExpr.replaceExterns externs)
         
 module Var =
-    let replaceExterns externs (v:Var) =
+    let replaceExterns externs v =
         let replace = Expr.replaceExterns externs
         let init' =
             match v.init with

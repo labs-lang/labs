@@ -2,23 +2,28 @@
 module Types
 open LabsCore
 open Types
+open FSharpPlus.Lens
 
     
-type VarType = 
+type VarType<'a> = 
     | Scalar
-    | Array of size:Expr<unit, unit>
+    | Array of size:'a
 
-type Var = {
+type Var<'a> = {
         name: string
-        vartype: VarType
+        vartype: VarType<'a>
         location: Location
         init:Init
     }
     with 
         override this.ToString() = this.name
+let inline _vartype x =
+    let getter v = v.vartype
+    let setter v t' = {vartype=t'; name=v.name; location=v.location; init=v.init}
+    lens getter setter x
 
 type Sys = {
-    environment: Node<Var> list
+    environment: Node<Var<Expr<unit, unit>>> list
     externals: string list
     spawn: Node<Expr<unit, unit>> list
     processes: Node<Process<string>> list
@@ -27,7 +32,7 @@ type Sys = {
 type Agent =
     {
         name: string
-        iface: Node<Var> list
+        iface: Node<Var<Expr<unit, unit>>> list
         lstig: string list
         processes: Node<Process<string>> list
     }
@@ -39,7 +44,7 @@ type Link<'a> = BExpr<'a * LinkComponent, LinkComponent>
 type Stigmergy<'a> =
     {
         name: string
-        vars: Set<Node<Var>> list
+        vars: Set<Node<Var<Expr<unit, unit>>>> list
         link: Node<Link<'a>>
     }
 
