@@ -17,14 +17,10 @@ with
         | Act a -> string a
         | Name s -> s
 
-//type Base<'a, 'b> =
-//    { stmt: Stmt<'a>; pos: 'b }
-
 type Composition =
         | Seq
         | Choice
         | Par
-
 type Process<'a> =
     | BaseProcess of Node<Stmt<'a>> //Base<'a, 'b>
     | Guard of Node<BExpr<'a, unit> * Process<'a>>

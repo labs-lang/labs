@@ -12,10 +12,12 @@
         <Compile Include="Externs.fs" />
         <Compile Include="LTS.fs" />
         <Compile Include="SymbolTable.fs" />
+        <Compile Include="Liquid.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="DotLiquid" Version="2.0.298" />
       <PackageReference Include="FSharpPlus" Version="1.0.0" />
     </ItemGroup>
 

@@ -41,8 +41,8 @@ module Expr =
     let evalConstExpr expr =
         let leaf_ = function
             | Const i -> i
-            | Id _
-            | Extern _ -> failwith "Not a constexpr" (* THIS SHOULD NEVER MATCH *)
+            | Id _ -> failwith "Not a constexpr"
+            | Extern a -> failwithf "Not a constexpr: %s" a (* THIS SHOULD NEVER MATCH *)
         let arithm_ = function
             | Plus -> (+)
             | Minus -> (-)
