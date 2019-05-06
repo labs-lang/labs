@@ -1,4 +1,5 @@
 namespace Frontend
+open FSharpPlus.Lens
 open LabsCore
 open Types
 open Externs
@@ -7,7 +8,7 @@ open Outcome
 open LTS
 
 type Mapping = {
-    map: Map<string, int * Location>
+    map: Map<string, Var<int> * int>
     nextI: int
     nextL: int
     nextE: int
@@ -16,11 +17,11 @@ with
     static member empty = {map=Map.empty; nextI=0; nextE=0; nextL=0}
     member this.Item with get(key:string) = this.map.[key]
     member this.TryFind key = this.map.TryFind key
-    member this.mapvar (var:Var) = 
+    member this.mapvar (var:Var<int>) = 
         if this.map.ContainsKey var.name then this
         else
-            let updateMap index = Map.add var.name (index, var.location) this.map
-            let updateNext = (+) (match var.vartype with | Scalar -> 1 | Array e -> Expr.evalConstExpr e)
+            let updateMap index = Map.add var.name (var, index) this.map
+            let updateNext = (+) (match var.vartype with | Scalar -> 1 | Array n -> n)
             match var.location with
             | Location.I -> {this with map= updateMap this.nextI; nextI = updateNext this.nextI} 
             | Location.E -> {this with map= updateMap this.nextE; nextE = updateNext this.nextE}            
@@ -28,9 +29,9 @@ with
 
 type AgentTable = {
     lts: TransitionSystem
-    processes: Map<string, Process<int*Location>>
+    processes: Map<string, Process<Var<int>*int>>
     init: ExitCond
-    variables: Var list
+    variables: Var<int> list
 }
 with
     static member empty =
@@ -44,11 +45,11 @@ with
 type SymbolTable = {
     spawn: Map<string, int*int>
     agents: Map<string, AgentTable>
-    stigmergies: Map<string, Link<int * Location>>
-    processes : Map<string, Process<int*Location>>
-    variables: Map<string, Var>
+    stigmergies: Map<string, Link<Var<int>*int>>
+    processes : Map<string, Process<Var<int>*int>>
+    variables: Map<string, Var<int>>
     m: Mapping
-    guards: Map<Node<Stmt<int*Location>>, Set<BExpr<int*Location, unit>>>
+    guards: Map<Node<Stmt<Var<int>*int>>, Set<BExpr<Var<int>*int, unit>>>
 }
 with
     static member empty =
@@ -63,15 +64,22 @@ with
         }
 
 module internal SymbolTable = 
-    let mapVar (v:Var) table =
-        let m' = table.m.mapvar v
-        zero {table with m = m'}
-        
-    let tryAddVar externs (vardef:Node<Var>) table =
-        let vardef' = map (Var.replaceExterns externs) vardef
+    let mapVar (v:Var<int>) table =
+        zero {table with m = table.m.mapvar v}
+
+    let private processVar externs vardef =
+        map (Var.replaceExterns externs) vardef
+        |> map (over _vartype (function Scalar -> Scalar | Array e -> Array (Expr.evalConstExpr e)))
+        |> fun x ->
+            match x.def.vartype with
+            | Array s when s <= 0 -> 
+                raise (LabsException {what=NonPositiveArraySize vardef.name; where=[vardef.pos]})
+            | _ -> x
+            
+    let tryAddVar externs (vardef:Node<Var<Expr<unit, unit>>>) table =
         if table.variables.ContainsKey vardef.name then
             raise (LabsException {what=Generic (sprintf "Unexpected operation on variable %s" vardef.name); where=[vardef.pos]})
-        else zero {table with variables = Map.add vardef.name vardef'.def table.variables}
+        else zero {table with variables = table.variables.Add(vardef.name, (processVar externs vardef).def)}
     
     /// Basic function to retrieve the mapping of variable named k
     let findString table k =
@@ -98,7 +106,7 @@ module internal SymbolTable =
             | Nil -> Nil
             | Skip -> Skip
             | Name s -> Name s
-            |> fun def' -> {def= def'; pos=b.pos; name=b.name}
+            |> fun def' -> {def=def'; pos=b.pos; name=b.name}
         Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
     
     let setGuards proc =
@@ -126,7 +134,7 @@ module internal SymbolTable =
         zero {table with stigmergies=table.stigmergies.Add(s.name, link.def)}
     
     let tryAddIface externs (a:Node<Agent>) table =
-        let iface = List.map (map (Var.replaceExterns externs)) a.def.iface |> List.map (fun x -> x.def)
+        let iface = List.map (processVar externs) a.def.iface |> List.map (fun x -> x.def)
         fold mapVar iface table
         <~> fun t -> zero {t with agents = table.agents.Add(a.name, {AgentTable.empty with variables=iface})}
     

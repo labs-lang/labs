@@ -12,6 +12,7 @@ type Err =
     | UndefAgent of string
     | NoValueForExtern of string
     | NegativeSpawn of string
+    | NonPositiveArraySize of string
     | Generic of string
 
 type Warn =

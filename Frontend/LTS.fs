@@ -6,7 +6,7 @@ open FSharpPlus.Lens
 type ExecPoint = Map<int, int>
 type EntryCond = Map<int,int>
 type ExitCond = Map<int,Set<int>>
-type Transition = { entry: EntryCond; siblings: Set<int>; last: bool; exit: ExitCond; action: Node<Stmt<int*Location>>}
+type Transition = { entry: EntryCond; siblings: Set<int>; last: bool; exit: ExitCond; action: Node<Stmt<Var<int>*int>>}
 type TransitionSystem = Set<Transition>
 
 type State = {
