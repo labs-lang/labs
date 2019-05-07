@@ -128,7 +128,7 @@ let makeTransitions state proc =
                 Set.map (
                     fun t ->
                         let t' = {t with siblings=siblings}
-                        Set.singleton t' |> Set.add {t' with last=true} //TODO add exit
+                        Set.singleton t' |> Set.add {t' with last=true; exit=t'.exit <||> exit}
                     ) last
                 |> Set.unionMany
                 |> Set.union others
