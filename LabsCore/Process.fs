@@ -112,8 +112,8 @@ module Process =
     /// Returns the final base processes of proc.
     let final proc = entryOrExit List.last proc
 
-    let tag name pos def =
-        let p=def.pos in let p' = Position((sprintf "%s@%O" name pos), p.Index, p.Line, p.Column)
+    let tag lbl def =
+        let p=def.pos in let p' = Position(lbl, p.Index, p.Line, p.Column)
         setl _pos p' def
     
     /// Replace (non-recursive) Name processes with their definitions.
@@ -127,7 +127,7 @@ module Process =
                     match procs.TryFind n with
                     | Some _ -> 
                         expand_ (visited.Add b) n 
-                        |> map ((tag n b.pos) >> BaseProcess) id
+                        |> map ((tag (sprintf "%s@%O" n b.pos)) >> BaseProcess) id
                     | None -> failwith n
                 | _ -> BaseProcess b
             map base_ id procs.[name]
