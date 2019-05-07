@@ -121,7 +121,7 @@ module internal SymbolTable =
                 recurse (Set.empty, acc') (Comp(Seq, l.Tail)) 
             | _ ->
                 Seq.map (recurse (guards, acc)) l
-                |> Seq.reduce(fun (_, a1) (g2, a2) -> g2, Map.union a2 a1)
+                |> Seq.reduce(fun (_, a1) (_, a2) -> Set.empty, Map.union a2 a1)
         Process.fold base_ guard_ comp_ (Set.empty, Map.empty) proc                    
         |> snd
     
@@ -142,15 +142,19 @@ module internal SymbolTable =
         map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs)
         |> fun f -> List.map f a.def.processes
         |> List.map (fun node -> node.name, node.def)
-        |> Map.ofList |> zero
+        |> (Map.ofList >> zero)
         <~> fun p ->
             let allProcesses = Map.union p table.processes
             try
-                let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") p)
+                let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") allProcesses)
+                
                 let (lts, acc), initCond = LTS.makeTransitions state p'.["Behavior"]
-                let lts' = LTS.removeNames allProcesses lts
-                let agent = {table.agents.[a.name] with processes=p; lts=lts'; init=initCond}
-                zero ({table with agents = table.agents.Add(a.name, agent)}, (Set.empty, acc))
+                
+                let lts' = LTS.removeNames p' lts
+                Set.map (fun t -> eprintfn "<<%A %s %A>>" t.entry t.action.name t.exit) lts' |> ignore
+                let guards = Map.union table.guards (setGuards p'.["Behavior"])
+                let agent = {table.agents.[a.name] with processes=p'; lts=lts'; init=initCond}
+                zero ({table with agents = table.agents.Add(a.name, agent); guards=guards}, (Set.empty, acc))
             with err -> wrap (table, state) [] [{what=UndefProcess err.Message; where=[a.pos]}] //TODO add correct position        
     
     let makeSpawnRanges externs spawn table =
