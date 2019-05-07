@@ -10,7 +10,7 @@ open Properties
 let parse =
     ws_ >>. tuple4
         (ws psys) 
-        ((plstig |> ws |> many))
-        ((pcomp |> ws |> many))
+        ((plstig |> ws |> many) <!> "STIGMERGIES")
+        ((pcomp |> ws |> many) <!> "AGENTS")
         (pproperties <!> "PROPERTIES")
     <!> "PARSER"

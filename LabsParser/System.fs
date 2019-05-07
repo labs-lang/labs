@@ -29,8 +29,8 @@ let psys =
     .>> ws (skipString "system")
     .>>. 
         (pipe4
-            (opt (pstringEq "extern" pextern))
-            (opt (pstringEq "environment" (pkeys Location.E)))
+            (opt (pstringEq "extern" pextern) <!> "EXTERN")
+            (opt (pstringEq "environment" (pkeys Location.E)) <!> "ENV")
             (pstringEq "spawn" pspawn <!> "SPAWN")
             processes
             (fun ext env spawn procs -> {
