@@ -49,7 +49,6 @@ let run externs (sys, lstigs, agents', properties) =
     <~> fold (tryAddStigmergy externs) lstigs
     <~> fold (tryAddProcess externs) sys.def.processes
     <~> fun x ->
-        let exit = [(0, Set.singleton 0)] |> Map.ofList
-        fold (tryAddAgent externs) agents (x, (Set.empty, (0, ExecPoint.empty, Map.empty, exit)))
+        fold (tryAddAgent externs) agents (x, (Set.empty, (0, ExecPoint.empty, Map.empty, Map.empty)))
     <~> (fst >> zero)
     <~> (makeSpawnRanges externs) sys.def.spawn
