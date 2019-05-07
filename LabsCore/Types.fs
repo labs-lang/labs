@@ -9,16 +9,16 @@ type Node<'a> = {
     def: 'a
 }
 let inline _name x =
-    let getter {name=n; pos=p; def=d} = n
-    let setter {name=n; pos=p; def=d} n' = {name=n'; pos=p; def=d}
+    let getter {name=n} = n
+    let setter {pos=p; def=d} n' = {name=n'; pos=p; def=d}
     lens getter setter x
 let inline _def x =
-    let getter {name=n; pos=p; def=d} = d
-    let setter {name=n; pos=p; def=d} d' = {name=n; pos=p; def=d'}
+    let getter {def=d} = d
+    let setter {name=n; pos=p} d' = {name=n; pos=p; def=d'}
     lens getter setter x
 let inline _pos x =
-    let getter {name=n; pos=p; def=d} = p
-    let setter {name=n; pos=p; def=d} p' = {name=n; pos=p'; def=d}
+    let getter {pos=p} = p
+    let setter {name=n; def=d} p' = {name=n; pos=p'; def=d}
     lens getter setter x
 
 type Location =
