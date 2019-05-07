@@ -4,13 +4,13 @@ system {
 
     # "Global" processes
     MoveUpDown =
-        x % 2 = 0 -> (
+        (x % 2 = 0 -> 
             (y < _grid - 1 -> y <- y + 1) 
             ++
             (y = _grid - 1 and x < _grid - 1 -> x <- x + 1)
         )
         ++
-        x % 2 != 0 -> (
+        (x % 2 != 0 ->
             y > 0 -> y <- y - 1
             ++
             y = 0 and x < _grid - 1 -> x <- x + 1
@@ -48,7 +48,7 @@ agent Searcher {
         (found = 0 -> 
             (x != posx or y != posy -> MoveUpDown; Behavior)
             ++
-            x = posx and y = posy -> found <~ 1; Behavior)
+            (x = posx and y = posy -> found <~ 1; Behavior))
         ++
         # found = 2 means the searcher has picked up the victim
         (found = 2 and (x != 0 or y != 0) -> GoHome)

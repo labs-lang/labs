@@ -1,7 +1,7 @@
 system {
     extern = _n
     # ...
-
+    spawn = Ant: _n; Evaporate: 1
     Prova = Skip; Nil
 }
 
@@ -29,11 +29,11 @@ agent Ant {
         next[pos] = -1 ->
             (pos = 0 -> 
                 (total <- total + 20; pos <- 1; next[0] = 1)
-                &
+                ++
                 (total <- total + 42; pos <- 2; next[0] = 2)
-                & 
+                ++ 
                 (total <- total + 35; pos <- 3; next[0] = 3))
-            &
+            ++
             pos = 1 -> # ...
         ; FirstLoop
 
@@ -46,32 +46,28 @@ agent Ant {
                 next[pos] = 1 or (ab > 2*ac and ab > 2*ad) ->
                     pos <- 1;
                     ab <~ ab + (100/total)
-                &
+                ++
                 next[pos] = 2 or (ac > 2*ab and ac > 2*ad) ->
                     pos <- 2;
                     ac <~ ac + (100/total)
-                &
+                ++
                 next[pos] = 3 or (ad > 2*ab and ad > 2*ac) ->
                     pos <- 3;
                     ac <~ ac + (100/total)
-            &
+            ++
             pos = 1 -> # ...
         ; OtherLoops
 
 }
 
-agent Pheromone {
+agent Evaporate {
     interface = pos: 0
     stigmergies = AB, AC, AD, BC, BD
 
-    # Simulate evaporation of pheromones by decreasing an arbitrary counter
+    # Simulate evaporation of pheromones by decreasing counters
     Behavior = 
-        (ab > 0 -> pos <- 0; ab <~ ab - 1)
-        &
-        (ac > 0 -> pos <- 0; ac <~ ac - 1)
-        &
-        # ...
-        ); Behavior
+        ab, ac, ad <~ max(ab-1, 0), max(ac-1, 0), max(ad-1,0)
+        ; Behavior
 
 
 }
