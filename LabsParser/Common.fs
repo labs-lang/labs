@@ -25,7 +25,7 @@ let PAR : Parser<_> =           (skipString tPAR)
 let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
 
 /// Parse p and skip whitespace/comments after.
-let ws p = p .>> spaces .>> skipMany lineComment .>> spaces
+let ws p = p .>> spaces .>> skipMany (spaces1 <|> lineComment)
 let ws_ = ws (preturn ())
 
 let isAlphanum x = isAsciiLetter x || isDigit x
