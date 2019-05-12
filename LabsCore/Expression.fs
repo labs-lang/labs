@@ -38,10 +38,10 @@ module Expr =
     let getVars expr =
         fold (fun a _ -> a) (fun a r -> Set.add r.var a) Set.empty expr
         
-    let evalConstExpr expr =
+    let evalConstExpr idfun expr =
         let leaf_ = function
             | Const i -> i
-            | Id _ -> failwith "Not a constexpr"
+            | Id x -> idfun x
             | Extern a -> failwithf "Not a constexpr: %s" a (* THIS SHOULD NEVER MATCH *)
         let arithm_ = function
             | Plus -> (+)
@@ -55,6 +55,8 @@ module Expr =
             | UnaryMinus -> fun x -> -x
             | Abs -> abs
         cata leaf_ arithm_ unary_ (fun _ _ -> failwith "Not a constexpr") expr
+    
+    let evalCexprNoId expr = evalConstExpr (fun _ -> failwith "id not allowed here.") expr
         
 module BExpr = 
     let rec map fleaf fexpr bexpr =
