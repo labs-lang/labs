@@ -7,6 +7,8 @@ let translateLocation = function
     | L _ -> sprintf "Lvalue[%s][%O]"
     | E -> (fun _ -> sprintf "E[%O]")
 
+let translateInitLocation a b c = (sprintf "_%s") (translateLocation a b c)
+
 let refTypeCheck v (offset:'a option) =
     let test, msg = 
         match v.vartype with
@@ -39,13 +41,13 @@ let private translate trRef trId =
 
 
 /// Translates a variable reference.
-let trref cmp (v:Var<int>, i:int) offset =
+let trref trLocation cmp (v:Var<int>, i:int) offset =
     do refTypeCheck v offset
     let index =
         match offset with
         | None -> string i
         | Some off -> sprintf "%i + %s" i off
-    (translateLocation v.location) cmp index
+    (trLocation v.location) cmp index
 
 let checkUndef filter trref expr =
     Expr.getVars expr
@@ -54,7 +56,7 @@ let checkUndef filter trref expr =
     |> Seq.map (sprintf "(%s != undef_value)")
     |> fun s -> if Seq.isEmpty s then "" else String.concat " & " s
 
-let rec private translateBExpr filter trref trExpr bexpr =
+let rec private translateBExpr filter trref trExpr bexpr checkundef =
     let bleaf_ b = if b then "1" else "0"
     let neg_ = sprintf "(!(%s))"
     let compound_ = function
@@ -63,8 +65,8 @@ let rec private translateBExpr filter trref trExpr bexpr =
     let compare_ op e1 e2 = 
         let undef1, undef2 = (checkUndef filter trref e1), (checkUndef filter trref e2)
         sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2)
-        |> (if undef1 <> "" then sprintf "(%s) & (%s)" undef1 else id)
-        |> (if undef2 <> "" then sprintf "(%s) & (%s)" undef2 else id)
+        |> (if undef1 <> "" && checkundef then sprintf "(%s) & (%s)" undef1 else id)
+        |> (if undef2 <> "" && checkundef then sprintf "(%s) & (%s)" undef2 else id)
     BExpr.cata bleaf_ neg_ compare_ compound_ bexpr
     
 type TranslateFactory<'a, 'b> when 'a:comparison and 'b:comparison = {
@@ -76,8 +78,14 @@ with
     member this.BExprTranslator = translateBExpr this.filterUndef this.refTranslator this.ExprTranslator
     member this.ExprTranslator = translate this.refTranslator this.idTranslator
 
-let customProcExpr name = {
-    refTranslator= trref name
+let tidProcExpr name = {
+    refTranslator=  trref translateLocation name
+    idTranslator= fun () -> name
+    filterUndef= fun (v, _) -> v.init = Undef
+}
+
+let initExpr name = {
+    refTranslator=  trref translateInitLocation name
     idTranslator= fun () -> name
     filterUndef= fun (v, _) -> v.init = Undef
 }
@@ -88,12 +96,12 @@ let constExpr name = {
     filterUndef= fun () -> false
 }
 
-let procExpr = customProcExpr "tid"
+let procExpr = tidProcExpr "tid"
 
 let linkExpr = 
     let trLinkId = function | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
     let trLinkRef (v, cmp) (offset:string option) =
-        trref (trLinkId cmp) v offset 
+        trref translateLocation  (trLinkId cmp) v offset 
     {
         refTranslator= trLinkRef
         idTranslator= trLinkId
