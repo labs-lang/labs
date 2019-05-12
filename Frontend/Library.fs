@@ -60,3 +60,25 @@ let run externs (sys, lstigs, agents', properties) =
         fold (tryAddAgent externs) agents (x, (Set.empty, (0, ExecPoint.empty, Map.empty, Map.empty)))
     <~> (fst >> zero)
     <~> (makeSpawnRanges externs) sys.def.spawn
+
+let initBExprs undefvalue evalfn (v:Var<_>, i: int) =
+    let refs =
+        let r = {var=(v, i); offset = None}
+        match v.vartype with
+        | Scalar -> [r]
+        | Array s -> List.map (fun i -> {r with offset = Some (Leaf (Const i))}) [0 .. s-1]
+    match v.init with
+    | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Const undefvalue))) refs
+    | Choose l ->
+        let choice r =
+            List.map (evalfn >> (fun i -> Compare(Ref r, Equal, Leaf(Const i)))) l
+            |> List.reduce (fun e1 e2 -> Compound(e1, Disj, e2))
+        List.map choice refs
+    | Range (_start, _end) ->
+        let s', e' = evalfn _start, evalfn _end
+        if s' > e' then
+            {what=(Generic (sprintf "Invalid range initializer for %s" v.name)); where=[]}
+            |> LabsException |> raise
+        else    
+            let between r = Compound(Compare(Ref r, Geq, Leaf(Const s')), Conj, Compare(Ref r, Less, Leaf(Const e')))
+            List.map (fun r -> between r) refs    
