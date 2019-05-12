@@ -5,6 +5,7 @@ open SymbolTable
 open Outcome
 open Message
 open LTS
+open LabsCore
 
 // Duplicate attributes in different agents are legal.
 let private envAndLstigVars sys lstigs =
@@ -42,7 +43,14 @@ let run externs (sys, lstigs, agents', properties) =
     <??> check (sys, lstigs, agents', properties)
     (* map non-interface variables *)
     <~> fold (tryAddVar externs) vars
-    <~> fun x -> fold mapVar (Map.values x.variables) x
+    <~> fun x -> fold mapVar (Map.values x.variables |> Seq.filter (isEnvVar)) x
+    <~> fun x ->
+            (* Ensure that variables in the same tuple get contiguous indices *)
+            Map.values x.variables
+            |> Seq.filter (isLstigVar)
+            |> Seq.groupBy (fun v -> v.location)
+            |> Seq.map snd
+            |> Seq.fold (fun x' s -> x' <~> fold mapVar s) (zero x)
     
     (* map attributes; add stigmergies, global processes, agents*)
     <~> fold (tryAddIface externs) agents
