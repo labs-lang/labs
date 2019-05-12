@@ -1,4 +1,8 @@
 ﻿module Frontend.Liquid
+open Frontend
+
+open Outcome
+open Message
 open DotLiquid
 open System.IO
 
@@ -26,13 +30,11 @@ let private internalRender strfun vals (template:Template) =
             |> Hash.FromDictionary
     let render = template.Render (hashdict vals)
     if template.Errors.Count = 0 then 
-        Result.Ok (strfun render)
+        zero (strfun render)
     else 
         template.Errors
-        |> Seq.map (fun x -> x.Message)
-        |> String.concat "\n"
-        |> sprintf "Code generation failed with the following message:\n%s"
-        |> Result.Error
+        |> Seq.map (fun x -> {what=Codegen x.Message; where=[]})
+        |> (Seq.toList >> wrap (strfun "") [])
 
 /// Renders a given template to standard output
 let render v t = internalRender (printfn "%s") v t

@@ -13,6 +13,7 @@ type Err =
     | NoValueForExtern of string
     | NegativeSpawn of string
     | NonPositiveArraySize of string
+    | Codegen of string
     | Generic of string
 
 type Warn =
