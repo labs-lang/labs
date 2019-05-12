@@ -3,6 +3,7 @@ module Types
 open LabsCore
 open Types
 open FSharpPlus.Lens
+open LabsCore
 
     
 type VarType<'a> = 
@@ -17,10 +18,16 @@ type Var<'a> = {
     }
     with 
         override this.ToString() = this.name
+            
 let inline _vartype x =
     let getter v = v.vartype
     let setter v t' = {vartype=t'; name=v.name; location=v.location; init=v.init}
     lens getter setter x
+
+//TODO see if active patterns would be better
+let inline isEnvVar v = match v.location with E -> true | _ -> false
+let inline isLstigVar v = match v.location with L _ -> true | _ -> false
+
 
 type Sys = {
     environment: Node<Var<Expr<unit, unit>>> list
