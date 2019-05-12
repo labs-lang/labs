@@ -23,13 +23,23 @@ module internal ExitCond =
                 | None -> Map.add k (Set.singleton v) st
             )    
         ) Map.empty s
-        
+    
+    /// Returns a new exitcond with entry removed from the given exitcond     
     let remove (entry:EntryCond) (exit:ExitCond) =
-        Map.fold (fun ex pc v -> Map.add pc (Set.remove v ex.[pc]) ex) exit entry
+        let _remove key elem table =
+            Map.tryFind key table
+            |> Option.map (fun s -> Map.add key (Set.remove elem s) table)
+            |> Option.defaultValue table
+        Map.fold (fun ex pc v -> _remove pc v ex) exit entry
     
 /// Returns the disjunction of two exit points.
-let (<||>) e1 e2 =
+let (.>>.) e1 e2 =
     Map.unionWith (fun _ s1 s2 -> Set.union s1 s2) e1 e2
+
+/// Returns the disjunction of two exit points.
+/// If v[k] terminates in e1 but not in e2, the termination is removed  
+let (>>.) e1 e2 =
+    Map.unionWith (fun _ (s1:Set<_>) (s2:Set<_>) -> Set.union (s1.Remove 0) s2) e1 e2
 
 let (|-) (entry:EntryCond) (exit:ExitCond) =
     Map.toSeq entry
@@ -50,7 +60,7 @@ module ExecPoint =
         let maxpc = Map.keys v |> Seq.max
         let newpcs = Set.ofSeq {maxpc+1 .. maxpc + n}
         newpcs
-        |> Set.map (fun n -> n, 1)
+        |> Set.map (fun n -> n, 0)
         |> Map.ofSeq
         |> fun v' -> Map.union v v', newpcs
 
@@ -74,10 +84,10 @@ let removeNames (procs:Map<string,Process<_>>) lts =
         let affected, others =
             l
             |> Set.remove tr
-            |> Set.partition (fun t -> tr.entry |- t.exit)  
+            |> Set.partition (fun t -> tr.entry |- t.exit && (t.siblings.IsEmpty || t.last)) 
         
         affected
-        |> Set.map (fun t -> {t with exit= (ExitCond.remove tr.entry t.exit) <||> exit})
+        |> Set.map (fun t -> {t with exit= (ExitCond.remove tr.entry t.exit) >>. exit})
         |> Set.union others
 
     lts
@@ -95,7 +105,7 @@ let makeTransitions state proc =
         let v', vk = ExecPoint.freshpc k v
         let entry = (Map.add k vk parent)
         (* If b is an initial action of procs, add its entry condition to initCond *)
-        initCond <- (initCond) <||> (if initials.Contains b then ExitCond.ofEntryConds [entry] else Map.empty)
+        initCond <- (initCond) .>>. (if initials.Contains b then ExitCond.ofEntryConds [entry] else Map.empty)
         let lts' = (Set.add {entry=entry; exit=exit; action=b; siblings=Set.empty; last=false}) lts
         lts', (setl _2 v' acc)
     let rec comp_ typ recurse (lts, acc) l =
@@ -107,9 +117,9 @@ let makeTransitions state proc =
                 Set.filter (fun t -> (Process.initial p).Contains t.action) lts'
                 |> Set.map (fun t -> t.entry)
                 |> ExitCond.ofEntryConds
-            let acc'' = setl _4 exit' acc' 
+            let acc'' = setl _4 exit' acc'
             match l with
-            | []
+            | [] (* This should never happen, we put it for completeness *)
             | _::[] -> (Set.union lts lts', acc'')
             (* recurse on l without its last element*)
             | _ -> comp_ Seq recurse (Set.union lts lts', acc'') ((List.rev << List.tail << List.rev) l)
@@ -121,26 +131,29 @@ let makeTransitions state proc =
             let v', fresh = ExecPoint.freshpc k v
             let v'', newpcs = ExecPoint.newpc (l.Length) v'
             
-            let childRecurse (l, a) child =
-                let siblings = Set.filter ((<>) (a^._1)) newpcs
-                let l', a' = recurse (Set.empty, a) child
+            let childRecurse (l, a) pc child =
+                let siblings = Set.filter ((<>) pc) newpcs
+                let a' = (setl _1 pc >> setl _4 ([(pc, Set.singleton 0)] |> Map.ofList)) a
+                let l', a'' = recurse (Set.empty, a') child
                 let last, others = Set.partition (fun t -> (Process.final child).Contains t.action) l'
                 Set.map (
                     fun t ->
                         let t' = {t with siblings=siblings}
-                        Set.singleton t' |> Set.add {t' with last=true; exit=t'.exit <||> exit}
+                        Set.singleton t' |> Set.add {t' with last=true; exit=t'.exit .>>. exit}
                     ) last
                 |> Set.unionMany
                 |> Set.union others
-                |> fun x -> Set.union l x, a'
+                |> fun x -> Set.union l x, a''
             
-            let acc' = setl _2 v'' acc |> over _3 (Map.add fresh k) (* update parent *)
-            
-            let children = Seq.zip newpcs l
-            Seq.fold (fun (l, a) (k', p) -> childRecurse (l, (setl _1 k' a)) p) (Set.empty, acc') children
+            (* update execpoint and parent *)
+            let acc' = (setl _2 v'' >> over _3 (Map.add k fresh)) acc
 
-    (* No matter what exit is passed to the function, the base exitcond is always pc[0]==0 *)                
-    let exit = [(0, Set.singleton 0)] |> Map.ofList
+            let children = Seq.zip newpcs l
+            Seq.fold (fun (l, a) (k', p) -> childRecurse (l, a) k' p) (Set.empty, acc') children
+            |> setl (_2 << _1) k
+
+    (* No matter what exit is passed to the function, the base exitcond is always pc[k]==0 *)                
+    let exit = [((view (_2 << _1) state), Set.singleton 0)] |> Map.ofList
     let state' = setl (_2 << _4) exit state                
     Process.fold base_ (fun i _ -> i) comp_ state' proc, initCond
     
