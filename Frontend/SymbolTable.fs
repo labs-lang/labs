@@ -6,6 +6,7 @@ open Externs
 open Message
 open Outcome
 open LTS
+open LabsCore
 
 type Mapping = {
     map: Map<string, Var<int> * int>
@@ -32,6 +33,7 @@ type AgentTable = {
     processes: Map<string, Process<Var<int>*int>>
     init: ExitCond
     variables: Var<int> list
+    lstig: Set<string>
 }
 with
     static member empty =
@@ -40,6 +42,7 @@ with
             processes=Map.empty
             init=Map.empty
             variables=[]
+            lstig=Set.empty
         }
         
 type SymbolTable = {
@@ -64,12 +67,20 @@ with
         }
 
 module internal SymbolTable = 
-    let mapVar (v:Var<int>) table =
+    let mapVar (v:Var<_>) table =
         zero {table with m = table.m.mapvar v}
 
     let private processVar externs vardef =
+        let toVarInt var =
+            {
+                location=var.location;
+                name=var.name;
+                vartype=match var.vartype with Scalar -> Scalar | Array e -> Array (Expr.evalCexprNoId e);
+                init=var.init
+            }
+        
         map (Var.replaceExterns externs) vardef
-        |> map (over _vartype (function Scalar -> Scalar | Array e -> Array (Expr.evalConstExpr e)))
+        |> map toVarInt
         |> fun x ->
             match x.def.vartype with
             | Array s when s <= 0 -> 
@@ -145,17 +156,17 @@ module internal SymbolTable =
         |> (Map.ofList >> zero)
         <~> fun p ->
             let allProcesses = Map.union p table.processes
-            try
-                let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") allProcesses)
-                
-                let (lts, acc), initCond = LTS.makeTransitions state p'.["Behavior"]
-                
-                let lts' = LTS.removeNames p' lts
-                Set.map (fun t -> eprintfn "<<%A %s %A>>" t.entry t.action.name t.exit) lts' |> ignore
-                let guards = Map.union table.guards (setGuards p'.["Behavior"])
-                let agent = {table.agents.[a.name] with processes=p'; lts=lts'; init=initCond}
-                zero ({table with agents = table.agents.Add(a.name, agent); guards=guards}, (Set.empty, acc))
-            with err -> wrap (table, state) [] [{what=UndefProcess err.Message; where=[a.pos]}] //TODO add correct position        
+//            try
+            let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") allProcesses)
+            
+            let (lts, acc), initCond = LTS.makeTransitions state p'.["Behavior"]
+            Set.map (fun t -> eprintfn "<%A %s %A>" t.entry t.action.name t.exit) lts |> ignore
+            let lts' = LTS.removeNames p' lts
+            Set.map (fun t -> eprintfn "<<%A %s %A>>" t.entry t.action.name t.exit) lts' |> ignore
+            let guards = Map.union table.guards (setGuards p'.["Behavior"])
+            let agent = {table.agents.[a.name] with processes=p'; lts=lts'; init=initCond; lstig=a.def.lstig |> Set.ofList}
+            zero ({table with agents = table.agents.Add(a.name, agent); guards=guards}, (Set.empty, acc))
+//            with err -> wrap (table, state) [] [{what=UndefProcess err.Message; where=[a.pos]}] //TODO add correct position        
     
     let makeSpawnRanges externs spawn table =
         let makeRanges mp =
@@ -167,7 +178,7 @@ module internal SymbolTable =
             spawn
             |> List.map (fun (d:Node<_>) -> d.name, d)
             |> Map.ofList
-            |> Map.mapValues (map (Expr.replaceExterns externs >> Expr.evalConstExpr))
+            |> Map.mapValues (map (Expr.replaceExterns externs >> Expr.evalCexprNoId ))
                      
         let valid, others = Map.partition (fun _ d -> d.def > 0) spawn'
         let zeroes, negatives = Map.partition (fun _ d -> d.def = 0) others 
