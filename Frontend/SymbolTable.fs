@@ -18,7 +18,10 @@ with
     static member empty = {map=Map.empty; nextI=0; nextE=0; nextL=0}
     member this.Item with get(key:string) = this.map.[key]
     member this.TryFind key = this.map.TryFind key
-    member this.mapvar (var:Var<int>) = 
+    member this.IndexOf (var:Var<_>) = snd this.[var.name]
+    member this.RangeOf (var:Var<_>) =
+        this.IndexOf var, this.IndexOf var + (match var.vartype with Scalar -> 0 | Array i -> i) 
+    member this.mapvar (var:Var<_>) = 
         if this.map.ContainsKey var.name then this
         else
             let updateMap index = Map.add var.name (var, index) this.map
@@ -44,8 +47,13 @@ with
             variables=[]
             lstig=Set.empty
         }
+    member this.lstigVariables (table:SymbolTable) =
+        table.variables
+        |> Map.filter (fun _ v -> match v.location with | L (s, _) when this.lstig.Contains s -> true | _ -> false)
+        |> Map.values
+        |> Seq.sortBy table.m.IndexOf
         
-type SymbolTable = {
+and SymbolTable = {
     spawn: Map<string, int*int>
     agents: Map<string, AgentTable>
     stigmergies: Map<string, Link<Var<int>*int>>
