@@ -1,5 +1,6 @@
 ﻿module internal ArgParse
 open Argu
+open Frontend.Message
 
 type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string
@@ -28,9 +29,9 @@ let parseCLI argv =
     try
         argParser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
     with e ->
-        raise e
+        raise (LabsException {what = CLI e.Message; where=[]})
 
-let placeholders (args:ParseResults<_>) = 
+let getExterns (args:ParseResults<_>) = 
     let parseValues (vals:string list) =
         vals
         |> Seq.map (fun x -> x.Split "=")

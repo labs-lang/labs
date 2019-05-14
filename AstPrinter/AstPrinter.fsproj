@@ -3,9 +3,11 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp2.2</TargetFramework>
+        <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="ArgParse.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
@@ -13,6 +15,11 @@
       <ProjectReference Include="..\Frontend\Frontend.fsproj" />
       <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
       <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
+      <ProjectReference Include="..\LabsToC\LabsToC.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Argu" Version="5.3.0" />
     </ItemGroup>
 
 </Project>
