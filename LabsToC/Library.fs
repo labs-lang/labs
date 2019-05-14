@@ -124,14 +124,17 @@ let encodeInit (table:SymbolTable) =
         Dict ["start", Int _start; "end", Int _end; "pcs", Lst (liquidPcs table.agents.[name].init)])
     |> fun x -> ["initpcs", (Map.values >> Lst) x; "initenv", Lst env; "initvars", Lst vars; "tstamps", Lst tstamps]
     |> fun x -> (render x) init
+let private funcName t =
+    Map.map (sprintf "_%i_%i") t.entry |> Map.values
+    |> String.concat ""
+    |> (+) (if t.last then "_last" else "")
+
+let private guards table t =
+    table.guards.TryFind t.action |> Option.defaultValue Set.empty
 
 let encodeAgent sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
-        let funcName =
-            Map.map (sprintf "_%i_%i") t.entry |> Map.values
-            |> String.concat ""
-            |> (+) (if t.last then "_last" else "")
-        let guards = table.guards.TryFind t.action |> Option.defaultValue Set.empty
+        let guards = guards table t
         let assignments = t.action.def |> (function Act a -> Some a | _ -> None)
         
         /// Set of keys that the agent will have to confirm
@@ -159,17 +162,12 @@ let encodeAgent sync table (a:AgentTable) =
             ]
         
         [
-            "label", funcName |> Str
+            "label", funcName t |> Str
             "last", t.last |> Bool
             "siblings", t.siblings |> Seq.map Int |> Lst
-            "entrycond", liquidPcs (t.entry |> Map.mapValues Set.singleton) |> Lst
-            "exitcond", liquidPcs (t.exit) |> Lst
-            "guards",
-                guards
-                |> Set.map (fun g -> procExpr.BExprTranslator g true)
-                |> Seq.map Str
-                |> Lst
-                
+            "entrycond", liquidPcs (t.entry |> Map.mapValues Set.singleton)
+            "exitcond", liquidPcs (t.exit)
+            "guards", guards |> Seq.map (Str << (procExpr.BExprTranslator true)) |> Lst
             "labs",
                 string t.action.def
                 |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
@@ -188,6 +186,7 @@ let encodeAgent sync table (a:AgentTable) =
                 |> Option.defaultValue Seq.empty
                 |> Lst         
         ]
-        |> fun x -> (strRender x) goto
-        
+        |> render goto
+    
     Set.map (encodeTransition) a.lts
+    |> Seq.reduce (<??>)
