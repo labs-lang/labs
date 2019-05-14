@@ -56,7 +56,7 @@ type LeafExpr<'b> =
         | Id _ -> tID
         | Const v -> string v
         | Extern s -> "_" + s
-and Expr<'a, 'b> =
+type Expr<'a, 'b> =
     | Leaf of LeafExpr<'b>
     | Ref of Ref<'a, 'b>
     | Unary of UnaryOp * Expr<'a, 'b>
@@ -71,7 +71,6 @@ and Expr<'a, 'b> =
             match op with
             | Min | Max -> sprintf "%O(%O, %O)" op e1 e2 
             | _ -> sprintf "%O %O %O" e1 op e2
-
 
 and Ref<'a, 'b> = 
     {var:'a; offset: Expr<'a, 'b> option}
