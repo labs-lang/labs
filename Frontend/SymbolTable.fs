@@ -195,4 +195,18 @@ module internal SymbolTable =
         let errors =
             negatives |> Map.mapValues (fun d -> {what=NegativeSpawn d.name; where=[d.pos]}) |> Map.values
 
-        wrap {table with SymbolTable.spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)                     
+        wrap {table with SymbolTable.spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)                         let dump (table:SymbolTable) =
+        let dumpVar v =
+            match v.vartype with
+            | Scalar -> sprintf "%i=%s=%O" (table.m.IndexOf v) v.name v.init
+            | Array s -> sprintf "%i=%s[%i]=%O" (snd table.m.[v.name]) v.name s v.init
+        let dumpSpawn agentName (_start, _end) =
+            let iface = table.agents.[agentName].variables |> List.map dumpVar |> String.concat ";"
+            let lstig = table.agents.[agentName].lstigVariables table |> Seq.map dumpVar |> String.concat ";"
+            printfn "%s %i,%i\n%s\n%s" agentName _start _end iface lstig
+        printfn "%s" (table.variables |> Map.filter (fun _ v -> isEnvVar v) |> Map.values |> Seq.sortBy table.m.IndexOf |> Seq.map dumpVar |> String.concat ";")
+        Map.map (dumpSpawn) table.spawn
+        
+
+        
+type SymbolTable with member this.dump() = SymbolTable.dump this
