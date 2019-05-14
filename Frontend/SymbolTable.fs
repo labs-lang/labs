@@ -6,7 +6,6 @@ open Externs
 open Message
 open Outcome
 open LTS
-open LabsCore
 
 type Mapping = {
     map: Map<string, Var<int> * int>
@@ -61,6 +60,7 @@ and SymbolTable = {
     variables: Map<string, Var<int>>
     m: Mapping
     guards: Map<Node<Stmt<Var<int>*int>>, Set<BExpr<Var<int>*int, unit>>>
+    properties: Map<string, Node<Property<Var<int>*int>>>
 }
 with
     static member empty =
@@ -72,12 +72,13 @@ with
             variables = Map.empty
             m = Mapping.empty
             guards = Map.empty
+            properties = Map.empty
         }
-
+        
 module internal SymbolTable = 
     let mapVar (v:Var<_>) table =
         zero {table with m = table.m.mapvar v}
-
+    
     let private processVar externs vardef =
         let toVarInt var =
             {
@@ -164,17 +165,12 @@ module internal SymbolTable =
         |> (Map.ofList >> zero)
         <~> fun p ->
             let allProcesses = Map.union p table.processes
-//            try
             let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") allProcesses)
-            
             let (lts, acc), initCond = LTS.makeTransitions state p'.["Behavior"]
-            Set.map (fun t -> eprintfn "<%A %s %A>" t.entry t.action.name t.exit) lts |> ignore
             let lts' = LTS.removeNames p' lts
-            Set.map (fun t -> eprintfn "<<%A %s %A>>" t.entry t.action.name t.exit) lts' |> ignore
             let guards = Map.union table.guards (setGuards p'.["Behavior"])
             let agent = {table.agents.[a.name] with processes=p'; lts=lts'; init=initCond; lstig=a.def.lstig |> Set.ofList}
-            zero ({table with agents = table.agents.Add(a.name, agent); guards=guards}, (Set.empty, acc))
-//            with err -> wrap (table, state) [] [{what=UndefProcess err.Message; where=[a.pos]}] //TODO add correct position        
+            zero ({table with agents = table.agents.Add(a.name, agent); guards=guards}, (Set.empty, acc))        
     
     let makeSpawnRanges externs spawn table =
         let makeRanges mp =
@@ -195,7 +191,19 @@ module internal SymbolTable =
         let errors =
             negatives |> Map.mapValues (fun d -> {what=NegativeSpawn d.name; where=[d.pos]}) |> Map.values
 
-        wrap {table with SymbolTable.spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)                         let dump (table:SymbolTable) =
+        wrap {table with SymbolTable.spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
+
+    let tryAddProperty externs (p:Node<Property<string>>) (table:SymbolTable) =
+        let fn = (BExpr.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
+        zero {table with properties= Map.add p.name (map (over _predicate fn) p) table.properties}
+
+    let lstigVariablesOf table name =
+        table.variables
+        |> Map.filter (fun _ v -> match v.location with | L (s, _) when table.agents.[name].lstig.Contains s -> true | _ -> false)
+        |> Map.values
+        |> Seq.sortBy table.m.IndexOf
+    
+    let dump (table:SymbolTable) =
         let dumpVar v =
             match v.vartype with
             | Scalar -> sprintf "%i=%s=%O" (table.m.IndexOf v) v.name v.init
