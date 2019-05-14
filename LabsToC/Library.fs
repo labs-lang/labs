@@ -18,15 +18,20 @@ let private header = parse "templates/header.c"
 let private UNDEF = -128 (*sentinel value for undef*)
 
 let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
-    let fromTo (v:Var<_>) =
-        snd table.m.[v.name], snd table.m.[v.name] + (match v.vartype with Scalar -> 0 | Array i -> i) 
-    let tupleStart, tupleEnd, maxTuple = //TODO maybe move to frontend
+    let stigmergyVarsFromTo groupBy : Map<'a, (int*int)> =
         table.variables
         |> Map.filter (fun _ -> isLstigVar)
         |> Map.values
-        |> Seq.groupBy (fun v -> v.location)
-        |> Seq.map(fun (_, s) -> (Seq.map fromTo s))
-        |> fun s -> Seq.map (fst << Seq.minBy fst) s, Seq.map (snd << Seq.maxBy snd) s
+        |> Seq.groupBy groupBy
+        |> Seq.map (fun (n, s) -> n, Seq.map (table.m.RangeOf) s)
+        |> Seq.map (fun (n, s) -> n, ((fst << Seq.minBy fst) s, (snd << Seq.maxBy snd) s))
+        |> Map.ofSeq
+        
+    let tupleStart, tupleEnd, maxTuple = //TODO maybe move to frontend
+        let vars = stigmergyVarsFromTo (fun v -> v.location) |> Map.values
+        if Seq.isEmpty vars then seq [0], seq [0], 1 else
+            vars
+            |> fun x -> Seq.sort <| Seq.map fst x, Seq.sort <| Seq.map snd x
         |> fun (s1, s2) -> s1, s2, (Seq.zip s1 s2 |> Seq.map (fun (a, b) -> b - a + 1) |> Seq.max)
     
     let getTypedef num = 
@@ -73,17 +78,28 @@ let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
             "Bool", getTypedef 1
         ]
     
-    let defines' = defines |> Map.map (fun a b -> Dict ["name", Str a; "value", Int b]) |> Map.values
-    eprintfn "%A" defines'
-    zero defines'
+    let links =
+        let fromTo = stigmergyVarsFromTo (fun v -> match v.location with L (n, _) -> n | _ -> "")
+        table.stigmergies
+        |> Map.map (fun name link ->
+            Dict [
+                "start", fst fromTo.[name] |> Int
+                "end", snd fromTo.[name] |> Int
+                "link", link |> linkExpr.BExprTranslator true |> Str
+            ] 
+        )
+        |> Map.values
+    
+    [
+        "defines", defines |> Map.toSeq |> makeDict Str Int
+        "typedefs", makeDict Str Str typedefs
+        "links", Lst links
+        "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
+        "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst
+    ]
+    |> render header
 
 let encodeInit (table:SymbolTable) =
-    let lstigvars agentName =
-        table.variables
-        |> Map.filter (fun _ v -> match v.location with | L (s, _) when table.agents.[agentName].lstig.Contains s -> true | _ -> false)
-        |> Map.values
-        |> Seq.sortBy (fun v -> snd table.m.[v.name])
-    
     let env =
         table.variables
         |> Map.filter (fun _ -> isEnvVar)
