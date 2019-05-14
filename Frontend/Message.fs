@@ -15,6 +15,7 @@ type Err =
     | NonPositiveArraySize of string
     | Codegen of string
     | Generic of string
+    | CLI of string
 
 type Warn =
     | SpawnZero of string
