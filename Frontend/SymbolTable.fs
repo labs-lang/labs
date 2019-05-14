@@ -155,7 +155,7 @@ module internal SymbolTable =
     let tryAddIface externs (a:Node<Agent>) table =
         let iface = List.map (processVar externs) a.def.iface |> List.map (fun x -> x.def)
         fold mapVar iface table
-        <~> fun t -> zero {t with agents = table.agents.Add(a.name, {AgentTable.empty with variables=iface})}
+        <~> fun t -> zero {t with agents = table.agents.Add(a.name, {AgentTable.empty with variables=iface |> List.sortBy t.m.IndexOf})}
     
     let tryAddAgent externs (a:Node<Agent>) (table, state) =
         map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs)
