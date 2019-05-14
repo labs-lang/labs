@@ -1,11 +1,10 @@
-﻿module Frontend.Transform
-open Checks
+﻿module Frontend.Frontend
+open Frontend.Checks
 open Types
-open SymbolTable
-open Outcome
-open Message
-open LTS
-open LabsCore
+open Frontend.SymbolTable
+open Frontend.Outcome
+open Frontend.Message
+open Frontend.LTS
 
 // Duplicate attributes in different agents are legal.
 let private envAndLstigVars sys lstigs =
@@ -39,7 +38,7 @@ let run externs (sys, lstigs, agents', properties) =
         let spawned = List.map (fun (d: Node<_>) -> d.name) sys.def.spawn |> Set.ofList
         List.filter (fun a -> Set.contains a.def.name spawned) agents'
     
-    zero (SymbolTable.empty)
+    zero (Frontend.SymbolTable.empty)
     <??> check (sys, lstigs, agents', properties)
     (* map non-interface variables *)
     <~> fold (tryAddVar externs) vars
@@ -60,6 +59,8 @@ let run externs (sys, lstigs, agents', properties) =
         fold (tryAddAgent externs) agents (x, (Set.empty, (0, ExecPoint.empty, Map.empty, Map.empty)))
     <~> (fst >> zero)
     <~> (makeSpawnRanges externs) sys.def.spawn
+    (* properties can only be added after spawn *)
+    <~> fold (tryAddProperty externs) properties
 
 let initBExprs undefvalue evalfn (v:Var<_>, i: int) =
     let refs =
