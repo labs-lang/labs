@@ -1,9 +1,13 @@
 void monitor() {
-    {{alwaysasserts}}
+    {%- for item in alwaysasserts -%}
+    LABSassert({{item}});
+    {%- endfor -%}
 }
 
 void finally() {
-    {{finallyasserts}}
+    {%- for item in finallyasserts-%}
+    LABSassert({{item}});
+    {%- endfor -%}
     #ifdef SIMULATION
     assert(0);
     #endif
@@ -26,7 +30,7 @@ int main(void) {
 
             {%- for item in schedule -%}
             {% unless forloop.first %}else {% endunless %}if LABScheck({%- for pc in item.entry -%}
-pc[firstAgent][{{pc.pc}}] == {{pc.values}}{% unless forloop.last %} & {% endunless %}{%- endfor -%}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
+pc[firstAgent][{{pc.name}}] == {{pc.value}}{% unless forloop.last %} & {% endunless %}{%- endfor -%}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
 {%- endfor -%}
             
             {%- if fair -%}
