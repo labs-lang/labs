@@ -1,7 +1,12 @@
 ﻿open System.IO
 open FParsec
 
-open Checker.Outcome
+open Frontend
+open Frontend.Outcome
+open Frontend.Message
+open LabsToC
+open ArgParse
+open Argu
 
 let wrapParserResult p text =
     try
@@ -9,16 +14,22 @@ let wrapParserResult p text =
         match x with
         | Success(a, _, _) -> zero a
         | Failure(errorMsg, _, _) ->
-            failwithf "Parsing failed:\n %s" errorMsg
+            Outcome.Error([], [{what=Parser errorMsg; where=[]}])
     with
-        ex -> failwith ex.Message
+        ex -> Outcome.Error([], [{what=Generic ex.Message; where=[]}])
+
 
 [<EntryPoint>]
 let main argv =
-    let input = File.ReadAllText argv.[0]
-    let externs = [("delta", 10); ("grid", 10); ("birds", 3)] |> Map.ofList
+    let flags (cli:ParseResults<_>) = (cli.Contains Fair, cli.Contains No_Bitvector, cli.Contains Simulation, cli.Contains Sync)
     
-    wrapParserResult Parser.parse input
-    <~> Checker.Transform.run externs
-    |> eprintfn "%A"
+    zero argv
+    <~> (parseCLI >> zero)
+    <~> fun cli ->
+        let input = File.ReadAllText (cli.GetResult Arguments.File)
+        let externs = getExterns cli |> Map.mapValues int
+        (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
+    <?> (fun (cli, x) -> LabsToC.encode (cli.GetResult (Bound, defaultValue=1)) (flags cli) x)
+    |> Result.mapError (eprintfn "%A") // TODO Format errors and set exit code
+    |> ignore
     0 // return an integer exit code
