@@ -88,10 +88,10 @@ let encodeInit (table:SymbolTable) =
         table.variables
         |> Map.filter (fun _ -> isEnvVar)
         |> Map.values
-        |> Seq.sortBy (fun v -> snd table.m.[v.name])
+        |> Seq.sortBy table.m.IndexOf
         |> Seq.map (fun v ->
-                Frontend.Transform.initBExprs UNDEF Expr.evalCexprNoId table.m.[v.name]
-                |> List.map (fun b -> (initExpr "").BExprTranslator b false |> Str)
+                Frontend.Frontend.initBExprs UNDEF Expr.evalCexprNoId table.m.[v.name]
+                |> List.map ((initExpr "").BExprTranslator false >> Str)
             )
         |> Seq.concat
     
@@ -99,10 +99,10 @@ let encodeInit (table:SymbolTable) =
         table.spawn
         |> Map.map (fun name (_start, _end) ->
             table.agents.[name].variables
-            |> List.append (lstigvars name |> List.ofSeq)
+            |> List.append (table.agents.[name].lstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
-                Frontend.Transform.initBExprs UNDEF (Expr.evalConstExpr (fun _ -> tid)) table.m.[v.name]
-                |> List.map (fun b -> (initExpr (string tid)).BExprTranslator b false))
+                Frontend.initBExprs UNDEF (Expr.evalConstExpr (fun _ -> tid)) table.m.[v.name]
+                |> List.map ((initExpr (string tid)).BExprTranslator false))
                 |> List.map (fun x i -> List.map Str (x i))
             |> List.map (fun f -> List.map f [_start.._end-1])
             |> List.concat |> List.concat)
@@ -112,7 +112,7 @@ let encodeInit (table:SymbolTable) =
     let tstamps =
         table.spawn
         |> Map.map (fun name (_start, _end) ->
-                (lstigvars name)
+                table.agents.[name].lstigVariables table
                 |> Seq.map (fun v tid -> Dict ["tid", Int tid; "index", Int (snd table.m.[v.name])])
                 |> Seq.map (fun f -> List.map f [_start.._end-1])
                 |> Seq.concat)
@@ -121,9 +121,10 @@ let encodeInit (table:SymbolTable) =
     
     table.spawn
     |> Map.map (fun name (_start, _end) ->
-        Dict ["start", Int _start; "end", Int _end; "pcs", Lst (liquidPcs table.agents.[name].init)])
+        Dict ["start", Int _start; "end", Int _end; "pcs", liquidPcs table.agents.[name].init])
     |> fun x -> ["initpcs", (Map.values >> Lst) x; "initenv", Lst env; "initvars", Lst vars; "tstamps", Lst tstamps]
-    |> fun x -> (render x) init
+    |> render init
+
 let private funcName t =
     Map.map (sprintf "_%i_%i") t.entry |> Map.values
     |> String.concat ""
