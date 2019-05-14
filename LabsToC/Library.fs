@@ -32,7 +32,7 @@ let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
         if Seq.isEmpty vars then seq [0], seq [0], 1 else
             vars
             |> fun x -> Seq.sort <| Seq.map fst x, Seq.sort <| Seq.map snd x
-        |> fun (s1, s2) -> s1, s2, (Seq.zip s1 s2 |> Seq.map (fun (a, b) -> b - a + 1) |> Seq.max)
+            |> fun (s1, s2) -> s1, s2, (Seq.zip s1 s2 |> Seq.map (fun (a, b) -> b - a + 1) |> Seq.max)
     
     let getTypedef num = 
         let getStandardTypes = 
@@ -207,6 +207,7 @@ let encodeAgent sync table (a:AgentTable) =
     
     Set.map (encodeTransition) a.lts
     |> Seq.reduce (<??>)
+
 let encodeMain fair (table:SymbolTable) =
     let scheduleTransition t =
         Dict [
@@ -231,3 +232,13 @@ let encodeMain fair (table:SymbolTable) =
         "finallyasserts", finallyP |> Map.values |> Lst
     ]
     |> render main
+
+let encode bound (fair, nobitvector, sim, sync) table =
+    zero table
+    <?> (encodeHeader bound sim nobitvector)
+    <?> encodeInit
+    <?> (fun x -> 
+            (Map.values x.agents)
+            |> Seq.map (encodeAgent sync x)
+            |> Seq.reduce (<??>))
+    <?> (encodeMain fair)
