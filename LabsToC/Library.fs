@@ -1,20 +1,20 @@
 ﻿module LabsToC.LabsToC
 
-open Frontend.LTS
 open Frontend
+open Frontend.LTS
+open Frontend.Liquid
 open Expressions
 open Types
 open Tokens
 open LabsCore
 open FSharpPlus
-open Frontend.Liquid
-open LabsCore
-open Outcome
-open Types
 
-let private goto = parse "templates/goto.c"
-let private init = parse "templates/init.c"
-let private header = parse "templates/header.c"
+open Outcome
+
+let private goto = Liquid.parse "templates/goto.c"
+let private init = Liquid.parse "templates/init.c"
+let private header = Liquid.parse "templates/header.c"
+let private main = Liquid.parse "templates/main.c"
 let private UNDEF = -128 (*sentinel value for undef*)
 
 let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
@@ -207,3 +207,27 @@ let encodeAgent sync table (a:AgentTable) =
     
     Set.map (encodeTransition) a.lts
     |> Seq.reduce (<??>)
+let encodeMain fair (table:SymbolTable) =
+    let scheduleTransition t =
+        Dict [
+            "name", funcName t |> Str
+            "entry", liquidPcs (t.entry |> Map.mapValues Set.singleton)
+            "guards", guards table t |> Seq.map (Str << ((tidProcExpr "firstAgent").BExprTranslator true)) |> Lst
+        ]
+    let alwaysP, finallyP =
+        let m1, m2 = Map.partition (fun _ n -> n.def.modality = Always) table.properties
+        Map.mapValues (Str << translateProp table) m1, Map.mapValues (Str << translateProp table) m2
+    
+    [
+        "firstagent", if table.spawn.Count = 1 then Int 0 else Int -1
+        "fair", Bool fair;
+        "schedule",
+            table.agents
+            |> Map.mapValues (fun a -> Seq.map scheduleTransition a.lts)
+            |> Map.values
+            |> Seq.concat
+            |> Lst
+        "alwaysasserts", alwaysP |> Map.values |> Lst
+        "finallyasserts", finallyP |> Map.values |> Lst
+    ]
+    |> render main
