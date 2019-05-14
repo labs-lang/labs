@@ -3,7 +3,6 @@ module Types
 open LabsCore
 open Types
 open FSharpPlus.Lens
-open LabsCore
 
     
 type VarType<'a> = 
@@ -70,5 +69,10 @@ type Property<'a> =
         modality:Modality
         quantifiers: Map<string, string * Quantifier>
     }
+let inline _predicate x =
+    let getter p = p.predicate
+    let setter p pred' = {predicate=pred'; name=p.name; quantifiers=p.quantifiers; modality=p.modality}
+    lens getter setter x
+    
 
 type Ast = Node<Sys> * Node<Stigmergy<string>> list * Node<Agent> list * Node<Property<string>> list
