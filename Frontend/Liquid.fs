@@ -17,7 +17,7 @@ and LiquidVal =
 
 let fs = new FileSystems.LocalFileSystem("")
 
-let private internalRender strfun vals (template:Template) =
+let private internalRender strfun (template:Template) values =
     let rec hashval = function
         | Int i -> box i
         | Bool b -> box b
@@ -28,7 +28,7 @@ let private internalRender strfun vals (template:Template) =
             Seq.map (fun (k, v) -> k, (hashval v)) x
             |> dict
             |> Hash.FromDictionary
-    let render = template.Render (hashdict vals)
+    let render = template.Render (hashdict values)
     if template.Errors.Count = 0 then 
         zero (strfun render)
     else 
@@ -37,10 +37,10 @@ let private internalRender strfun vals (template:Template) =
         |> (Seq.toList >> wrap (strfun "") [])
 
 /// Renders a given template to standard output
-let render v t = internalRender (printfn "%s") v t
+let render template values = internalRender (printfn "%s") template values
 
 /// Renders a given template to a string.
-let strRender v t = internalRender id v t
+let strRender template values = internalRender id template values
 
 let parse path =
     Template.FileSystem <- fs
@@ -50,12 +50,11 @@ let parse path =
 ///<summmary>Opens a template file and renders it using the specified
 ///local variables.</summary>
 let renderFile path (vals:LiquidDict) =
-    (strRender vals (parse path))
+    (strRender (parse path) vals)
 
-//// Reusable template, we only parse it once
-//let goto = parse "templates/goto.c"
+let makeDict typeofName typeofValue =
+    Lst << Seq.map (fun (a, b) -> Dict ["name", typeofName a; "value", typeofValue b])
 
 let liquidPcs pcset =
     pcset
-    |> Map.toSeq
-    |> Seq.map (fun (pc, vals) -> Dict["pc", Int pc; "values", Lst (Seq.map (Int) vals)])
+    |> Map.toSeq |> makeDict Int (Lst << (Seq.map Int))
