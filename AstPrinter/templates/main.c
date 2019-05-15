@@ -1,12 +1,12 @@
 void monitor() {
     {%- for item in alwaysasserts -%}
-    LABSassert({{item}});
+    LABSassert({{item.value}}, {{item.name}});
     {%- endfor -%}
 }
 
 void finally() {
-    {%- for item in finallyasserts-%}
-    LABSassert({{item}});
+    {%- for item in finallyasserts -%}
+    LABSassert({{item.value}}, {{item.name}});
     {%- endfor -%}
     #ifdef SIMULATION
     assert(0);

@@ -216,8 +216,9 @@ let encodeMain fair (table:SymbolTable) =
             "guards", guards table t |> Seq.map (Str << ((tidProcExpr "firstAgent").BExprTranslator true)) |> Lst
         ]
     let alwaysP, finallyP =
+        let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.name, translateProp table n) props)
         let m1, m2 = Map.partition (fun _ n -> n.def.modality = Always) table.properties
-        Map.mapValues (Str << translateProp table) m1, Map.mapValues (Str << translateProp table) m2
+        toLiquid <| Map.values m1, toLiquid <| Map.values m2
     
     [
         "firstagent", if table.spawn.Count = 1 then Int 0 else Int -1
@@ -228,8 +229,8 @@ let encodeMain fair (table:SymbolTable) =
             |> Map.values
             |> Seq.concat
             |> Lst
-        "alwaysasserts", alwaysP |> Map.values |> Lst
-        "finallyasserts", finallyP |> Map.values |> Lst
+        "alwaysasserts", alwaysP
+        "finallyasserts", finallyP
     ]
     |> render main
 
