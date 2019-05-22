@@ -1,15 +1,15 @@
 system {
-    extern = _max
+    extern = _mx
     environment = a: 0
     spawn = Proc1: 1
 }
 
 agent Proc1 {
 
-    Behavior = (a <-- 0 ++ a <-- 1); Behavior
+    Behavior = (a <-- 0 || a <-- 1); (a <-- 2 ++ Behavior)
 
 }
 
 check {
-    P1 = always a < _max
+    P1 = always a < _mx
 }

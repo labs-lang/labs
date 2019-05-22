@@ -69,7 +69,6 @@ agent Evaporate {
         ab, ac, ad <~ max(ab-1, 0), max(ac-1, 0), max(ad-1,0)
         ; Behavior
 
-
 }
 
 check {

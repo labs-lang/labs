@@ -10,7 +10,7 @@ agent Phil {
     # 1 = holding 1 fork (before eating)
     # 2 = holding both forks
     # 3 = holding 1 fork (after eating)
-    interface = think: 0, eat: 0, status: 0
+    interface = think: 0; eat: 0; status: 0
 
     Behavior =
         think <- think + 1;
