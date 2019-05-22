@@ -462,3 +462,4 @@ sliver/click
 sliver/pycparser
 sliver/core
 sliver/cseq.py
+.vscode

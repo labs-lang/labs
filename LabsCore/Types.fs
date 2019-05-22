@@ -1,48 +1,76 @@
 module Types
+open Tokens
+open FParsec
+open FSharpPlus.Lens
 
-type Location = 
+type Node<'a> = {
+    name: string
+    pos: Position
+    def: 'a
+}
+let inline _name x =
+    let getter {name=n} = n
+    let setter {pos=p; def=d} n' = {name=n'; pos=p; def=d}
+    lens getter setter x
+let inline _def x =
+    let getter {def=d} = d
+    let setter {name=n; pos=p} d' = {name=n; pos=p; def=d'}
+    lens getter setter x
+let inline _pos x =
+    let getter {pos=p} = p
+    let setter {name=n; def=d} p' = {name=n; pos=p'; def=d}
+    lens getter setter x
+
+type Location =
     | I 
-    | L of name:string 
+    | L of name:string * tupleIndex: int
     | E
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
-            | L n -> sprintf "Stigmergy (%s)" n 
-
+            | L(n, _) -> sprintf "Stigmergy (%s)" n 
 
 type ArithmOp =
-    | Plus
-    | Minus
-    | Times
-    | Div
-    | Mod
+    | Plus | Minus
+    | Times | Div | Mod
+    | Min | Max
     override this.ToString() = 
         match this with
-        | Plus -> "+" | Minus -> "-" | Times -> "*" | Div -> "/" | Mod -> "%" 
+        | Plus -> tPLUS | Minus -> tMINUS
+        | Times -> tMUL | Div -> tDIV | Mod -> tMOD
+        | Min -> tMIN | Max -> tMAX
 
-type Expr<'a, 'b> =
+type UnaryOp = 
+    | Abs | UnaryMinus
+    override this.ToString() =
+        match this with
+        | Abs -> tABS
+        | UnaryMinus -> tMINUS
+
+type LeafExpr<'b> =
     | Id of 'b
     | Const of int
+    | Extern of string
+    override this.ToString() = 
+        match this with
+        | Id _ -> tID
+        | Const v -> string v
+        | Extern s -> "_" + s
+type Expr<'a, 'b> =
+    | Leaf of LeafExpr<'b>
     | Ref of Ref<'a, 'b>
-    | Abs of Expr<'a, 'b>
+    | Unary of UnaryOp * Expr<'a, 'b>
     | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
     override this.ToString() = 
         match this with
-        | Id _ -> "id"
-        | Const v -> string v
+        | Leaf l -> string l
         | Ref r -> string r
-        | Abs e -> sprintf "abs(%O)" e
-        | Arithm(e1, op, e2) -> sprintf "%O %O %O" e1 op e2
-
-    member this.visit fn compose =
-        let rec visit x =
-            match x with
-            | Id _ 
-            | Const _ 
-            | Ref _ -> fn x
-            | Abs e -> visit e
-            | Arithm (e1, _, e2) -> compose (visit e1) (visit e2)
-        visit this
+        | Unary(op, e) -> 
+            let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in sprintf "%s(%O)" s e
+        | Arithm(e1, op, e2) ->
+            match op with
+            | Min | Max -> sprintf "%O(%O, %O)" op e1 e2 
+            | _ -> sprintf "%O %O %O" e1 op e2
 
 and Ref<'a, 'b> = 
     {var:'a; offset: Expr<'a, 'b> option}
@@ -71,19 +99,18 @@ type Bop =
     | Conj
     | Disj
     override this.ToString() = 
-        match this with Conj -> "and" | Disj -> "or"
+        match this with Conj -> tCONJ | Disj -> tDISJ
 
 ///<summmary>Boolean expressions.</summary>
 type BExpr<'a, 'b> =
-    | True
-    | False
+    | BLeaf of bool
     | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
     | Neg of BExpr<'a, 'b>
     | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
     override this.ToString() =
         match this with
-        | True -> "true" | False -> "false"
-        | Neg b -> sprintf "!(%O)" b
+        | BLeaf true -> tTRUE | BLeaf false -> tFALSE
+        | Neg b -> sprintf "%s(%O)" tNEG b
         | Compare(e1, op, e2) -> sprintf "(%O) %O (%O)" e1 op e2
         | Compound(b1, op, b2) -> sprintf "(%O) %O (%O)" b1 op b2
 
@@ -100,41 +127,11 @@ type Action<'a> = {
                 (this.updates |> List.map (string << fst) |> String.concat ",")
                 (this.updates  |> List.map (string << snd) |> String.concat ",")
 
-type Process<'a, 'b> = 
-    | Nil
-    | Skip of 'b
-    | Base of Action<'a> * 'b
-    | Seq of Process<'a, 'b> * Process<'a, 'b>
-    | Choice of Process<'a, 'b> * Process<'a, 'b>
-    | Par of Process<'a, 'b> * Process<'a, 'b>
-    | Await of BExpr<'a, unit> * Process<'a, 'b>
-    | Name of string * 'b
-    static member private monoid left right op = 
-        match left,right with
-        | _, Skip _ -> left
-        | Skip _, _ -> right
-        | _ -> op(left, right)
-    static member ( ^. )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
-        Seq(left, right)
-    static member ( ^+ )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
-        Choice(left, right)
-    static member ( ^| )(left: Process<'a, 'b>, right: Process<'a, 'b>) =
-        Process<'a, 'b>.monoid left right Par
-    override this.ToString() =
-        match this with
-        | Nil -> "0"
-        | Skip _ -> "√"
-        | Base (a, _) -> string a
-        | Seq(p, q) -> sprintf "%O; %O" p q
-        | Choice(p, q) -> sprintf "%O + %O" p q
-        | Par(p, q) -> sprintf "%O | %O" p q
-        | Await(b, p) -> sprintf "%A -> %O" b p
-        | Name (s, _) -> s
+module Action =
+    let updates_ =
+        (fun a -> a.updates),
+        (fun u a -> {actionType=a.actionType; updates=u})
 
-
-type VarType = 
-    | Scalar
-    | Array of size:int
  /// Initialization values
  type Init =
      | Choose of Expr<unit,unit> list
@@ -145,12 +142,3 @@ type VarType =
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> sprintf "%O..%O" min max
         | Undef -> "undef"
-
-
-type Var = {
-    name:string
-    vartype:VarType
-    location:Location
-    init:Init
-}
-with override this.ToString() = this.name

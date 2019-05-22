@@ -36,12 +36,12 @@ agent Bird {
 
     # Only move if there is no agent on the destination position
     Move = (
-            (x + dirX % _grid = repX and y + dirY % _grid = repY ->
+            ((x + dirX) % _grid = repX and (y + dirY) % _grid = repY ->
                 Skip)
             ++
-            (x + dirX % _grid != repX  or y + dirY % _grid != repy ->
-                x, y <- (x + dirX) % _grid, (y + dirY) % _grid)
-        );
+            ((x + dirX) % _grid != repX  or (y + dirY) % _grid != repY ->
+                    x, y <- (x + dirX) % _grid , (y + dirY) % _grid
+            ));
         repX, repY <~ x, y
         
 

@@ -26,24 +26,14 @@ stigmergy Alignment {
 
 agent Bird {
     interface = x: 0.._grid; y: 0.._grid
-    stigmergies = Cohesion; Alignment; Separation
+    stigmergies = Cohesion; Alignment
     
     # At first, every agent is the leader of their own swarm.
     # Exchange of stigmergic messages naturally leads to the
     # election of a leader for each group of connected birds
     Behavior = Move; Attract; Behavior
 
-
-    # Only move if there is no agent on the destination position
-    Move = (
-            (x + dirX % _grid = repX and y + dirY % _grid = repY ->
-                Skip)
-            ++
-            (x + dirX % _grid != repX  or y + dirY % _grid != repy ->
-                x, y <- (x + dirX) % _grid, (y + dirY) % _grid)
-        );
-        repX, repY <~ x, y
-        
+    Move = x, y <- (x + dirX) % _grid, (y + dirY) % _grid
 
     Attract = (
         # Leaders only signal their own position

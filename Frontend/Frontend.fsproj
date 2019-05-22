@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <RootNamespace>Checker</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Message.fs" />
+        <Compile Include="Outcome.fs" />
+        <Compile Include="Checks.fs" />
+        <Compile Include="Externs.fs" />
+        <Compile Include="LTS.fs" />
+        <Compile Include="SymbolTable.fs" />
+        <Compile Include="Liquid.fs" />
+        <Compile Include="Library.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="DotLiquid" Version="2.0.298" />
+      <PackageReference Include="FSharpPlus" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
+      <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
+    </ItemGroup>
+
+</Project>

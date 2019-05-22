@@ -1,7 +1,8 @@
 void {{label}}(int tid) {
     {% if labs %}//{{labs}}
     {%- endif -%}
-{% include "templates/entry" %}
+    
+    {%- include "templates/entry" -%}
 
     {%- if assignments -%}{%- for item in assignments -%}
     TYPEOFVALUES val{{forloop.index0}} = {{item.expr}};
@@ -25,13 +26,18 @@ void {{label}}(int tid) {
     __VERIFIER_assume(HinCnt[tid] == 0);
     {%- endif -%}
 
-    {%- for item in exitpoints -%}
-    {%- if item.values.size == 1-%}
-    pc[tid][{{ item.pc }}] = {{ item.values.first }};
+    {%- if sync -%}
+    {% if qrykeys.size > 0 -%}confirm();{% endif %}
+    {% if type == "lstig" -%}propagate();{% endif %}
+    {%- endif -%}
+
+    {%- for item in exitcond -%}
+    {%- if item.value.size == 1-%}
+    pc[tid][{{ item.name }}] = {{ item.value.first }};
     {%- else -%}
-    TYPEOFPC pc{{item.pc}};
-    LABSassume({%- for val in item.values -%} (pc{{ item.pc }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
-    pc[tid][{{ item.pc }}] = pc{{ item.pc }};
-    {%-endif-%}{%- endfor -%}
+    TYPEOFPC pc{{item.name}};
+    LABSassume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    pc[tid][{{ item.name }}] = pc{{ item.name }};
+    {%- endif -%}{%- endfor -%}
 
 }

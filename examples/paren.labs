@@ -1,0 +1,23 @@
+# Test suite for parentheses parsing
+
+system {
+    environment = x: 1
+    spawn = Agent: 1
+
+    P = x <-- 0
+
+    Proc            = (P); P
+    GuardedProc     = (true -> P); P
+    Guard           = (true) -> P; P
+    Expr            = (1) = 1 -> P; P
+    #ExprP           = ((1) = 1) -> P; P
+
+}
+
+agent Agent {
+    Behavior = Expr
+}
+
+check {
+
+}

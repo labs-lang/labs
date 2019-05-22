@@ -22,18 +22,21 @@ void init() {
     {%- for i in (item.start..a) -%}
 
     {%- for p in item.pcs -%}
-    {%- if p.values.size == 1 -%}
-    _pc[{{i}}][{{ p.pc }}] = {{ p.values.first }};{%- else -%}
-    LABSassume({%- for val in p.values -%} (_pc[{{i}}][{{ p.pc }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
-    {%- endif -%}
-    {% endfor %}
-
-    {%- endfor -%}{%- endfor -%}
+    {%- if p.value.size == 1 -%}
+    _pc[{{i}}][{{ p.name }}] = {{ p.value.first }};
+    {%- else -%}
+    LABSassume({%- for val in p.value -%} (_pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
         
-    {{- initenv -}}
-
-    {{- initvars -}}
-
+    {%- for item in initenv -%}
+    LABSassume({{item}});
+    {%- endfor -%}
+    {%- for item in initvars -%}
+    LABSassume({{item}});
+    {%- endfor -%}
+    {%- for item in tstamps -%}
+    Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();
+    {%- endfor -%}
     now();
 
     for (i=0; i<MAXKEYE; i++) {

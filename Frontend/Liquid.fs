@@ -1,7 +1,10 @@
-﻿module internal Liquid
+﻿module Frontend.Liquid
+open Frontend
 
-open Base
+open Outcome
+open Message
 open DotLiquid
+open System.IO
 
 type LiquidDict =
     (string * LiquidVal) seq
@@ -14,7 +17,7 @@ and LiquidVal =
 
 let fs = new FileSystems.LocalFileSystem("")
 
-let private internalRender strfun vals (template:Template) =
+let private internalRender strfun (template:Template) values =
     let rec hashval = function
         | Int i -> box i
         | Bool b -> box b
@@ -25,34 +28,33 @@ let private internalRender strfun vals (template:Template) =
             Seq.map (fun (k, v) -> k, (hashval v)) x
             |> dict
             |> Hash.FromDictionary
-    let render = template.Render (hashdict vals)
+    let render = template.Render (hashdict values)
     if template.Errors.Count = 0 then 
-        Result.Ok (strfun render)
+        zero (strfun render)
     else 
         template.Errors
-        |> Seq.map (fun x -> x.Message)
-        |> String.concat "\n"
-        |> sprintf "Code generation failed with the following message:\n%s"
-        |> Result.Error
+        |> Seq.map (fun x -> {what=Codegen x.Message; where=[]})
+        |> (Seq.toList >> wrap (strfun "") [])
 
 /// Renders a given template to standard output
-let render v t = internalRender (printfn "%s") v t
+let render template values = internalRender (printfn "%s") template values
 
-/// Renders a given template to string
-let strRender v t = internalRender id v t
+/// Renders a given template to a string.
+let strRender template values = internalRender id template values
 
 let parse path =
     Template.FileSystem <- fs
-    readFile path
-    |> Result.map Template.Parse
+    File.ReadAllText path
+    |> Template.Parse
 
 ///<summmary>Opens a template file and renders it using the specified
 ///local variables.</summary>
 let renderFile path (vals:LiquidDict) =
-    parse path
-    |> Result.bind (strRender vals)
+    (strRender (parse path) vals)
 
-// Reusable templates, we only parse them once
-let goto = parse "templates/goto.c"
-let transition = parse "templates/transition.c"
-let stop = parse "templates/stop.c"
+let makeDict typeofName typeofValue =
+    Lst << Seq.map (fun (a, b) -> Dict ["name", typeofName a; "value", typeofValue b])
+
+let liquidPcs pcset =
+    pcset
+    |> Map.toSeq |> makeDict Int (Lst << (Seq.map Int))

@@ -1,37 +1,44 @@
 ﻿module internal System
 open FParsec
+
+open Tokens
 open Init
 open Types
 open Processes
+open Expressions
 
-let pspawn = 
-    ws ((ws IDENTIFIER) .>>. (ws COLON >>. pint32)) |> sepbycommas >>= toMap
+let pspawn =
+    let pspawnexpr:Parser<Expr<unit,unit>> = 
+        makeExprParser 
+            (fun _ -> fail "unexpected variable in constant expression") 
+            (skipString tID >>. notInIdentifier >>. fail "unexpected id in constant expression")
+    
+    (pipe3
+        (followedBy IDENTIFIER >>. getPosition)
+        (ws IDENTIFIER .>> (ws (skipChar ':')))
+        (ws pspawnexpr)
+        (fun pos name expr -> {pos=pos; name=name; def=expr})
+    )
+    |> sepbycommas
 
-let pextern = ws ((sepbycommas (skipChar '_' >>. KEYNAME))) |>> Set.ofList
+let pextern = (sepbycommas ((skipChar '_' >>. KEYNAME) |> ws) |> ws)
 
-let psys = 
-    let makeRanges (mp: Map<'a, int>) =
-        mp 
-        |> Map.fold 
-            (fun (c, m) name num -> 
-                let newC = c + num
-                (newC, (Map.add name (c, newC) m) )) (0, Map.empty) 
-        |> snd
-
-    ws (skipString "system")
-    >>. 
+let psys =
+    (followedBy (skipString "system"))
+    >>. getPosition
+    .>> ws (skipString "system")
+    .>>. 
         (pipe4
-            (opt (pstringEq "extern" (ws (skipRestOfLine true))))
-            (opt (pstringEq "environment" (pkeys E)))
-            (pstringEq "spawn" pspawn)
-            (processes)
-            (fun _ env spawn procs -> {
-                processes = procs;
-                environment = (env |> Option.defaultValue Set.empty);
-                spawn = (makeRanges spawn);
-                components = Map.empty;
-                properties = Map.empty;
-                stigmergies = Map.empty;
+            (opt (pstringEq "extern" pextern) <!> "EXTERN")
+            (opt (pstringEq "environment" (pkeys Location.E)) <!> "ENV")
+            (pstringEq "spawn" pspawn <!> "SPAWN")
+            processes
+            (fun ext env spawn procs -> {
+                processes = procs
+                externals = Option.defaultValue [] ext
+                environment = Option.defaultValue [] env
+                spawn = spawn
             })
         |> betweenBraces)
         |> ws
+    |>> (fun (pos, sys) -> {name="system"; pos=pos; def=sys})

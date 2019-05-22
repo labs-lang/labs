@@ -5,23 +5,33 @@ system {
 }
 
 agent Phil {
-    interface = think: 0, eat: 0
+    # Status: 
+    # 0 = thinking (no forks)
+    # 1 = holding 1 fork (before eating)
+    # 2 = holding both forks
+    # 3 = holding 1 fork (after eating)
+    interface = think: 0; eat: 0; status: 0
 
     Behavior =
         think <- think + 1;
         
         fork[id] = 0 -> 
             fork[id] <-- 1;
+            status <- 1;
             fork[(id + 1) % _n] = 0 ->
                 fork[(id + 1) % _n] <-- 1;
-                # "Critical section"
-                eat <- eat + 1;
+                # Critical section
+                eat, status <- eat + 1, 2;
 
                 fork[(id + 1) % _n] <-- 0;
+                status <- 3;
                 fork[id] <-- 0;
+                status <- 0;
                 Behavior
 }
 
 check {
-    P1 = always forall Phil p, eat of p < 3
+    # It never happens that all philosophers are waiting
+    # for the second fork
+    P1 = always exists Phil p, status of p != 1
 }

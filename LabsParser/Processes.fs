@@ -1,18 +1,20 @@
-module Processes
+module internal Processes
 
 open FParsec
 open Types
+open Tokens
+open LabsCore
 open Expressions    
 
-let pexpr = makeExprParser simpleRef (skipString "id" >>. notFollowedBy (skipSatisfy isAlphanum))
+let pexpr = makeExprParser simpleRef (skipString tID .>> notInIdentifier)
 
 /// Parses elementary processes ("actions")
 let paction =
     let parseArrow =
         skipChar '<' >>. choice [
-            followedBy (skipString "--") >>. stringReturn "--" E; 
+            followedBy (skipString "--") >>. stringReturn "--" Location.E; 
             charReturn '-' I;
-            charReturn '~' (L "")
+            charReturn '~' (L("",0))
         ]
     tuple3 
         (ws (simpleRef pexpr) |> sepbycommas)
@@ -23,36 +25,48 @@ let paction =
         | :? System.ArgumentException -> 
             fail "A multiple assignment should contain the same number of variables and expressions.")
 
+
+// We need a recursive parser for LAbS processes
+// (see pGuarded and pParen)
 let pproc, pprocRef = createParserForwardedToRef()
-let pprocTerm, pprocTermRef = createParserForwardedToRef()
 
-do pprocTermRef :=
-    let pguard = makeBExprParser pexpr
-    let pNil = stringReturn "Nil" Nil
-    let pSkip = skipString "Skip" >>. getPosition |>> Skip
-    let pGuarded = (ws pguard) .>>. ((ws GUARD) >>. pproc)
-    choice [
-        followedBy (skipChar '(') >>. betweenParen pproc <!> "pparen"
-        attempt pGuarded <!> "Guarded" |>> Await;
-        attempt pNil <!> "Nil"; 
-        attempt pSkip <!> "Skip";
-        IDENTIFIER .>>. getPosition |>> Name; 
-        paction .>>. getPosition |>> Base;
-    ]
+do pprocRef :=
+    let doBase (pos, stmt) = {def=stmt; pos=pos; name=string stmt} |> BaseProcess
+    let compose a b = Comp(a, b)
 
-do pprocRef := 
-    // Turns a syntactic operator into a process composition
-    let OP : Parser<_> = 
+    let pGuarded = 
+        let pguard = makeBExprParser pexpr
+        followedBy ((ws pguard) >>. (ws GUARD))
+        >>. pipe3
+            getPosition (ws pguard) ((ws GUARD) >>. pproc)
+            (fun pos g p -> Guard({pos=pos; name=""; def=(g,p)}))
+        <!> "Guard"
+    let pBase =
+        let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase
+        let pSkip = getPosition .>>. safeStrReturn tSKIP Skip |>> doBase
+        let pParen = followedBy (skipChar '(') >>. (betweenParen pproc)
+        
         choice [
-            (stringReturn "++" (^+));
-            (stringReturn "||" (^|));
-            (charReturn ';' (^.));
-        ]
-    maybeTuple2 
-        (ws pprocTerm)
-        ((ws OP) .>>. (ws pproc))
-        (fun (a, (b, c)) -> b a c)
-    
+             attempt pGuarded <!> "Guarded"
+             attempt pNil <!> "Nil"
+             attempt pSkip <!> "Skip"
+             attempt (getPosition  .>>. (IDENTIFIER |>> Name)) |>> doBase <!> "Name"
+             attempt (getPosition .>>. (paction |>> Act)) |>> doBase <!> "Action"
+             pParen <!> "Paren"
+         ] <!> "BASE"
+
+    let pseq = 
+        sepBy1 (ws pBase) (ws SEQ) |>> (compose Seq) <!> "SEQ"
+    let pchoice = 
+        sepBy (ws pseq) (ws CHOICE) |>> (compose Choice) <!> "CHOICE"
+
+    sepBy (ws pchoice) (ws PAR) |>> (compose Par) <!> "PAR" 
+
 let processes = 
-    let pdef = (ws IDENTIFIER) .>>. ((ws EQ) >>. (ws pproc <!> "PPROC"))
-    ws (many pdef) >>= toMap
+    let pdef =
+        pipe3
+            ((followedBy IDENTIFIER) >>. getPosition) 
+            (ws IDENTIFIER)
+            ((ws EQ) >>. (ws pproc) <!> "PPROC")
+            (fun pos name proc -> {name=name; pos=pos; def=proc})
+    ws (many pdef)

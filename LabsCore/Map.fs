@@ -1,35 +1,23 @@
 ﻿module Map
+// https://github.com/fsprojects/FSharpPlus/blob/master/src/FSharpPlus/Extensions.fs
+// See LICENSE_FSharpPlus.txt
 
-/// Returns the set of keys in m.
-let keys m =
-    if Map.count m = 0
-    then Set.empty
-    else m |> Map.toSeq |> Seq.map fst |> Set.ofSeq
-/// Returns a sequence of all the values in m.
-let values table =
-    if Map.count table = 0
-    then Seq.empty
-    else table |> Map.toSeq |> Seq.map snd
+/// Returns the set of keys in source.
+let keys   (source: Map<_,_>) = Seq.map (fun (KeyValue(k, _)) -> k) source
+/// Returns the set of keys in source.
+let values (source: Map<_,_>) = Seq.map (fun (KeyValue(_, v)) -> v) source
 
-/// Builds a new map made by adding all the elements of other into table.
-/// Values with the same key will be overwritten.
-let merge other table =
-    Map.fold (fun acc key value -> Map.add key value acc) table other
+/// <summary>Map values of the original Map.</summary>
+/// <remarks>Keys remain unchanged.</remarks>
+/// <param name="f">The mapping function.</param>
+/// <param name="x">The input Map.</param>
+///
+/// <returns>The mapped Map.</returns>
+let mapValues f (x: Map<'Key, 'T>) = Map.map (fun _ -> f) x
 
-let mergeIfDisjoint map1 map2 = 
-    let intersect =
-        map2 |> Map.filter (fun x _ -> (Map.containsKey x map1)) |> keys
-    if intersect.IsEmpty 
-    then merge map1 map2
-    else
-        intersect
-        |> Set.map (sprintf "%O")
-        |> String.concat ", "
-        |> sprintf "Duplicate variable definitions for %s"
-        |> failwith
+/// Returns the union of two maps, using the combiner function for duplicate keys.
+let unionWith combiner (source1: Map<'Key, 'Value>) (source2: Map<'Key, 'Value>) =
+    Map.fold (fun m k v' -> Map.add k (match Map.tryFind k m with Some v -> combiner k v v' | None -> v') m) source1 source2
 
-/// Builds a new collection whose elements are the result of
-/// applying the given function to each value in the map.
-/// The key is ignored.
-let mapValues mapping table =
-    Map.map (fun _ -> mapping) table
+/// Returns the union of two maps, preferring values from the first in case of duplicate keys.
+let union (source: Map<'Key, 'T>) (altSource: Map<'Key, 'T>) = unionWith (fun _ x _ -> x) source altSource

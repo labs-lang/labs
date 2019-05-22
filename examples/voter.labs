@@ -1,5 +1,5 @@
 system {
-    environment = op: [0,1]
+    environment = op: [0, 1]
     spawn = Voter: 10
     # "Global" processes
     Listen = op != opinion -> opinion <- op
@@ -8,7 +8,7 @@ system {
 }
 
 agent Voter {
-    interface = opinion: [0,1]
+    interface = opinion: [0, 1]
 
     Behavior = VoterModel
     VoterModel = (Listen | Talk); VoterModel

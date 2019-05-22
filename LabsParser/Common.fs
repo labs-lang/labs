@@ -1,43 +1,70 @@
 ﻿[<AutoOpen>]
 module internal Common
+
+open Tokens
 open FParsec
 
 type Parser<'t> = Parser<'t, unit>
 
 // Tokens
 //-----------------------------------------
-let COMMENT : Parser<_> =       (skipChar '#')
+let COMMENT : Parser<_> =       (skipString tCOMMENT)
 let COLON : Parser<_> =         (skipChar ':')
 let COMMA : Parser<_> =         (skipChar ',')
 let EQ : Parser<_> =            (skipChar '=')
-let GUARD : Parser<_> =         (skipString "->")
-let NEG : Parser<_> =           (skipChar '!')
 let RANGE : Parser<_> =         (skipString "..")
-let strUNDEF =                  "undef"
+let OF : Parser<_> =            (skipString "of")
+let GUARD : Parser<_> =         (skipString tGUARD)
+let NEG : Parser<_> =           (skipString tNEG)
+let SEQ : Parser<_> =           (skipString tSEQ)
+let CHOICE : Parser<_> =        (skipString tCHOICE)
+let PAR : Parser<_> =           (skipString tPAR)
 //-----------------------------------------
 
-let isAlphanum x = isAsciiLetter x || isDigit x
 
+let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
+
+/// Parse p and skip whitespace/comments after.
+let ws p = p .>> spaces .>> skipMany (spaces1 <|> lineComment)
+let ws_ = ws (preturn ())
+
+let isAlphanum x = isAsciiLetter x || isDigit x
+let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum)
+
+// Parses reserved keyword so they are not parsed as identifiers or names
+let reserved : Parser<_> = 
+    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX]
+    |> List.map pstring 
+    |> choice
+    .>> notInIdentifier
+
+let safeSkip str = skipString str .>> notInIdentifier
+let safeStrReturn str ret = safeSkip str >>% ret
+
+let safeIdentifier options =
+    (notFollowedBy reserved >>. identifier options)
+    <|> (followedBy reserved >>. reserved >>= (fail << (sprintf "Unexpected keyword '%s'")))
+    
 let KEYNAME : Parser<_> =
     IdentifierOptions(
         isAsciiIdStart=isAsciiLower,
         isAsciiIdContinue=isAlphanum)
-    |> identifier
+    |> safeIdentifier
 
 let IDENTIFIER : Parser<_> = 
     IdentifierOptions(
         isAsciiIdStart=isAsciiUpper,
         isAsciiIdContinue=isAlphanum)
-    |> identifier
+    |> safeIdentifier
 
 let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
-/// Parse p and skip whitespace after.
-let ws p = p .>> spaces
-let betweenBrackets p = between (ws (skipChar '[')) (skipChar ']') p
-let betweenBraces p = between (ws (skipChar '{')) (skipChar '}') p
-let betweenParen p = between (ws (skipChar '(')) (skipChar ')') p
-let betweenAng p = between (ws (skipChar '<')) (skipChar '>') p
+let enclose startc endc = between (ws (skipChar startc)) (skipChar endc)
+
+let betweenBrackets p = enclose '[' ']' p
+let betweenBraces p = enclose '{' '}' p
+let betweenParen p = enclose '(' ')' p
+let betweenAng p = enclose '<' '>' p
 let sepbycommas p = sepBy1 p (ws COMMA)
 let sepbysemis p = sepBy1 p (ws (skipChar ';'))
 
@@ -46,24 +73,13 @@ let sepbysemis p = sepBy1 p (ws (skipChar ';'))
 let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
     #if DEBUG
     fun stream ->
-        eprintfn "%A: Entering %s" stream.Position label
+        eprintfn "%A: Entering %s (char: %O)" stream.Position label (stream.Peek())
         let reply = p stream
-        eprintfn "%A: Leaving %s (%A)" stream.Position label reply.Status
+        eprintfn "%A: Leaving %s (%A, %O)" stream.Position label reply.Status reply.Result
         reply
     #else
     p
     #endif
-
-/// Apply parser p1, then apply optional parser p2.
-/// If p2 succeeds, pass both results to if2.
-/// Otherwise return the result of p1.
-let maybeTuple2 p1 p2 if2 =
-    p1 .>>. (opt p2 <!> "p2") |>> 
-    function
-    | a, Some b -> if2(a, b)
-    | a, None -> a
-
-let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
     
 let toMapF formatonFail lst =
     let dup = lst |> List.map fst |> List.duplicates
@@ -89,8 +105,9 @@ let toSet dupFn formatOnFail lst =
     else
         preturn (Set.ofList lst)
         
-let inline byName v =
-   (^T : (member name : string) v)
+let inline byName v = (^T : (member name : string) v)
 
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)
+    
+let pextern : Parser<_> = ((skipChar '_') >>. (KEYNAME))

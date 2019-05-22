@@ -1,7 +1,58 @@
 ﻿[<AutoOpen>]
 module Types
+open LabsCore
 open Types
-open Link
+open FSharpPlus.Lens
+
+    
+type VarType<'a> = 
+    | Scalar
+    | Array of size:'a
+
+type Var<'a> = {
+        name: string
+        vartype: VarType<'a>
+        location: Location
+        init:Init
+    }
+    with 
+        override this.ToString() = this.name
+            
+let inline _vartype x =
+    let getter v = v.vartype
+    let setter v t' = {vartype=t'; name=v.name; location=v.location; init=v.init}
+    lens getter setter x
+
+//TODO see if active patterns would be better
+let inline isEnvVar v = match v.location with E -> true | _ -> false
+let inline isLstigVar v = match v.location with L _ -> true | _ -> false
+
+
+type Sys = {
+    environment: Node<Var<Expr<unit, unit>>> list
+    externals: string list
+    spawn: Node<Expr<unit, unit>> list
+    processes: Node<Process<string>> list
+}
+
+type Agent =
+    {
+        name: string
+        iface: Node<Var<Expr<unit, unit>>> list
+        lstig: string list
+        processes: Node<Process<string>> list
+    }
+
+type LinkComponent = | C1 | C2
+
+type Link<'a> = BExpr<'a * LinkComponent, LinkComponent>
+
+type Stigmergy<'a> =
+    {
+        name: string
+        vars: Set<Node<Var<Expr<unit, unit>>>> list
+        link: Node<Link<'a>>
+    }
 
 type Modality =
     | Always
@@ -11,44 +62,17 @@ type Quantifier =
     | All
     | Exists
 
-type Property<'a> = {
+type Property<'a> =
+    {
         name:string
         predicate:BExpr<'a * string option, string>
         modality:Modality
         quantifiers: Map<string, string * Quantifier>
     }
+let inline _predicate x =
+    let getter p = p.predicate
+    let setter p pred' = {predicate=pred'; name=p.name; quantifiers=p.quantifiers; modality=p.modality}
+    lens getter setter x
     
-type ComponentDef<'a> = { 
-    name: string
-    iface: Set<Var>
-    lstig: string list
-    processes: Map<string, Process<'a, FParsec.Position>>
-}
 
-type SystemDef<'a> = {
-    environment: Set<Var>
-    stigmergies: Map<string,Stigmergy<'a>>
-    components: Map<string, ComponentDef<'a>>
-    processes: Map<string, Process<'a, FParsec.Position>>
-    spawn: Map<string, int*int>
-    properties: Map<string, Property<'a>>
-} with
-    member this.ifaceVars = 
-        lazy
-            this.components
-            |> Map.mapValues (fun c -> c.iface)
-            |> Map.values
-            |> Set.unionMany
-            //|> Seq.reduce Map.merge
-    member this.lstigVars =
-        lazy
-            this.stigmergies
-            |> Map.mapValues (fun s -> s.vars |> Set.unionMany)
-            |> Map.values
-            |> Set.unionMany
-            //|> Seq.reduce Map.merge
-
-    member this.SpawnedComps = 
-        this.components
-        |> Map.filter (fun n _ -> this.spawn.ContainsKey n)
-    
+type Ast = Node<Sys> * Node<Stigmergy<string>> list * Node<Agent> list * Node<Property<string>> list

@@ -1,6 +1,6 @@
 
-              SLiVER 1.0
-              May 2018
+              SLiVER 1.1
+              May 2019
 
 Symbolic LAbS VERifier
 
@@ -26,6 +26,10 @@ To install SLiVER, please follow the steps below:
 
     1. install the dependencies:
         - Python 3.5 or higher
+        - The Click package: https://click.palletsprojects.com.
+          If the Python package installer (pip() is available, 
+          Click may be installed with the command:
+          $ pip install click
         - backends: CBMC, ESBMC, CSeq
          (none of the above tools is specifically required
           but at least one of them is needed for verification)

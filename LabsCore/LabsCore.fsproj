@@ -14,7 +14,13 @@
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     <Compile Include="List.fs" />
     <Compile Include="Map.fs" />
+    <Compile Include="Tokens.fs" />
     <Compile Include="Types.fs" />
-    <Compile Include="Link.fs" />
+    <Compile Include="Expression.fs" />
+    <Compile Include="Process.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="FSharpPlus" Version="1.0.0" />
   </ItemGroup>
 </Project>

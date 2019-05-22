@@ -3,32 +3,34 @@ system {
     spawn = Victim: 1, Searcher: _n
 
     # "Global" processes
-    MoveUpDown = 
-        x % 2 = 0 -> (
-            y < _grid - 1 -> y <- y + 1 
-            ++ 
-            y = _grid - 1 and x < _grid - 1 -> x <- x + 1
+    MoveUpDown =
+        (x % 2 = 0 -> 
+            (y < _grid - 1 -> y <- y + 1) 
+            ++
+            (y = _grid - 1 and x < _grid - 1 -> x <- x + 1)
         )
         ++
-        x % 2 != 0 -> (
+        (x % 2 != 0 ->
             y > 0 -> y <- y - 1
             ++
             y = 0 and x < _grid - 1 -> x <- x + 1
         )
         ++
-        (_grid % 2 = 0 and y = _grid - 1 and x = 0) or
-        (_grid % 2 != 0 and y = _grid - 1 and x = _grid -1) -> (
-            x <- 0; y <- 0
-        )
-    StepHome =
-        (x > 0 -> x <- x -1) || (y > 0 -> y <- y - 1)
+        ((_grid % 2 = 0 and y = _grid - 1 and x = 0) or
+        (_grid % 2 != 0 and y = _grid - 1 and x = _grid -1) -> x <- 0; y <- 0)
+    GoHome =
+        (x = 0 and y = 0 -> Skip)
+        ++
+        (x != 0 or y != 0 -> 
+            x, y <- max(x-1, 0), max(y-1, 0);
+            GoHome)
 }
 
 stigmergy Search {
     link = ((x of c1 - x of c2) * (x of c1 - x of c2)) + 
         ((y of c1 - y of c2) * (y of c1 - y of c2)) <= _delta
 
-    <posx: undef, posy: undef>
+    posx, posy: undef, undef
 
 }
 
@@ -39,35 +41,37 @@ stigmergy Pickup {
 }
 
 agent Searcher {
-    interface = x: 0.._grid, y: 0.._grid
-    stigmergies = Search, Pickup
+    interface = x: 0.._grid; y: 0.._grid
+    stigmergies = Search; Pickup
     
     Behavior = (
-        (found = 0 -> (
-            x != posx or y != posy -> MoveUpDown)
+        (found = 0 -> 
+            (x != posx or y != posy -> MoveUpDown; Behavior)
             ++
-            x = posx and y = posy -> found <~ 1)
+            (x = posx and y = posy -> found <~ 1; Behavior))
         ++
-        (found = 2 -> StepHome)
-    ); Behavior
-        
-    
+        # found = 2 means the searcher has picked up the victim
+        (found = 2 and (x != 0 or y != 0) -> GoHome)
+    )
+          
 }
 
 agent Victim {
-    interface = x: 0.._grid, y: 0.._grid
-    stigmergies = Search, Pickup
+    interface = x: 0.._grid; y: 0.._grid
+    stigmergies = Search; Pickup
 
     Behavior = (
-        (found = 0 -> posx <~ x; posy <~ y)
+        # Victim sends her position until she has been found
+        (found = 0 -> posx, posy <~ x, y)
         ++
+        # When found, victim is picked up
         (found = 1 -> found <~ 2)
     ); Behavior
     
 }
 
 check {
-    CorrectPosition = always forall Searcher s,
+    WithinGrid = always forall Searcher s,
         x of s >= 0 and x of s < _grid
         and
         y of s >= 0 and y of s < _grid

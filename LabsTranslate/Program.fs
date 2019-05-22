@@ -1,75 +1,35 @@
-﻿open Base
-open Checks
-open EncodeInit
-open Encode
-open Templates
+﻿open System.IO
+open FParsec
+
+open Frontend
+open Frontend.Outcome
+open Frontend.Message
+open LabsToC
 open ArgParse
+open Argu
+
+let wrapParserResult p text =
+    try
+        let x = CharParsers.run p text
+        match x with
+        | Success(a, _, _) -> zero a
+        | Failure(errorMsg, _, _) ->
+            Outcome.Error([], [{what=Parser errorMsg; where=[]}])
+    with
+        ex -> Outcome.Error([], [{what=Generic ex.Message; where=[]}])
 
 
 [<EntryPoint>]
 let main argv =
-
-    let checks sys = 
-        async {
-            let! t1 = async { return checkNames sys } |> Async.StartChild
-            let! t2 = async { return checkComponents sys } |> Async.StartChild
-            let! t3 = async { return analyzeKeys sys } |> Async.StartChild
-            let! r1 = t1
-            let! r2 = t2
-            let! r3 = t3
-
-            return (r1 <&&> r2 <&&> r3 >>= fun (m, (a, b, c)) -> Ok (sys, m, a,b,c))
-        }
-        |> Async.RunSynchronously
-
-
-    let readAndCheck (cli:Argu.ParseResults<_>) =
-        cli.GetResult File
-        |> readFile
-        >+> Ok (placeholders cli)
-        >>= parse
-        |> logErr
-        >>= checks
-
-    let doTranslate (cli:Argu.ParseResults<_>) (s, m, maxI, maxL, maxE) =
-        let translate x = 
-            let bound = cli.GetResult (Bound, defaultValue=1)
-            let sys, trees, _, _, _, _ = x
-            [
-                translateHeader (cli.Contains Simulation) (cli.Contains No_Bitvector)  bound x
-                translateInit (sys, trees, m)
-                translateAll trees
-                translateCanProceed trees
-                translateMain (cli.Contains Fair) (sys, trees)
-            ]
-            |> List.map ((Result.map (printfn "%s")) >> logErr)
-            |> List.reduce (<&&>)
-
-
-        resolveSystem (s, m)
-        >>= encode
-        |> Result.map (fun (sys, trees) -> (sys, trees, m, maxI,maxL,maxE))
-        >>= translate
-        |> logErr // Log any error at the end
-        |> setReturnCode
-
-    let doInfo (s,m,_,_,_) = 
-        serializeInfo (s, m)
-        |> logErr // Log any error at the end
-        |> setReturnCode
-
-    try
-        let parsedCli = parseCLI argv
-        readAndCheck parsedCli
-        |> Result.map (fun x ->
-            if parsedCli.Contains Info
-            then doInfo x
-            else doTranslate parsedCli x
-        )
-        |> 
-            function | Ok i -> i 
-                     | Error _ -> 10
-    with 
-        e -> 
-            eprintfn "%s" e.Message
-            10
+    let flags (cli:ParseResults<_>) = (cli.Contains Fair, cli.Contains No_Bitvector, cli.Contains Simulation, cli.Contains Sync)
+    
+    zero argv
+    <~> (parseCLI >> zero)
+    <~> fun cli ->
+        let input = File.ReadAllText (cli.GetResult Arguments.File)
+        let externs = getExterns cli |> Map.mapValues int
+        (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
+    <?> (fun (cli, x) -> LabsToC.encode (cli.GetResult (Bound, defaultValue=1)) (flags cli) x)
+    |> Result.mapError (eprintfn "%A") // TODO Format errors and set exit code
+    |> ignore
+    0 // return an integer exit code

@@ -1,11 +1,13 @@
 ﻿module internal ArgParse
 open Argu
+open Frontend.Message
 
 type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string
     | [<Mandatory>] [<Unique>] Bound of int
     | Fair
-    | No_Bitvector 
+    | No_Bitvector
+    | Sync
     | Info
     | Simulation
     | [<Unique>] Values of string list
@@ -17,6 +19,7 @@ type Arguments =
             | No_Bitvector _ -> "disable bitvector optimizations"
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
+            | Sync _ -> "force syncronous sending of stigmergic messages"
             | Simulation _ -> "encode in simulation mode (default: verification mode)."
             | Fair -> "enforce fair interleaving of components."
 
@@ -26,9 +29,9 @@ let parseCLI argv =
     try
         argParser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
     with e ->
-        raise e
+        raise (LabsException {what = CLI e.Message; where=[]})
 
-let placeholders (args:ParseResults<_>) = 
+let getExterns (args:ParseResults<_>) = 
     let parseValues (vals:string list) =
         vals
         |> Seq.map (fun x -> x.Split "=")
