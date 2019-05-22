@@ -20,9 +20,11 @@ class Backends(Enum):
 
 
 HELPMSG = {
-    "backend": "backend to use in verification mode.",
+    "backend": "Backend to use in verification mode.",
 
-    "bitvector": "enable bitvector optimization (default: true)",
+    "bitvector": "Enable bitvector optimization where supported (default: true)",
+
+    "cores": "Number of CPU cores for parallel analysis",
 
     "debug": "Enable additional checks in the backend.",
 
@@ -45,12 +47,12 @@ backends = {
     "cbmc": ["/usr/local/bin/cbmc5.4"],
     "esbmc": [
         "esbmc", "--no-bounds-check", "--no-div-by-zero-check",
-        "--no-pointer-check", "--no-align-check", "--no-unwinding-assertions",
-        "--z3"],
+        "--no-pointer-check", "--no-align-check",
+        "--no-unwinding-assertions", "--z3"],
     "cseq": [
-        "./cseq.py", "-l", "labs_parallel", "--split", "sys_or_not",
-        "--cores", "4"]
+        "./cseq.py", "-l", "labs_parallel", "--split", "_I"]
 }
+
 
 backends_debug = {
     "cbmc":
@@ -147,8 +149,9 @@ def DEFAULTS(name):
 @click.option('--steps', default=1, type=int, **DEFAULTS("steps"))
 @click.option('--sync/--no-sync', default=False, **DEFAULTS("sync"))
 @click.option('--timeout', default=0, type=int, **DEFAULTS("timeout"))
+@click.option('--cores', default=4, type=int, **DEFAULTS("cores"))
 def main(file, backend, steps, fair, bv, simulate, show, sync, values, timeout,
-         debug):
+         debug, cores):
     """
 * * *  SLiVER - Symbolic LAbS VERification. v1.1 (November 2018) * * *
 
@@ -176,6 +179,7 @@ VALUES -- assign values for parameterised specification (key=value)
         backend_call = backends_debug[backend] if debug else backends[backend]
 
         if backend == "cseq":
+            backend_call.extend(["--cores", str(cores)])
             backend_call.extend(["--steps", str(steps), "-i"])
 
         backend_call.append(fname)
@@ -192,7 +196,6 @@ VALUES -- assign values for parameterised specification (key=value)
             print(
                 "{} with backend {}...".format(sim_or_verify, backend),
                 file=sys.stderr)
-            out = b''
             out = check_output(backend_call, stderr=DEVNULL)
         except KeyboardInterrupt as err:
             print("Verification stopped (keyboard interrupt)", file=sys.stderr)
