@@ -7,7 +7,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LabsCore", "LabsCore\LabsCo
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Frontend", "Frontend\Frontend.fsproj", "{B4C43C21-52DB-4A46-91E2-7213AC8F7265}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "AstPrinter", "AstPrinter\AstPrinter.fsproj", "{F6BEF90D-B47C-4887-AF3A-15AFC047B430}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LabsTranslate", "LabsTranslate\LabsTranslate.fsproj", "{F6BEF90D-B47C-4887-AF3A-15AFC047B430}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LabsToC", "LabsToC\LabsToC.fsproj", "{9EE2759F-14D7-49C4-AB37-A4EDFEAC152F}"
 EndProject
