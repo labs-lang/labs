@@ -243,3 +243,4 @@ let encode bound (fair, nobitvector, sim, sync) table =
             |> Seq.map (encodeAgent sync x)
             |> Seq.reduce (<??>))
     <?> (encodeMain fair)
+    <~~> zero () 
