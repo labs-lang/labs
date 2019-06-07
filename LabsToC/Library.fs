@@ -212,6 +212,7 @@ let encodeMain fair (table:SymbolTable) =
     let scheduleTransition t =
         Dict [
             "name", funcName t |> Str
+            "siblings", seq t.siblings |> Seq.map Int |> Lst
             "entry", liquidPcs (t.entry |> Map.mapValues Set.singleton)
             "guards", guards table t |> Seq.map (Str << ((tidProcExpr "firstAgent").BExprTranslator true)) |> Lst
         ]

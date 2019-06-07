@@ -30,7 +30,13 @@ int main(void) {
 
             {%- for item in schedule -%}
             {% unless forloop.first %}else {% endunless %}if LABScheck({%- for pc in item.entry -%}
-pc[firstAgent][{{pc.name}}] == {{pc.value}}{% unless forloop.last %} & {% endunless %}{%- endfor -%}, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
+pc[firstAgent][{{pc.name}}] == {{pc.value}}{% unless forloop.last %} & {% endunless %}{%- endfor -%}
+{%- if item.siblings.size != 0 -%} &
+{%- for pc in item.siblings -%}
+pc[firstAgent][{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0{% unless forloop.last %} & {% endunless %}
+{%- endfor -%}
+{%- endif -%}
+, {{ item.guards | join: " & " }}) {{ item.name }}(firstAgent);
 {%- endfor -%}
             
             {%- if fair -%}
