@@ -117,7 +117,7 @@ let encodeInit (table:SymbolTable) =
             table.agents.[name].variables
             |> List.append (table.agents.[name].lstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
-                Frontend.initBExprs UNDEF (Expr.evalConstExpr (fun _ -> tid)) table.m.[v.name]
+                Frontend.initBExprs UNDEF (Expr.evalConstExpr (fun _ -> tid)) (v, snd table.m.[v.name])
                 |> List.map ((initExpr (string tid)).BExprTranslator false))
                 |> List.map (fun x i -> List.map Str (x i))
             |> List.map (fun f -> List.map f [_start.._end-1])
