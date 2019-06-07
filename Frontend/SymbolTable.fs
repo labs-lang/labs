@@ -213,8 +213,6 @@ module internal SymbolTable =
             let lstig = table.agents.[agentName].lstigVariables table |> Seq.map dumpVar |> String.concat ";"
             printfn "%s %i,%i\n%s\n%s" agentName _start _end iface lstig
         printfn "%s" (table.variables |> Map.filter (fun _ v -> isEnvVar v) |> Map.values |> Seq.sortBy table.m.IndexOf |> Seq.map dumpVar |> String.concat ";")
-        Map.map (dumpSpawn) table.spawn
-        
-
+        Map.map (dumpSpawn) table.spawn |> ignore
         
 type SymbolTable with member this.dump() = SymbolTable.dump this
