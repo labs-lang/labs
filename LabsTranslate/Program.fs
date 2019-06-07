@@ -29,7 +29,9 @@ let main argv =
         let input = File.ReadAllText (cli.GetResult Arguments.File)
         let externs = getExterns cli |> Map.mapValues int
         (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
-    <?> (fun (cli, x) -> LabsToC.encode (cli.GetResult (Bound, defaultValue=1)) (flags cli) x)
+    <?> (fun (cli, x) ->
+        if cli.Contains Info then zero (x.dump())
+        else LabsToC.encode (cli.GetResult (Bound, defaultValue=1)) (flags cli) x)
     |> Result.mapError (eprintfn "%A") // TODO Format errors and set exit code
     |> ignore
     0 // return an integer exit code
