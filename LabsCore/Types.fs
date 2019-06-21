@@ -106,13 +106,13 @@ type BExpr<'a, 'b> =
     | BLeaf of bool
     | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
     | Neg of BExpr<'a, 'b>
-    | Compound of BExpr<'a, 'b> * Bop * BExpr<'a, 'b>
+    | Compound of Bop * BExpr<'a, 'b> list
     override this.ToString() =
         match this with
         | BLeaf true -> tTRUE | BLeaf false -> tFALSE
         | Neg b -> sprintf "%s(%O)" tNEG b
         | Compare(e1, op, e2) -> sprintf "(%O) %O (%O)" e1 op e2
-        | Compound(b1, op, b2) -> sprintf "(%O) %O (%O)" b1 op b2
+        | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat (sprintf " %O " op)
 
 type Action<'a> = {
     actionType: Location

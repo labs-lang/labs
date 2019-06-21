@@ -64,7 +64,7 @@ module BExpr =
         match bexpr with
         | BLeaf b -> fleaf b
         | Neg b -> Neg(recurse b)
-        | Compound(b1, op, b2) -> Compound(recurse b1, op, recurse b2)
+        | Compound(op, b) -> Compound(op, List.map recurse b)
         | Compare(e1, op, e2) -> 
             Compare(fexpr e1, op, fexpr e2)
     let rec cata fleaf fneg fcompare fcompound bexpr = 
@@ -73,4 +73,4 @@ module BExpr =
         | BLeaf b -> fleaf b 
         | Neg b -> fneg (recurse b)
         | Compare(e1, op, e2) -> fcompare op e1 e2
-        | Compound(b1, op, b2) -> fcompound op (recurse b1) (recurse b2)
+        | Compound(op, b) -> fcompound op (List.map recurse b)
