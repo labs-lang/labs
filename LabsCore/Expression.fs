@@ -34,9 +34,9 @@ module Expr =
             Ref(fref r newOffset)
         | Unary(u, e) -> Unary(u, recurse e)
 
+    let getRefs expr = fold (fun a _ -> a) (fun a r -> Set.add r a) Set.empty expr
     
-    let getVars expr =
-        fold (fun a _ -> a) (fun a r -> Set.add r.var a) Set.empty expr
+    let getVars expr = Set.map (fun r -> r.var) (getRefs expr)
         
     let evalConstExpr idfun expr =
         let leaf_ = function
