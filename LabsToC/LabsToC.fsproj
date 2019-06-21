@@ -5,7 +5,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Expressions.fs" />
+        <Compile Include="Common.fs" />
+        <Compile Include="C.fs" />
+        <Compile Include="Lnt.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 
