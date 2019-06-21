@@ -1,12 +1,8 @@
 module HEADER is
 
-    --{% for item in defines -%}
-    --function {{item.name}}:Int is return {{item.value}} end function
-    --{% endfor -%}
-
-    function MAXKEYI:Nat is return (*{{MAXKEYI}}*)1 end function
-    function MAXKEYL:Nat is return (*{{MAXKEYL}}*)1 end function
-    function MAXCOMPONENTS:Nat is return (*{{MAXCOMPONENTS}}*)5 end function
+    {% for item in defines -%}
+    function {{item.name}}:Int is return {{item.value}} end function
+    {% endfor -%}
 
     type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
     type IndexI is X:Nat where X < MAXKEYI with "==", "!=" end type
@@ -16,6 +12,9 @@ module HEADER is
     function TUPLESTART(n:Nat): Nat is
         case n in
         (*todo must be generated*)
+        {%- for i in tupleStart -%}
+        {% unless forloop.first %}|{% endunless %}{{ forloop.index | minus: 1 }} -> return {{i}}
+        {%- endfor -%}
           0 -> return 0
         | any -> return 255
         end case
@@ -29,16 +28,16 @@ module HEADER is
         end case
     end function
 
-    type Iface is array [ 0 .. (*{{MAXKEYI}}-1*)0 ] of Int with "get", "set" end type
+    type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with "get", "set" end type
     type LstigEntry is LstigEntry (value: Int, tstamp: Nat) with "get", "set" end type
-    type Lstig is array [ 0 .. (*{{MAXKEYL}}-1*)0 ] of LstigEntry with "get", "set" end type
+    type Lstig is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of LstigEntry with "get", "set" end type
 
-    --type Env is array [ 0 .. (*{{MAXKEYE-1}}*)0 ] of Int with "get", "set" end type
+    --type Env is array [ 0 .. (*{{ MAXKEYE | minus : 1 }}*) ] of Int with "get", "set" end type
 
     type Pending is set of IndexL with "length", "remove" end type
 
     type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending) with "get", "set" end type
-    type Agents is array [0 .. (*{{MAXCOMPONENTS-1}}*)4 ] of Agent with "get", "set" end type
+    type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
     type Sys is sys(agents: Agents, time: Nat (*, env: Env*)) with "get", "set" end type
 
 
@@ -55,7 +54,7 @@ module HEADER is
     end function
 
     function link(a1: Agent, a2: Agent, key: Nat):Bool is
-        return {{link}}
+        return {{ links }}
     end function
 
     process attr(in out a:Agent, key:Nat, val:Int, check: Bool) is 
@@ -135,6 +134,7 @@ module HEADER is
     end var
     end process
 
+    {% comment %}
     (* example of an individual transition *)
     process action_0_2 (in out agent: Agent, t: Nat) is 
         var I:Iface in
@@ -152,6 +152,7 @@ module HEADER is
             *)
         end var
     end process
+
 
 
     process step (in out sys: Sys) is
@@ -189,4 +190,5 @@ module HEADER is
         end var
     end process
 
+    {% endcomment %}
 end module
