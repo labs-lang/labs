@@ -5,10 +5,10 @@ open Types
 open Common
 
 let translateLocation loc n e =
-    let name = match n with
-    | "agent" -> "agent"
-    | "firstAgent" -> "firstAgent"
-    | _ -> sprintf "agents[%s]" n
+    let name =
+        match n with
+        | "agent" | "firstAgent" | "a1" | "a2" -> n
+        | _ -> sprintf "agents[%s]" n 
     match loc with
     | I -> sprintf "%s.I[%O]" 
     | L _ -> sprintf "%s.L[%O]" 
