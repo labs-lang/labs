@@ -33,7 +33,7 @@ with
 type AgentTable = {
     lts: TransitionSystem
     processes: Map<string, Process<Var<int>*int>>
-    init: ExitCond
+    initCond: ExitCond
     variables: Var<int> list
     lstig: Set<string>
 }
@@ -42,7 +42,7 @@ with
         {
             lts=Set.empty
             processes=Map.empty
-            init=Map.empty
+            initCond=Map.empty
             variables=[]
             lstig=Set.empty
         }
@@ -169,7 +169,7 @@ module internal SymbolTable =
             let (lts, acc), initCond = LTS.makeTransitions state p'.["Behavior"]
             let lts' = LTS.removeNames p' lts
             let guards = Map.union table.guards (setGuards p'.["Behavior"])
-            let agent = {table.agents.[a.name] with processes=p'; lts=lts'; init=initCond; lstig=a.def.lstig |> Set.ofList}
+            let agent = {table.agents.[a.name] with processes=p'; lts=lts'; initCond=initCond; lstig=a.def.lstig |> Set.ofList}
             zero ({table with agents = table.agents.Add(a.name, agent); guards=guards}, (Set.empty, acc))        
     
     let makeSpawnRanges externs spawn table =

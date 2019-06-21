@@ -50,7 +50,7 @@ let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
         else sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth num)
     
     let maxpc =
-        Map.mapValues (fun (x:AgentTable) -> Map.keys x.init) table.agents
+        Map.mapValues (fun (x:AgentTable) -> Map.keys x.initCond) table.agents
         |> Map.values |> Seq.concat |> Seq.max
     
     let defines = 
