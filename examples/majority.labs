@@ -17,7 +17,7 @@ system {
     spawn = Yes: _yes, No: _no
     Protocol = (
         (opinion != 2 -> agent, message <~ id, opinion)
-        ||
+        ++
         agent != id ->
             (message = 1 and opinion = 2 -> opinion <- 1) ++
             (message = 1 and opinion = 0 -> opinion <- 2) ++

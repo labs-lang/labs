@@ -13,22 +13,18 @@
 
 system {
     extern = _yes, _no
-    environment = agent: undef; message: undef
+    environment = agent: -1; message: undef
     spawn = Yes: _yes, No: _no
     Protocol =
         (
-            (opinion != 2 -> agent, message <-- id, opinion) #++
-          #  (opinion = 2 -> Skip)
-         
-            ||
-            ((agent = id -> Skip)
+            (agent != id and opinion != 2 -> agent, message <-- id, opinion)
             ++
             (agent != id ->
                 (message = opinion -> Skip) ++
                 (message = 1 and opinion = 2 -> opinion <- 1) ++
                 (message = 1 and opinion = 0 -> opinion <- 2) ++
                 (message = 0 and opinion = 1 -> opinion <- 2) ++
-                (message = 0 and opinion = 2 -> opinion <- 1)))
+                (message = 0 and opinion = 2 -> opinion <- 1))
         ); Protocol
 }
 
@@ -45,8 +41,11 @@ agent No {
 }
 
 check {
-    NoUndecided = finally forall Yes y, forall No n, 
-    opinion of y != 2 and opinion of n != 2
+    #NoUndecided = finally forall Yes y, forall No n, 
+    #opinion of y != 2 and opinion of n != 2
+
+    NotAllYes = finally exists Yes y, exists No n, 
+    opinion of y != 1 or opinion of n != 1
     #AllYes = finally forall Yes y, forall No n, 
     #opinion of y = 1 and opinion of n = 1
 
