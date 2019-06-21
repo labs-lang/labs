@@ -59,6 +59,16 @@ module Expr =
     let evalCexprNoId expr = evalConstExpr (fun _ -> failwith "id not allowed here.") expr
         
 module BExpr = 
+    /// Returns a "canonical" version of bexpr.
+    /// It uses structural comparison on the inner expressions 
+    let canonical bexpr =
+        match bexpr with
+        | Compare(e1, Equal, e2) when e1 > e2 -> Compare(e2, Equal, e1)
+        | Compare(e1, Neq, e2) when e1 > e2 -> Compare(e2, Neq, e1)
+        | Compound(op, l) -> Compound(op, List.sort l)
+        // TODO add other cases
+        | _ -> bexpr
+    
     let rec map fleaf fexpr bexpr =
         let recurse = map fleaf fexpr
         match bexpr with
@@ -74,3 +84,14 @@ module BExpr =
         | Neg b -> fneg (recurse b)
         | Compare(e1, op, e2) -> fcompare op e1 e2
         | Compound(op, b) -> fcompound op (List.map recurse b)
+
+    let simplify bexpr =
+        let compound_ op ls =
+            let sameOp, others = List.partition (function | Compound(o, _) when o=op -> true | _ -> false) ls 
+            sameOp
+            |> List.map (function Compound(_, l) -> l | _ -> [])
+            |> List.concat
+            |> List.append others
+            |> List.distinctBy (canonical)
+            |> fun l -> Compound(op, l)
+        cata BLeaf Neg (fun op e1 e2 -> Compare(e1, op, e2)) compound_ bexpr
