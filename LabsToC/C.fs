@@ -1,7 +1,6 @@
-module LabsToC.C
+module internal LabsToC.C
 open LabsCore
 open Types
-open Frontend
 open Common
 
 let translateLocation = function
@@ -9,9 +8,7 @@ let translateLocation = function
     | L _ -> sprintf "Lvalue[%s][%O]"
     | E -> (fun _ -> sprintf "E[%O]")
 
-let translateInitLocation a b c = (sprintf "_%s") (translateLocation a b c)
-
-let private translate trRef trId =
+let translate trRef trId =
     let leaf_ = function
         | Id i -> trId i
         | Const i -> string i
