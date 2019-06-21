@@ -5,6 +5,7 @@ open Frontend.SymbolTable
 open Frontend.Outcome
 open Frontend.Message
 open Frontend.LTS
+open Common
 
 // Duplicate attributes in different agents are legal.
 let private envAndLstigVars sys lstigs =
@@ -73,7 +74,7 @@ let initBExprs undefvalue evalfn (v:Var<_>, i: int) =
     | Choose l ->
         let choice r =
             List.map (evalfn >> (fun i -> Compare(Ref r, Equal, Leaf(Const i)))) l
-            |> List.reduce (fun e1 e2 -> Compound(e1, Disj, e2))
+            |> fun l -> Compound(Disj, l)
         List.map choice refs
     | Range (_start, _end) ->
         let s', e' = evalfn _start, evalfn _end
@@ -81,5 +82,5 @@ let initBExprs undefvalue evalfn (v:Var<_>, i: int) =
             {what=(Generic (sprintf "Invalid range initializer for %s" v.name)); where=[]}
             |> LabsException |> raise
         else    
-            let between r = Compound(Compare(Ref r, Geq, Leaf(Const s')), Conj, Compare(Ref r, Less, Leaf(Const e')))
+            let between r = Compound(Conj, [Compare(Ref r, Geq, Leaf(Const s')); Compare(Ref r, Less, Leaf(Const e'))])
             List.map (fun r -> between r) refs    
