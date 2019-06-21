@@ -9,13 +9,17 @@ open Tokens
 open LabsCore
 open FSharpPlus
 
+open LabsToC
 open Outcome
+open Common
 
 let private goto = Liquid.parse "templates/goto.c"
 let private init = Liquid.parse "templates/init.c"
 let private header = Liquid.parse "templates/header.c"
 let private main = Liquid.parse "templates/main.c"
 let private UNDEF = -128 (*sentinel value for undef*)
+
+let private trKit:TranslationKit = translateKit C.wrapper
 
 let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, (int*int)> =
@@ -85,12 +89,16 @@ let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
             Dict [
                 "start", fst fromTo.[name] |> Int
                 "end", snd fromTo.[name] |> Int
-                "link", link |> linkExpr.BExprTranslator true |> Str
+                "link", trKit.linkTr link |> Str
             ] 
         )
         |> Map.values
     
     [
+        "MAXKEYI", max table.m.nextI 1 |> Int
+        "MAXKEYL", max table.m.nextL 1 |> Int
+        "MAXKEYE", max table.m.nextE 1 |> Int
+        "MAXCOMPONENTS", table.spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
         "defines", defines |> Map.toSeq |> makeDict Str Int
         "typedefs", makeDict Str Str typedefs
         "links", Lst links
@@ -107,10 +115,10 @@ let encodeInit (table:SymbolTable) =
         |> Seq.sortBy table.m.IndexOf
         |> Seq.map (fun v ->
                 Frontend.Frontend.initBExprs UNDEF Expr.evalCexprNoId table.m.[v.name]
-                |> List.map ((initExpr "").BExprTranslator false >> Str)
+                |> List.map ((trKit.initTr "") >> Str)
             )
         |> Seq.concat
-    
+
     let vars =
         table.spawn
         |> Map.map (fun name (_start, _end) ->
@@ -118,8 +126,8 @@ let encodeInit (table:SymbolTable) =
             |> List.append (table.agents.[name].lstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
                 Frontend.initBExprs UNDEF (Expr.evalConstExpr (fun _ -> tid)) (v, snd table.m.[v.name])
-                |> List.map ((initExpr (string tid)).BExprTranslator false))
-                |> List.map (fun x i -> List.map Str (x i))
+                |> fun x -> x
+                |> List.map (Str << trKit.initTr (string tid)))
             |> List.map (fun f -> List.map f [_start.._end-1])
             |> List.concat |> List.concat)
         |> Map.values
@@ -137,7 +145,7 @@ let encodeInit (table:SymbolTable) =
     
     table.spawn
     |> Map.map (fun name (_start, _end) ->
-        Dict ["start", Int _start; "end", Int _end; "pcs", liquidPcs table.agents.[name].init])
+        Dict ["start", Int _start; "end", Int _end; "pcs", liquidPcs table.agents.[name].initCond])
     |> fun x -> ["initpcs", (Map.values >> Lst) x; "initenv", Lst env; "initvars", Lst vars; "tstamps", Lst tstamps]
     |> render init
 
@@ -158,7 +166,7 @@ let encodeAgent sync table (a:AgentTable) =
         let qrykeys =
             let getLstigVarsBExpr =
                 let compare_ _ e1 e2 = Set.union (getLstigVars e1) (getLstigVars e2)
-                BExpr.cata (fun _ -> Set.empty) id compare_ (fun _ -> Set.union)
+                BExpr.cata (fun _ -> Set.empty) id compare_ (fun _ -> Set.unionMany)
             assignments
             |>> (fun a -> List.map (getLstigVars << snd) a.updates)
             |>> Set.unionMany
@@ -173,9 +181,9 @@ let encodeAgent sync table (a:AgentTable) =
             Dict [
                 "key",  Int (snd k.var)
                 "offset",
-                    k.offset |>> (procExpr.ExprTranslator >> Str) |> Option.defaultValue (Int 0)
+                    k.offset |>> (trKit.agentExprTr >> Str) |> Option.defaultValue (Int 0)
                 "size", Int size
-                "expr", procExpr.ExprTranslator expr |> Str
+                "expr", trKit.agentExprTr expr |> Str
             ]
         
         [
@@ -184,7 +192,7 @@ let encodeAgent sync table (a:AgentTable) =
             "siblings", t.siblings |> Seq.map Int |> Lst
             "entrycond", liquidPcs (t.entry |> Map.mapValues Set.singleton)
             "exitcond", liquidPcs (t.exit)
-            "guards", guards |> Seq.map (Str << (procExpr.BExprTranslator true)) |> Lst
+            "guards", guards |> Seq.map (Str << (trKit.agentGuardTr)) |> Lst
             "labs",
                 string t.action.def
                 |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
@@ -214,10 +222,10 @@ let encodeMain fair (table:SymbolTable) =
             "name", funcName t |> Str
             "siblings", seq t.siblings |> Seq.map Int |> Lst
             "entry", liquidPcs (t.entry |> Map.mapValues Set.singleton)
-            "guards", guards table t |> Seq.map (Str << ((tidProcExpr "firstAgent").BExprTranslator true)) |> Lst
+            "guards", guards table t |> Seq.map (Str << trKit.mainGuardTr) |> Lst
         ]
     let alwaysP, finallyP =
-        let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.name, translateProp table n) props)
+        let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.name, trKit.propTr table n) props)
         let m1, m2 = Map.partition (fun _ n -> n.def.modality = Always) table.properties
         toLiquid <| Map.values m1, toLiquid <| Map.values m2
     
