@@ -1,4 +1,4 @@
-﻿module LabsToC.Common
+﻿module internal LabsToC.Common
 open Frontend
 open LabsCore
 open Types
@@ -12,20 +12,20 @@ let private refTypeCheck v (offset:'a option) =
     if test then failwith (msg v.name) else ()
 
 /// Returns the set of all stigmergy variables accessed by the expression.
-let internal getLstigVars expr =
+let getLstigVars expr =
     Expr.getVars expr
     |> Set.filter (fun (v, _) -> isLstigVar v)
 
 /// Translates a variable reference.
-let internal trref trLocation name (v:Var<int>, i:int) offset =
-    do refTypeCheck v offset
+let private trref trLocation name (v:Var<int>, i:int) offset =
+    do refTypeCheck v offset //TODO move
     let index =
         match offset with
         | None -> string i
         | Some off -> sprintf "%i + %s" i off
-    (trLocation v.location) name index
+    trLocation v.location name index
 
-let internal translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr =
+let translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr =
     let undefs =
         match filter with
         | None -> Set.empty
@@ -41,15 +41,9 @@ let internal translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr =
     else
         Set.add bexpr undefs
         |> fun s -> Compound(Conj, s |> Set.toList)
-//        |> Seq.reduce (fun b1 b2 -> Compound(b1, Conj, b2))
     |> BExpr.cata bleaf_ neg_ compare_ compound_
     
-/// Build consistent Expr/BExpr translators using trRef and trId. 
-let internal makeTranslators trExpr trBexpr trRef trId =
-    let expr = trExpr trRef trId
-    expr, trBexpr expr
-
-let translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property<_>>) =
+let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property<_>>) =
     let ex = Map.exists (fun _ (_, q)-> q = Exists) p.def.quantifiers
     let fa = Map.exists (fun _ (_, q)-> q = All) p.def.quantifiers
     
@@ -86,9 +80,6 @@ let translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property
             |> List.map (fun s -> trProp s {prop with quantifiers=prop.quantifiers.Remove nextId})
             |> fun l -> Compound(trQuantifier quantifier, l)
             |> BExpr.simplify
-            
-//            |> List.reduce (fun b1 b2 -> Compound(b1, trQuantifier quantifier, b2))
-//            |> String.concat (trQuantifier quantifier)
         else
             (translateSub subs) prop.predicate
     
@@ -108,3 +99,44 @@ type TranslationKit = {
     linkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
     propTr: SymbolTable -> Node<Property<Var<int> * int>> -> string 
 }
+
+type RefTranslator<'a> = 'a -> string option -> string
+type UndefFilter<'a, 'b> = Ref<'a, 'b> -> bool
+
+type Wrapper =
+    abstract member agentName: string
+    abstract member trLoc<'a> : Location -> string -> 'a -> string
+    abstract member trInitLoc<'a> : Location -> string -> 'a -> string
+    abstract member trLinkId : LinkComponent -> string
+    abstract member trExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> Expr<'a, 'b> -> string
+    abstract member trBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
+        
+let makeTranslator (wrapper: Wrapper) trRef trId filter =
+    let expr = wrapper.trExpr trRef trId
+    expr, wrapper.trBExpr filter expr
+
+let translateKit (p:Wrapper) =
+    let agentExprTr = p.trExpr (trref p.trLoc p.agentName) (fun () -> p.agentName)
+    let agentGuardTr = p.trBExpr (Some <| fun r -> (fst r.var).init = Undef) agentExprTr
+    
+    let linkTr =
+        p.trExpr (fun (v, cmp) offset -> trref p.trLoc (p.trLinkId cmp) v offset) p.trLinkId
+        |> p.trBExpr (Some <| fun r -> ((fst << fst) r.var).init = Undef)
+    
+    let initTr n =
+        p.trBExpr None (p.trExpr (trref p.trInitLoc n) (fun () -> n))
+
+    let mainGuardTr =
+        p.trBExpr None (p.trExpr (trref p.trLoc "firstAgent") (fun () -> "firstAgent"))
+    
+    let propTr =
+        translateProp p.trExpr (p.trBExpr (Some <| fun r -> ((fst << fst) r.var).init = Undef)) p.trLoc
+    
+    {
+        agentExprTr = agentExprTr
+        agentGuardTr = agentGuardTr
+        initTr = initTr
+        linkTr = linkTr
+        mainGuardTr = mainGuardTr
+        propTr = propTr
+    }
