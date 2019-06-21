@@ -28,12 +28,12 @@ let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
         |> Map.ofSeq
         
     let tupleStart, tupleEnd, maxTuple = //TODO maybe move to frontend
-        let vars = stigmergyVarsFromTo (fun v -> v.location) |> Map.values
+        let vars = stigmergyVarsFromTo (fun v -> v.location) |> Map.values |> Seq.sortBy fst
+        let repeat fstOrSnd =
+            Seq.concat << Seq.map (fun pair -> Seq.replicate (snd pair - fst pair + 1) (fstOrSnd pair))
         if Seq.isEmpty vars then seq [0], seq [0], 1 else
-            vars
-            |> fun x -> Seq.sort <| Seq.map fst x, Seq.sort <| Seq.map snd x
-            |> fun (s1, s2) -> s1, s2, (Seq.zip s1 s2 |> Seq.map (fun (a, b) -> b - a + 1) |> Seq.max)
-    
+            repeat fst vars, repeat snd vars, Seq.map (fun (a, b) -> b - a + 1) vars |> Seq.max
+
     let getTypedef num = 
         let getStandardTypes = 
             function
