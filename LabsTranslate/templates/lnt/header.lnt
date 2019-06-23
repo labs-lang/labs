@@ -34,9 +34,23 @@ module HEADER is
 
     --type Env is array [ 0 .. (*{{ MAXKEYE | minus : 1 }}*) ] of Int with "get", "set" end type
 
-    type Pending is set of IndexL with "length", "remove" end type
+    type Pending is array [ 0 .. (*{{MAXKEYL}}-1*)1 ] of Bool with "get", "set" end type
 
-    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending) with "get", "set" end type
+    function length(p:Pending): Nat is
+        var n, j:Nat in
+            n := 0;
+            for j := 0 while j < MAXKEYL by j := j + 1 loop
+                if (p[j]) then n := n + 1 end if
+            end loop;
+            return n
+        end var
+    end function
+
+    function empty(p:Pending): Bool is
+        return (length(p) == 0)
+    end function
+
+    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool) with "get", "set" end type
     type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
     type Sys is sys(agents: Agents, time: Nat (*, env: Env*)) with "get", "set" end type
 
@@ -46,7 +60,7 @@ module HEADER is
     channel Sysch is (Sys) end channel
 
     function emptyAgent:Agent is
-        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), nil, nil)
+        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), false)
     end function
 
     function incr(x: Nat): Nat is 
