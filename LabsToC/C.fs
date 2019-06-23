@@ -37,6 +37,7 @@ let rec private BExprC filter trExpr bexpr =
  
 let wrapper = { new Wrapper with
                 member __.agentName = "tid"
+                member __.initId n = Const n
                 member __.trLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
                 member __.trBExpr filter trExpr b = BExprC filter trExpr b
                 member __.trExpr trRef trId e = translate trRef trId e

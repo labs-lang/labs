@@ -15,6 +15,8 @@ let translateLocation loc n e =
     | E -> fun _ -> sprintf "E[%O]"
     |> fun f -> f name e
 
+let translateInitLocation loc n e = "x"
+
 let private translateExpr trRef trId =
     let leaf_ = function
         | Id i -> trId i
@@ -43,9 +45,10 @@ let rec private BExprLnt filter trExpr bexpr =
     translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr
     
 let wrapper = { new Wrapper with
-                member __.agentName = "agent"
+                member __.agentName = "agent.id"
+                member __.initId _ = Extern "Nat(a.id)"
                 member __.trLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
                 member __.trBExpr filter trExpr b = BExprLnt filter trExpr b
                 member __.trExpr trRef trId e = translateExpr trRef trId e
                 member __.trLoc loc x y = translateLocation loc x y
-                member __.trInitLoc loc x y = translateLocation loc x y }    
+                member __.trInitLoc loc x y = translateInitLocation loc x y }    

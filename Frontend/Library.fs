@@ -5,7 +5,7 @@ open Frontend.SymbolTable
 open Frontend.Outcome
 open Frontend.Message
 open Frontend.LTS
-open Common
+open LabsCore
 
 // Duplicate attributes in different agents are legal.
 let private envAndLstigVars sys lstigs =
@@ -63,24 +63,52 @@ let run externs (sys, lstigs, agents', properties) =
     (* properties can only be added after spawn *)
     <~> fold (tryAddProperty externs) properties
 
-let initBExprs undefvalue evalfn (v:Var<_>, i: int) =
+/// Turn a variable initializer into a list of BExpr
+/// (multiple BExprs are returned when v is an array).
+let initBExprs idfn (v:Var<_>, i: int) =
+    let refs =
+        let r = {var=(v, i); offset = None}
+        match v.vartype with
+        | Scalar -> [r]
+        | Array s -> List.map (fun i -> {r with offset = Some (Leaf (Const i))}) [0 .. s-1]
+    let map_ r =
+        let leaf_ l = match l with | Id _ -> idfn | _ -> l
+        Expr.map leaf_ (fun _ o -> {r with offset=o})
     let refs =
         let r = {var=(v, i); offset = None}
         match v.vartype with
         | Scalar -> [r]
         | Array s -> List.map (fun i -> {r with offset = Some (Leaf (Const i))}) [0 .. s-1]
     match v.init with
-    | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Const undefvalue))) refs
+    | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Extern "undef_value"))) refs
     | Choose l ->
         let choice r =
-            List.map (evalfn >> (fun i -> Compare(Ref r, Equal, Leaf(Const i)))) l
+            List.map (map_ r >> (fun e -> Compare(Ref r, Equal, e))) l
             |> fun l -> Compound(Disj, l)
         List.map choice refs
-    | Range (_start, _end) ->
-        let s', e' = evalfn _start, evalfn _end
-        if s' > e' then
-            {what=(Generic (sprintf "Invalid range initializer for %s" v.name)); where=[]}
-            |> LabsException |> raise
-        else    
-            let between r = Compound(Conj, [Compare(Ref r, Geq, Leaf(Const s')); Compare(Ref r, Less, Leaf(Const e'))])
-            List.map (fun r -> between r) refs    
+    | Range (start_, end_) -> 
+        let between r = Compound(Conj, [Compare(Ref r, Geq, map_ r start_); Compare(Ref r, Less, map_ r end_)])
+        List.map (fun r -> between r) refs
+
+// TODO turn this function below into a check
+//let initBExprs undefvalue evalfn (v:Var<_>, i: int) =
+//    let refs =
+//        let r = {var=(v, i); offset = None}
+//        match v.vartype with
+//        | Scalar -> [r]
+//        | Array s -> List.map (fun i -> {r with offset = Some (Leaf (Const i))}) [0 .. s-1]
+//    match v.init with
+//    | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Const undefvalue))) refs
+//    | Choose l ->
+//        let choice r =
+//            List.map (evalfn >> (fun i -> Compare(Ref r, Equal, Leaf(Const i)))) l
+//            |> fun l -> Compound(Disj, l)
+//        List.map choice refs
+//    | Range (_start, _end) ->
+//        let s', e' = evalfn _start, evalfn _end
+//        if s' > e' then
+//            {what=(Generic (sprintf "Invalid range initializer for %s" v.name)); where=[]}
+//            |> LabsException |> raise
+//        else    
+//            let between r = Compound(Conj, [Compare(Ref r, Geq, Leaf(Const s')); Compare(Ref r, Less, Leaf(Const e'))])
+//            List.map (fun r -> between r) refs    

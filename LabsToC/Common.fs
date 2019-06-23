@@ -95,7 +95,7 @@ type TranslationKit = {
     agentExprTr: Expr<Var<int> * int, unit> -> string
     agentGuardTr: BExpr<Var<int> * int, unit> -> string
     mainGuardTr: BExpr<Var<int> * int, unit> -> string
-    initTr: string -> BExpr<Var<int> * int, unit> -> string
+    initTr: Var<int> * int -> int -> string list
     linkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
     propTr: SymbolTable -> Node<Property<Var<int> * int>> -> string 
 }
@@ -104,7 +104,8 @@ type RefTranslator<'a> = 'a -> string option -> string
 type UndefFilter<'a, 'b> = Ref<'a, 'b> -> bool
 
 type Wrapper =
-    abstract member agentName: string
+    abstract member initId : int -> LeafExpr<'b>
+    abstract member agentName : string
     abstract member trLoc<'a> : Location -> string -> 'a -> string
     abstract member trInitLoc<'a> : Location -> string -> 'a -> string
     abstract member trLinkId : LinkComponent -> string
@@ -123,8 +124,10 @@ let translateKit (p:Wrapper) =
         p.trExpr (fun (v, cmp) offset -> trref p.trLoc (p.trLinkId cmp) v offset) p.trLinkId
         |> p.trBExpr (Some <| fun r -> ((fst << fst) r.var).init = Undef)
     
-    let initTr n =
-        p.trBExpr None (p.trExpr (trref p.trInitLoc n) (fun () -> n))
+    let initTr (v, i) tid =
+        let bexprs = Frontend.initBExprs (p.initId tid) (v, i)
+        p.trBExpr None (p.trExpr (trref p.trInitLoc (string tid)) (fun () -> (string tid)))
+        |> fun f -> List.map f bexprs
 
     let mainGuardTr =
         p.trBExpr None (p.trExpr (trref p.trLoc "firstAgent") (fun () -> "firstAgent"))

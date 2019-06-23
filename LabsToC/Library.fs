@@ -114,8 +114,9 @@ let encodeInit (table:SymbolTable) =
         |> Map.values
         |> Seq.sortBy table.m.IndexOf
         |> Seq.map (fun v ->
-                Frontend.Frontend.initBExprs UNDEF Expr.evalCexprNoId table.m.[v.name]
-                |> List.map ((trKit.initTr "") >> Str)
+                let info = table.m.[v.name]
+                trKit.initTr (v, snd table.m.[v.name]) -1
+                |> List.map (fun x -> Dict ["type", Str "E"; "index", Int (snd info); "bexpr", Str x])
             )
         |> Seq.concat
 
@@ -125,13 +126,15 @@ let encodeInit (table:SymbolTable) =
             table.agents.[name].variables
             |> List.append (table.agents.[name].lstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
-                Frontend.initBExprs UNDEF (Expr.evalConstExpr (fun _ -> tid)) (v, snd table.m.[v.name])
-                |> fun x -> x
-                |> List.map (Str << trKit.initTr (string tid)))
+                let loc = match v.location with I -> "I" | L _ -> "L" | E -> "E"
+                trKit.initTr (v, snd table.m.[v.name]) tid
+                |> List.map (fun x -> Dict ["loc", Str loc; "index", Int (snd table.m.[v.name]); "bexpr", Str x])
+                )
             |> List.map (fun f -> List.map f [_start.._end-1])
             |> List.concat |> List.concat)
         |> Map.values
         |> List.concat
+        |> List.distinct
         
     let tstamps =
         table.spawn
