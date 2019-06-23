@@ -17,11 +17,11 @@ void init() {
         HoutCnt[i] = 0;
     }
 
-    {%- for item in initpcs -%}
-    {%- assign a = item.end | minus: 1 -%}
-    {%- for i in (item.start..a) -%}
+    {%- for agent in agents -%}
+    {%- assign a = agent.end | minus: 1 -%}
+    {%- for i in (agent.start..a) -%}
 
-    {%- for p in item.pcs -%}
+    {%- for p in agent.pcs -%}
     {%- if p.value.size == 1 -%}
     _pc[{{i}}][{{ p.name }}] = {{ p.value.first }};
     {%- else -%}
@@ -29,10 +29,12 @@ void init() {
     {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
         
     {%- for item in initenv -%}
-    LABSassume({{item}});
+    LABSassume({{ item.bexpr }});
     {%- endfor -%}
-    {%- for item in initvars -%}
-    LABSassume({{item}});
+    {%- for agent in agents -%}
+    {%- for item in agent.initvars -%}
+    LABSassume({{ item.bexpr }});
+    {%- endfor -%}
     {%- endfor -%}
     {%- for item in tstamps -%}
     Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();

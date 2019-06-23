@@ -120,7 +120,7 @@ let encodeInit (table:SymbolTable) =
             )
         |> Seq.concat
 
-    let vars =
+    let agents =
         table.spawn
         |> Map.map (fun name (_start, _end) ->
             table.agents.[name].variables
@@ -131,10 +131,10 @@ let encodeInit (table:SymbolTable) =
                 |> List.map (fun x -> Dict ["loc", Str loc; "index", Int (snd table.m.[v.name]); "bexpr", Str x])
                 )
             |> List.map (fun f -> List.map f [_start.._end-1])
-            |> List.concat |> List.concat)
+            |> List.concat |> List.concat |> List.distinct
+            |> fun l -> Dict ["start", Int _start; "end", Int _end; "initvars", Lst l; "pcs", liquidPcs table.agents.[name].initCond]
+            )
         |> Map.values
-        |> List.concat
-        |> List.distinct
         
     let tstamps =
         table.spawn
@@ -146,10 +146,7 @@ let encodeInit (table:SymbolTable) =
         |> Map.values
         |> Seq.concat
     
-    table.spawn
-    |> Map.map (fun name (_start, _end) ->
-        Dict ["start", Int _start; "end", Int _end; "pcs", liquidPcs table.agents.[name].initCond])
-    |> fun x -> ["initpcs", (Map.values >> Lst) x; "initenv", Lst env; "initvars", Lst vars; "tstamps", Lst tstamps]
+    ["initenv", Lst env; "agents", Lst agents; "tstamps", Lst tstamps]
     |> render init
 
 let private funcName t =
