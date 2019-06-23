@@ -46,6 +46,7 @@ let rec private BExprLnt filter trExpr bexpr =
     translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr
     
 let wrapper = { new Wrapper with
+                member __.templateInfo = {baseDir = "templates/lnt"; extension = "lnt"}
                 member __.agentName = "agent.id"
                 member __.initId _ = Extern "Nat(a.id)"
                 member __.trLinkId x = match x with | C1 -> "a1" | C2 -> "a2"

@@ -2,6 +2,7 @@
 open Frontend
 open LabsCore
 open Types
+open System.IO
 
 let private refTypeCheck v (offset:'a option) =
     // TODO move to frontend
@@ -91,21 +92,33 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
     trProp Map.empty p.def
     |> trBExpr (trExpr propRef id)
     
+
+type TemplateInfo = {
+    baseDir: string
+    extension: string
+}
+with
+    member this.Get name =
+        Path.Combine(this.baseDir, name)
+        |> fun path -> Path.ChangeExtension(path, this.extension)
+
+    
 type TranslationKit = {
     agentExprTr: Expr<Var<int> * int, unit> -> string
     agentGuardTr: BExpr<Var<int> * int, unit> -> string
     mainGuardTr: BExpr<Var<int> * int, unit> -> string
     initTr: Var<int> * int -> int -> string list
     linkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
-    propTr: SymbolTable -> Node<Property<Var<int> * int>> -> string 
+    propTr: SymbolTable -> Node<Property<Var<int> * int>> -> string
+    templateInfo : TemplateInfo
 }
 
 type RefTranslator<'a> = 'a -> string option -> string
-type UndefFilter<'a, 'b> = Ref<'a, 'b> -> bool
 
 type Wrapper =
     abstract member initId : int -> LeafExpr<'b>
     abstract member agentName : string
+    abstract member templateInfo : TemplateInfo
     abstract member trLoc<'a> : Location -> string -> 'a -> string
     abstract member trInitLoc<'a> : Location -> string -> 'a -> string
     abstract member trLinkId : LinkComponent -> string
@@ -142,4 +155,5 @@ let translateKit (p:Wrapper) =
         linkTr = linkTr
         mainGuardTr = mainGuardTr
         propTr = propTr
+        templateInfo = p.templateInfo
     }
