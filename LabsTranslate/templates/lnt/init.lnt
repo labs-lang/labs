@@ -1,0 +1,33 @@
+process INITAGENT(in out agent:Agent, in out t:Nat) is
+    var I:Iface, L:Lstig, x: Int, p:PC in
+        I := agent.I;
+        L := agent.L;
+        p := agent.pc;
+
+        {%- for agent in agents -%}
+        {% unless forloop.first %}else {% endunless %}if (agent.id >= {{agent.start}}) and (agent.id < {{agent.end}}) then
+
+        {%- for p in agent.pcs -%}
+        {%- if p.value.size == 1 -%}
+        p[{{ p.name }}] := {{ p.value.first }};
+        {%- else -%}
+        x := Any Nat where {%- for val in p.value -%} (x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
+        p[{{ p.name }}] := x;
+        {%- endif -%}{%- endfor -%}
+
+        {%- for item in agent.initvars -%}
+
+        x := any Int where {{ item.bexpr }};
+        {%- if item.loc == "L" -%}
+        L[{{ item.index }}] := LstigEntry(x, t);
+        t := incr(t){%- else -%}
+        {{item.loc}}[{{ item.index }}] := x{%- endif -%}
+        {%- unless forloop.last-%};{%- endunless -%}
+        {%- endfor -%}
+        {%- endfor-%}
+        
+        end if;
+
+        agent := agent.{I => I, L => L, init => true, pc => p}
+    end var 
+end process
