@@ -112,99 +112,64 @@ module HEADER is
         end var
     end process
 
-    process propagate [debug: DEBUG] (in out sys:Sys) is
-    var senderId:ID, key: Nat, sender:Agent, agents:Agents in
-        agents := sys.agents;
-        senderId := any ID where length(agents[Nat(senderId)].Zput) > 0;
-        sender := agents[Nat(senderId)];
-        key := any Nat where member(IndexL(key), sender.Zput);
-        key := TUPLESTART(key);
-        var j, k: Nat, L: Lstig, entry: LstigEntry in
-            for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
-                if (agents[j].id != sender.id) and link(sender, agents[j], key) and 
-                (agents[j].L[key].tstamp < sender.L[key].tstamp) then
-                    L := agents[j].L;
-                    for k := key while k <= TUPLEEND(key) by k := k + 1 loop
-                        L[k] := sender.L[k]
-                    end loop;
-                    agents[j] := agents[j].{
-                        L => L, 
-                        Zput => insert(IndexL(key), agents[j].Zput),
-                        Zqry => remove(IndexL(key), agents[j].Zqry)
-                    }
-                end if
-            end loop
-        end var;
-        agents[Nat(senderId)] := sender.{Zput => remove(IndexL(key), sender.Zput)};
-        sys := sys.{agents => agents};
-        debug("put")
-    end var
-    end process
+    process propagate (in out sys:Sys) is
+        var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
+            senderId := any ID where length(sys.agents[Nat(senderId)].Zput) > 0;
+            agents := sys.agents;
+            sender := agents[Nat(senderId)];
+            key := any IndexL where member(key, sender.Zput);
+            var j, k, t: Nat, L: Lstig, a:Agent in
+                t := sys.time;
+                for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
+                    a := agents[j];
+                    if a.init == false then INITAGENT(!?a, !?t) end if;
 
-    process confirm [debug: DEBUG] (in out sys:Sys) is
-    var senderId:ID, key: Nat, sender:Agent, agents:Agents in
-        agents := sys.agents;
-        senderId := any ID where length(agents[Nat(senderId)].Zqry) > 0;
-        sender := agents[Nat(senderId)];
-        key := any Nat where member(IndexL(key), sender.Zqry);
-        key := TUPLESTART(key);
-        var j, k: Nat, L: Lstig, entry: LstigEntry in
-            for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
-                if (agents[j].id != sender.id) and link(sender, agents[j], key) and
-                (agents[j].L[key].tstamp != sender.L[key].tstamp) then 
-                    agents[j] := agents[j].{Zput => insert(IndexL(key), agents[j].Zput)};
-                    if (agents[j].L[key].tstamp < sender.L[key].tstamp) then
-                        L := agents[j].L;
-                        for k := key while k <= TUPLEEND(key) by k := k + 1 loop
+                    if (a.id != sender.id) and link(sender, a, Nat(key)) and 
+                    (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
+                        L := a.L;
+                        for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
                             L[k] := sender.L[k]
                         end loop;
-                        agents[j] := agents[j].{L => L, Zqry => remove(IndexL(key), agents[j].Zqry)}
+                        agents[j] := a.{
+                            L => L, 
+                            Zput => insert(key, a.Zput),
+                            Zqry => remove(key, a.Zqry)
+                        }
                     end if
-                end if
-            end loop
-        end var;
-        agents[Nat(senderId)] := sender.{Zqry => remove(IndexL(key), sender.Zqry)};
-        sys := sys.{agents => agents};
-        debug("qry")
-    end var
+                end loop;
+                agents[Nat(senderId)] := sender.{Zput => remove(key, sender.Zput)};
+                sys := sys.{agents => agents, time => t}
+            end var
+        end var
     end process
 
-    {% comment %}
-
-    process step (in out sys: Sys) is
-        var next:Nat, a:Agent, t:Nat, agents:Agents in
-            next := any ID; --unfair scheduler
+    process confirm (in out sys:Sys) is
+        var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
+            senderId := any ID where length(sys.agents[Nat(senderId)].Zqry) > 0;
             agents := sys.agents;
-            a := agents[Nat(next)];
-
-            (* SELECT only if (pc[....]) and (guards) then action... else... *)
-            action_0_2 (!?a, sys.time);
-            (* END SELECT *)
-            agents[Nat(next)] := a;
-            sys := sys.{ agents => agents, time => incr(sys.time) }
-        end var
-    end process 
-
-    process MAIN [o: Sysch, debug: DEBUG] is
-        var sys: Sys, agents: Agents, next:Nat in
-            agents := Agents(emptyAgent);
-            for next := 0 while next < MAXCOMPONENTS by next := next + 1 loop
-                agents[next] := agents[next].{id => ID(next)}
-            end loop;
-            sys := Sys(agents, 0); --todo adjust initial time
-
-            while true loop
-                select
-                    step(!?sys);
-                    o(sys)
-                []
-                    propagate [debug] (!?sys)
-                []
-                    confirm [debug] (!?sys)  
-                end select
-            end loop
+            sender := agents[Nat(senderId)];
+            key := any IndexL where member(key, sender.Zqry);
+            var j, k, t: Nat, L: Lstig, a:agent in
+                t:=sys.time;
+                for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
+                    
+                    a := agents[j];
+                    if a.init == false then INITAGENT(!?a, !?t) end if;
+                    
+                    if (a.id != sender.id) and link(sender, a, Nat(key)) and
+                    (a.L[Nat(key)].tstamp != sender.L[Nat(key)].tstamp) then 
+                        a := a.{Zput => insert(key, a.Zput)};
+                        if (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
+                            L := a.L;
+                            for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
+                                L[k] := sender.L[k]
+                            end loop;
+                            agents[j] := a.{L => L, Zqry => remove(key, a.Zqry)}
+                        end if
+                    end if
+                end loop;
+                agents[Nat(senderId)] := sender.{Zqry => remove(key, sender.Zqry)};
+                sys := sys.{agents => agents, time => t}
+            end var
         end var
     end process
-
-    {% endcomment %}
-end module
