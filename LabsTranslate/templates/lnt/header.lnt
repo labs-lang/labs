@@ -50,6 +50,32 @@ module HEADER is
         return (length(p) == 0)
     end function
 
+
+    function empty(p:Pending): Bool is
+        return (length(p) == 0)
+    end function
+
+    function insert(k: IndexL, p:Pending): Pending is
+        var p1 : Pending in
+            p1 := p;
+            p1[Nat(k)] := true;
+            return p1
+        end var
+    end function
+
+    function remove(k: IndexL, p:Pending): Pending is
+        var p1 : Pending in
+            p1 := p;
+            p1[Nat(k)] := false;
+            return p1
+        end var
+    end function
+
+    function member(k: IndexL, p:Pending): Bool is
+        return p[Nat(k)]
+    end function
+
+
     type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool) with "get", "set" end type
     type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
     type Sys is sys(agents: Agents, time: Nat (*, env: Env*)) with "get", "set" end type
