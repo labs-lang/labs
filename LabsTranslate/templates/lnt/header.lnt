@@ -101,24 +101,20 @@ module HEADER is
         end if
     end function
 
-    process attr(in out a:Agent, key:Nat, val:Int, check: Bool) is 
-        only if (not(check) or ((length(a.Zput) == 0) and (length(a.Zqry) == 0))) then
-            var Inew: Iface in 
-                Inew := a.I;
-                Inew[key] := val;
-                a := a.{I => Inew}
-            end var
-        end if
+    process attr(in out a:Agent, key:Nat, val:Int) is 
+        var Inew: Iface in 
+            Inew := a.I;
+            Inew[key] := val;
+            a := a.{I => Inew}
+        end var
     end process
 
-    process lstig(in out a:Agent, key:IndexL, val:Int, tstamp: Nat, check: Bool) is 
-        only if (not(check) or ((length(a.Zput) == 0) and (length(a.Zqry) == 0))) then
-            var Lnew: Lstig in 
-                Lnew := a.L;
-                Lnew[Nat(key)] := LstigEntry(val, tstamp);
-                a := a.{L => Lnew, Zput => insert(IndexL(TUPLESTART(Nat(key))), a.Zput)}
-            end var
-        end if
+    process lstig(in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
+        var Lnew: Lstig in 
+            Lnew := a.L;
+            Lnew[key] := LstigEntry(val, tstamp);
+            a := a.{L => Lnew, Zput => insert(TUPLESTART(IndexL(key)), a.Zput)}
+        end var
     end process
 
     process propagate [debug: DEBUG] (in out sys:Sys) is
@@ -179,25 +175,6 @@ module HEADER is
     end process
 
     {% comment %}
-    (* example of an individual transition *)
-    process action_0_2 (in out agent: Agent, t: Nat) is 
-        var I:Iface in
-            attr(!?agent, 0, (agent.I[0] + 1 mod 2), false)--{%- if qrykeys.size > 0 -%};{%- endif -%}
-            (* -- TODO ADD keys to >qry
-            {%- if qrykeys.size > 0 -%}
-            var Zqry: Pending in
-                Zqry := agent.Zqry;
-                {%- for item in qrykeys -%}
-                Zqry := insert({{item}}, Zqry);
-                {%- endfor -%}
-                agent := agent.{Zqry := Zqry}
-            end var
-            {%- endif -%}
-            *)
-        end var
-    end process
-
-
 
     process step (in out sys: Sys) is
         var next:Nat, a:Agent, t:Nat, agents:Agents in
