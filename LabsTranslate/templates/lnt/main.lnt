@@ -16,7 +16,7 @@
             {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}(!?a, sys.time) end if
             {% unless forloop.last %}[]{%- endunless %}
             {%- endfor -%}
-            end select
+            end select;
             agents[Nat(tid)] := a;
             sys := sys.{ agents => agents, time => incr(sys.time) }
         end var
@@ -37,7 +37,7 @@
         var next: ID in
             loop
                 next := any ID;
-                sched(next);
+                sched(next)
             end loop
         end var
     end process
@@ -50,10 +50,12 @@
         {%- assign cnt = agentscount | minus: 1 -%}
         if {%- for i in (0..cnt) -%}(agents[{{i}}].init) {% unless forloop.last %}and {% endunless %} {%- endfor -%}then 
             {%- for p in alwaysasserts -%}
-            if not({{ p }}) then mon(false); stop end if{% unless forloop.last %};{% endunless %}
+            -- {{ p.name }}
+            if not({{ p.value }}) then mon(false); stop end if{% unless forloop.last %};{% endunless %}{%if finallyasserts.size > 0 %};{% endif %}
             {%- endfor -%}
             {%- for p in finallyasserts -%}
-            if {{ p }} then mon(true); stop end if{% unless forloop.last %};{% endunless %}
+            -- {{ p.name }}
+            if {{ p.value }} then mon(true); stop end if{% unless forloop.last %};{% endunless %}
             {%- endfor -%}
         end if
         {%- endif -%}

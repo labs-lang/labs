@@ -21,11 +21,11 @@ process action{{label}} (in out agent: Agent, t: Nat) is
         
         {%- for item in exitcond -%}
         {%- if item.value.size == 1-%}
-        p[{{ item.name }}] = {{ item.value.first }};
+        p[{{ item.name }}] := {{ item.value.first }};
         {%- else -%}
         var x: Nat in
             x := any Nat where {%- for val in item.value -%}(x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
-            p[{{ item.name }}] = x
+            p[{{ item.name }}] := x
         end var;
         {%- endif -%}{%- endfor -%}
         agent := agent.{pc => p}
