@@ -9,6 +9,9 @@ module HEADER is
     type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
     type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
 
+    channel Sched is (ID) end channel
+    channel Boolch is (Bool) end channel
+
     function TUPLESTART(n:IndexL): IndexL is
         case n in
         {%- for i in tupleStart -%}
@@ -45,11 +48,6 @@ module HEADER is
             return n
         end var
     end function
-
-    function empty(p:Pending): Bool is
-        return (length(p) == 0)
-    end function
-
 
     function empty(p:Pending): Bool is
         return (length(p) == 0)
@@ -93,6 +91,7 @@ module HEADER is
         {% unless forloop.first %}else {% endunless %}if ((key >= {{l.start}}) and (key <= {{l.end}})) then
             return {{l.link}}
         {% endfor %}
+        else return false
         end if
     end function
 
