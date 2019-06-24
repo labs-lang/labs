@@ -7,14 +7,14 @@ module HEADER is
     type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
     type IndexI is X:Nat where X < MAXKEYI with "==", "!=" end type
     type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
-
+    type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
 
     function TUPLESTART(n:IndexL): IndexL is
         case n in
         {%- for i in tupleStart -%}
             {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
         {%- endfor -%}
-        | any -> raise unexpected (* should never match *)
+            | any -> raise unexpected (* should never match *)
         end case
     end function
 
@@ -23,7 +23,7 @@ module HEADER is
         {%- for i in tupleEnd -%}
             {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
         {%- endfor -%}
-        | any -> raise unexpected (* should never match *)
+            | any -> raise unexpected (* should never match *)
         end case
     end function
 
@@ -76,17 +76,12 @@ module HEADER is
     end function
 
 
-    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool) with "get", "set" end type
+    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool, pc:PC) with "get", "set" end type
     type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
     type Sys is sys(agents: Agents, time: Nat (*, env: Env*)) with "get", "set" end type
 
-
-    channel Agentch is (Agent) end channel
-    channel DEBUG is (String) end channel
-    channel Sysch is (Sys) end channel
-
-    function emptyAgent:Agent is
-        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), false)
+    function emptyAgent: Agent is
+        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), false, PC(0))
     end function
 
     function incr(x: Nat): Nat is 
