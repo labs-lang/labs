@@ -33,7 +33,8 @@ module HEADER is
 
     --type Env is array [ 0 .. (*{{ MAXKEYE | minus : 1 }}*) ] of Int with "get", "set" end type
 
-    type Pending is array [ 0 .. (*{{MAXKEYL}}-1*)1 ] of Bool with "get", "set" end type
+
+    type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
 
     function length(p:Pending): Nat is
         var n, j:Nat in
