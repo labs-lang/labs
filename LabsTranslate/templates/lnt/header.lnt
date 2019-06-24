@@ -12,7 +12,7 @@ module HEADER is
     function TUPLESTART(n:IndexL): IndexL is
         case n in
         {%- for i in tupleStart -%}
-            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index | minus: 1 }}) -> return IndexL({{i}})
+            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
         {%- endfor -%}
         | any -> raise unexpected (* should never match *)
         end case
@@ -21,7 +21,7 @@ module HEADER is
     function TUPLEEND(n:IndexL): IndexL is
         case n in
         {%- for i in tupleEnd -%}
-            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index | minus: 1 }}) -> return IndexL({{i}})
+            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
         {%- endfor -%}
         | any -> raise unexpected (* should never match *)
         end case
