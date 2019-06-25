@@ -12,7 +12,7 @@ let translateLocation loc n e =
         | _ -> sprintf "agents[%s]" n 
     match loc with
     | I -> sprintf "%s.I[%O]" 
-    | L _ -> sprintf "%s.L[%O]" 
+    | L _ -> sprintf "%s.L[%O].value" 
     | E -> fun _ -> sprintf "E[%O]"
     |> fun f -> f name e
 
