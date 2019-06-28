@@ -95,6 +95,7 @@ let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
         |> Map.values
     
     [
+        "MAXPC", maxpc + 1 |> Int
         "MAXKEYI", max table.m.nextI 1 |> Int
         "MAXKEYL", max table.m.nextL 1 |> Int
         "MAXKEYE", max table.m.nextE 1 |> Int
@@ -232,6 +233,7 @@ let encodeMain fair (table:SymbolTable) =
     [
         "firstagent", if table.spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair;
+        
         "schedule",
             table.agents
             |> Map.mapValues (fun a -> Seq.map scheduleTransition a.lts)
@@ -240,6 +242,7 @@ let encodeMain fair (table:SymbolTable) =
             |> Lst
         "alwaysasserts", alwaysP
         "finallyasserts", finallyP
+        "agentscount", table.spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
     ]
     |> render main
 
