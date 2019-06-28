@@ -1,7 +1,7 @@
 module HEADER is
 
     {% for item in defines -%}
-    function {{item.name}}:Int is return {{item.value}} end function
+    function {{item.name}}:Nat is return {{item.value}} end function
     {% endfor -%}
 
     type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
@@ -35,7 +35,6 @@ module HEADER is
     type Lstig is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of LstigEntry with "get", "set" end type
 
     --type Env is array [ 0 .. (*{{ MAXKEYE | minus : 1 }}*) ] of Int with "get", "set" end type
-
 
     type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
 

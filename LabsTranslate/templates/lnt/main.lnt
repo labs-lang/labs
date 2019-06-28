@@ -44,7 +44,7 @@
     {%- endif -%}
 
 
-    process monitor [mon: Boolch] (sys: Sys) is
+    process monitor [mon: Boolch] (agents: Agents) is
         {%- if alwaysasserts.size == 0 and finallyasserts.size == 0 -%}null
         {%- else -%}
         {%- assign cnt = agentscount | minus: 1 -%}
@@ -80,7 +80,7 @@
                     ||
                     loop
                         --o(sys);
-                        monitor[monitor](sys);
+                        monitor[monitor](sys.agents);
                         select
                             step[sched](!?sys)
                         []

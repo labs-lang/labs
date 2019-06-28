@@ -5,7 +5,7 @@ process INITAGENT(in out agent:Agent, in out t:Nat) is
         p := agent.pc;
 
         {%- for agent in agents -%}
-        {% unless forloop.first %}else {% endunless %}if (agent.id >= {{agent.start}}) and (agent.id < {{agent.end}}) then
+        {% unless forloop.first %}else {% endunless %}if (Nat(agent.id) >= {{agent.start}}) and (Nat(agent.id) < {{agent.end}}) then
 
         {%- for p in agent.pcs -%}
         {%- if p.value.size == 1 -%}
