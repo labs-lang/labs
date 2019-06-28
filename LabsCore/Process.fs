@@ -57,11 +57,6 @@ module Process =
 
     let rec print proc =
         let print_ b = string b.def
-//            match b.def with
-//            | Nil -> "0"
-//            | Skip -> "√"
-//            | Act a -> string a
-//            | Name s -> s
         let printGuard_ g =
             sprintf "%O %s %s" g tGUARD
         let rec printComp_ typ l = 
