@@ -198,7 +198,7 @@ let encodeAgent sync table (a:AgentTable) =
                 string t.action.def
                 |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
                 |> Str
-            "type",
+            "loc",
                 assignments
                 |>> fun a -> a.actionType
                 |>> function | I -> "attr" | L _ -> "lstig" | E -> "env"
