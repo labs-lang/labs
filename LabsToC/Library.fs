@@ -11,17 +11,9 @@ open FSharpPlus
 
 open LabsToC
 open Outcome
-open Common
+open Common 
 
-let private goto = Liquid.parse "templates/goto.c"
-let private init = Liquid.parse "templates/init.c"
-let private header = Liquid.parse "templates/header.c"
-let private main = Liquid.parse "templates/main.c"
-let private UNDEF = -128 (*sentinel value for undef*)
-
-let private trKit:TranslationKit = translateKit C.wrapper
-
-let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
+let private encodeHeader trKit bound isSimulation noBitvectors (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, (int*int)> =
         table.variables
         |> Map.filter (fun _ -> isLstigVar)
@@ -106,9 +98,9 @@ let encodeHeader bound isSimulation noBitvectors (table:SymbolTable) =
         "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
         "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst
     ]
-    |> render header
+    |> render (Liquid.parse (trKit.templateInfo.Get "header"))
 
-let encodeInit (table:SymbolTable) =
+let private encodeInit trKit (table:SymbolTable) =
     let env =
         table.variables
         |> Map.filter (fun _ -> isEnvVar)
@@ -148,7 +140,7 @@ let encodeInit (table:SymbolTable) =
         |> Seq.concat
     
     ["initenv", Lst env; "agents", Lst agents; "tstamps", Lst tstamps]
-    |> render init
+    |> render (Liquid.parse (trKit.templateInfo.Get "init"))
 
 let private funcName t =
     Map.map (sprintf "_%i_%i") t.entry |> Map.values
@@ -158,7 +150,7 @@ let private funcName t =
 let private guards table t =
     table.guards.TryFind t.action |> Option.defaultValue Set.empty
 
-let encodeAgent sync table (a:AgentTable) =
+let private encodeAgent trKit goto sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
         let guards = guards table t
         let assignments = t.action.def |> (function Act a -> Some a | _ -> None)
@@ -217,7 +209,7 @@ let encodeAgent sync table (a:AgentTable) =
     Set.map (encodeTransition) a.lts
     |> Seq.reduce (<??>)
 
-let encodeMain fair (table:SymbolTable) =
+let private encodeMain trKit fair (table:SymbolTable) =
     let scheduleTransition t =
         Dict [
             "name", funcName t |> Str
@@ -244,15 +236,18 @@ let encodeMain fair (table:SymbolTable) =
         "finallyasserts", finallyP
         "agentscount", table.spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
     ]
-    |> render main
+    |> render (Liquid.parse (trKit.templateInfo.Get "main"))
 
-let encode bound (fair, nobitvector, sim, sync) table =
+let encode encodeTo bound (fair, nobitvector, sim, sync) table =
+    let trKit = translateKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper
+    let goto = Liquid.parse (trKit.templateInfo.Get "goto")
+    
     zero table
-    <?> (encodeHeader bound sim nobitvector)
-    <?> encodeInit
+    <?> (encodeHeader trKit bound sim nobitvector)
+    <?> (encodeInit trKit)
     <?> (fun x -> 
             (Map.values x.agents)
-            |> Seq.map (encodeAgent sync x)
+            |> Seq.map (encodeAgent trKit goto sync x)
             |> Seq.reduce (<??>))
-    <?> (encodeMain fair)
+    <?> (encodeMain trKit fair)
     <~~> zero () 
