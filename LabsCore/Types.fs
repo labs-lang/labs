@@ -142,3 +142,7 @@ type Init =
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> sprintf "%O..%O" min max
         | Undef -> "undef"
+        
+
+/// Supported target encodings
+type EncodeTo = | C | Lnt
