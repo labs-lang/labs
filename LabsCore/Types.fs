@@ -132,8 +132,8 @@ module Action =
         (fun a -> a.updates),
         (fun u a -> {actionType=a.actionType; updates=u})
 
- /// Initialization values
- type Init =
+/// Initialization values
+type Init =
      | Choose of Expr<unit,unit> list
      | Range of Expr<unit,unit> * Expr<unit,unit>
      | Undef
