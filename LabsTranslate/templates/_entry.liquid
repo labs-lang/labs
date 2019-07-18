@@ -8,7 +8,7 @@
 {%- endif -%});
 {%- endif -%}
 
-{%- if type == "" -%}
+{%- if loc == "" -%}
     LABSassume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
 {%- endif -%}
 {%- for guard in guards %}
