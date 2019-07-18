@@ -7,6 +7,7 @@ open Frontend.Message
 open LabsToC
 open ArgParse
 open Argu
+open Types
 
 let wrapParserResult p text =
     try
@@ -31,7 +32,10 @@ let main argv =
         (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
     <?> (fun (cli, x) ->
         if cli.Contains Info then zero (x.dump())
-        else LabsToC.encode (cli.GetResult (Bound, defaultValue=1)) (flags cli) x)
+        else
+            let bound = cli.GetResult (Bound, defaultValue=1)
+            let enc = cli.GetResult (Enc, defaultValue=C)
+            LabsToC.encode enc (bound) (flags cli) x)
     |> Result.mapError (eprintfn "%A") // TODO Format errors and set exit code
     |> ignore
     0 // return an integer exit code

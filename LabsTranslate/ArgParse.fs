@@ -1,10 +1,12 @@
 ﻿module internal ArgParse
 open Argu
 open Frontend.Message
+open Types
 
 type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string
     | [<Mandatory>] [<Unique>] Bound of int
+    | Enc of EncodeTo
     | Fair
     | No_Bitvector
     | Sync
@@ -22,6 +24,7 @@ type Arguments =
             | Sync _ -> "force syncronous sending of stigmergic messages"
             | Simulation _ -> "encode in simulation mode (default: verification mode)."
             | Fair -> "enforce fair interleaving of components."
+            | Enc _ -> "specify the target encoding."
 
 let argParser = ArgumentParser.Create<Arguments>(programName = "LabsTranslate")
 
