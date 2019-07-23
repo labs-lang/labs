@@ -129,6 +129,13 @@ module internal SymbolTable =
             |> fun def' -> {def=def'; pos=b.pos; name=b.name}
         Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
     
+    
+    /// <summary>Builds a map from actions to guards.</summary>
+    /// <remarks>This function assumes that all occurrences of the form
+    /// (guard -> Par(...))
+    /// have been transformed into
+    /// (guard -> Seq([Skip; Par(...)). 
+    /// </remarks>
     let setGuards proc =
         let base_ (guards, acc) b = (guards, Map.add b guards acc)
         let guard_ (guards, acc) g = (Set.add g guards, acc)
