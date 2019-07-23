@@ -129,6 +129,8 @@ module internal SymbolTable =
             |> fun def' -> {def=def'; pos=b.pos; name=b.name}
         Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
     
+    let private handleProcessNode externs table p =
+        map (Process.simplify >> Process.fixGuardedPar >> toVarProcess table >> Process.replaceExterns externs) p
     
     /// <summary>Builds a map from actions to guards.</summary>
     /// <remarks>This function assumes that all occurrences of the form
@@ -153,7 +155,7 @@ module internal SymbolTable =
         |> snd
     
     let tryAddProcess externs (p: Node<Process<_>>) table =
-        let p' = map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs) p
+        let p' = handleProcessNode externs table p
         zero {table with processes=Map.add p.name p'.def table.processes; guards=Map.union table.guards (setGuards p'.def)}
     
     let tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
@@ -166,7 +168,7 @@ module internal SymbolTable =
         <~> fun t -> zero {t with agents = table.agents.Add(a.name, {AgentTable.empty with variables=iface |> List.sortBy t.m.IndexOf})}
     
     let tryAddAgent externs (a:Node<Agent>) (table, state) =
-        map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs)
+        handleProcessNode externs table
         |> fun f -> List.map f a.def.processes
         |> List.map (fun node -> node.name, node.def)
         |> (Map.ofList >> zero)
