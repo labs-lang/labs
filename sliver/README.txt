@@ -1,6 +1,6 @@
 
-              SLiVER 1.1
-              May 2019
+              SLiVER 1.2
+              June 2019
 
 Symbolic LAbS VERifier
 
@@ -16,7 +16,9 @@ core/             CSeq core framework
 
 labs/             LAbS parser and translator
 
-flock.labs        a simple, parametric LAbS system.
+*.labs            LAbS example specifications
+
+cbmc54-custom     A slightly customized build of CBMC 5.4
 
 (Other files)     Libraries used by CSeq/SLiVER
 
@@ -25,36 +27,37 @@ flock.labs        a simple, parametric LAbS system.
 To install SLiVER, please follow the steps below:
 
     1. install the dependencies:
-        - Python 3.5 or higher
-        - The Click package: https://click.palletsprojects.com.
-          If the Python package installer (pip() is available, 
-          Click may be installed with the command:
-          $ pip install click
-        - backends: CBMC, ESBMC, CSeq
-         (none of the above tools is specifically required
-          but at least one of them is needed for verification)
+      - Python 3.5 or higher
+      - (Optional) The bundled CSeq backend requires Python 2.7 with the
+        pycparser module (bundled in this distribution).
 
     2. create a directory, suppose this is called /workspace
 
     3. extract the entire package contents in /workspace
     
-    4. set execution (+x) permissions for sliver.py
+    4. set execution (+x) permissions for sliver.py and cbmc54-custom
 
     5. make sure that the backend's binary is in the search path, or
-       amend the command strings in, sect. Options and Parameters,
-       accordingly.
+       amend the command strings in sliver.py accordingly.
 
     * Usage *
 
 To try SLiVER, please use the following command:
 
-    ./sliver.py --steps 12 --fair flock.labs birds=3 delta=22 grid=16
+    ./sliver.py --steps 12 --fair boids-aw.labs birds=3 delta=13 grid=10
 
 which should report that no property is violated.
 
 The following command should instead report that a property is violated:
 
-    ./sliver.py --steps 12 --fair flock.labs birds=3 delta=21 grid=16
+    ./sliver.py --steps 18 --fair boids-aw.labs birds=4 delta=13 grid=10
+
+Use the --backend=<cbmc|cseq|esbmc> option to select a different
+verification backend. 
+Please keep in mind that ESBMC support is still experimental, therefore:
+
+  1. The esbmc executable is not provided as part of this package
+  2. Our counterexample translation only supports CBMC and CSeq.
 
 Invoking the tool without options:
 
