@@ -153,7 +153,7 @@ def DEFAULTS(name):
 def main(file, backend, steps, fair, bv, simulate, show, sync, values, timeout,
          debug, cores):
     """
-* * *  SLiVER - Symbolic LAbS VERification. v1.1 (November 2018) * * *
+* * *  SLiVER - Symbolic LAbS VERification. v1.2 (April 2019) * * *
 
 FILE -- path of LABS file to analyze
 
