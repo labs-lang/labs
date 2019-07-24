@@ -198,9 +198,11 @@ VALUES -- assign values for parameterised specification (key=value)
                 "{} with backend {}...".format(sim_or_verify, backend),
                 file=sys.stderr)
             out = check_output(backend_call, stderr=DEVNULL)
-        except KeyboardInterrupt as err:
+        except KeyboardInterrupt:
             print("Verification stopped (keyboard interrupt)", file=sys.stderr)
+            out = b""
         except CalledProcessError as err:
+            out = b""
             if err.returncode == 10:
                 out = err.output
             elif err.returncode == 1 and backend == "cseq":
