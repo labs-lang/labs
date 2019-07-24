@@ -9,44 +9,50 @@
 # Population Protocol for Fast Robust Approximate Majority. Distributed
 # Computing, vol. 21, issue 2, pp. 87–102, 2008.
 
-# 0 = N, 1 = Y, 2 = b
+# 0 = N, 1 = Y, 2 = n, 3 = y
 
 system {
     extern = _yes, _no
-    
+    environment = agent: -1; message: -1; responder: -1; lock: 0
     spawn = Yes: _yes, No: _no
     Protocol = (
-        (opinion != 2 -> agent, message <~ id, opinion)
+        (lock = 2 and agent = id -> 
+          (state = 1 and responder = 0 -> state <- 3; lock <-- 3)
+        )
         ++
-        agent != id ->
-            (message = 1 and opinion = 2 -> opinion <- 1) ++
-            (message = 1 and opinion = 0 -> opinion <- 2) ++
-            (message = 0 and opinion = 1 -> opinion <- 2) ++
-            (message = 0 and opinion = 2 -> opinion <- 1)
+        (agent != id ->
+            (lock = 0 -> 
+              (state != 2 -> agent, message, lock <-- id, state, 1)
+            )++
+            (lock = 1 ->
+              (message = 1 and state = 0 -> 
+                lock, responder <-- 2, state;
+                state <- 2; 
+                (lock = 3) -> agent, responder, lock <-- -1, -1, 0
+              ) ++ # YN -> yn
+              (message = 1 and state = 2 -> state <- 3; agent, lock <-- -1, 0) ++ # Yn -> Yy
+              (message = 0 and state = 3 -> state <- 2; agent, lock <-- -1, 0) ++ # Ny -> Nn
+              (message = 3 and state = 2 -> state <- 3; agent, lock <-- -1, 0)) # yn -> yy
+              #(message = state -> Skip))
+        )
         ); Protocol
 }
 
-stigmergy LStig {
-    link = true
-
-    agent, message: undef, undef
-}
-
 agent Yes {
-    interface = opinion: 1
-    stigmergies = LStig
+    interface = state: 1
   
     Behavior = Protocol
 }
 
 agent No {
-    interface = opinion: 0
-    stigmergies = LStig
+    interface = state: 0
   
     Behavior = Protocol
 }
 
 check {
-    AllYes = finally forall Yes y, forall No n, 
-    opinion of y = 1 and opinion of n = 1
+    NoYConsensus = always exists Yes y, exists No n,
+    (state of y == 0 or state of y == 2)
+    or 
+    (state of n == 0 or state of n == 2)
 }
