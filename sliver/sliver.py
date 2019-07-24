@@ -19,6 +19,11 @@ class Backends(Enum):
     CSeq = "cseq"
 
 
+class Languages(Enum):
+    C = "c"
+    LNT = "lnt"
+
+
 HELPMSG = {
     "backend": "Backend to use in verification mode.",
 
@@ -28,6 +33,8 @@ HELPMSG = {
     "cores": "Number of CPU cores for parallel analysis",
 
     "debug": "Enable additional checks in the backend.",
+
+    "lang": "Target language for the code generator.",
 
     "fair": "Enforce fair interleaving of components.",
 
@@ -82,11 +89,12 @@ else:
     TIMEOUT_CMD = "/usr/local/bin/gtimeout"
 
 
-def parse_linux(file, values, bound, fair, simulate, bv, sync):
+def parse_linux(file, values, bound, fair, simulate, bv, sync, lang):
     call = [
         "labs/LabsTranslate",
         "--file", file,
-        "--bound", str(bound)]
+        "--bound", str(bound),
+        "--enc", lang]
     flags = [
         (fair, "--fair"), (simulate, "--simulation"),
         (not bv, "--no-bitvector"), (sync, "--sync")
@@ -141,7 +149,7 @@ def DEFAULTS(name):
 @click.option(
     '--backend',
     type=click.Choice(b.value for b in Backends),
-    default="cbmc", **DEFAULTS("backend"))
+    default=Backends.CBMC.value, **DEFAULTS("backend"))
 @click.option('--debug', default=False, is_flag=True, **DEFAULTS("debug"))
 @click.option('--fair/--no-fair', default=False, **DEFAULTS("fair"))
 @click.option('--bv/--no-bv', default=True, **DEFAULTS("bitvector"))
@@ -151,8 +159,12 @@ def DEFAULTS(name):
 @click.option('--sync/--no-sync', default=False, **DEFAULTS("sync"))
 @click.option('--timeout', default=0, type=int, **DEFAULTS("timeout"))
 @click.option('--cores', default=4, type=int, **DEFAULTS("cores"))
+@click.option(
+    '--lang',
+    type=click.Choice(l.value for l in Languages),
+    default=Languages.C.value, **DEFAULTS("lang"))
 def main(file, backend, steps, fair, bv, simulate, show, sync, values, timeout,
-         debug, cores):
+         debug, cores, lang):
     """
 * * *  SLiVER - Symbolic LAbS VERification. v1.3 (July 2019) * * *
 
@@ -163,7 +175,7 @@ VALUES -- assign values for parameterised specification (key=value)
 
     print("Encoding...", file=sys.stderr)
     c_program, fname, info = parse_linux(
-        file, values, steps, fair, simulate, bv, sync)
+        file, values, steps, fair, simulate, bv, sync, lang)
     info = info.decode().replace("\n", "|")[:-1]
     if fname:
         if show:
