@@ -22,7 +22,8 @@ class Backends(Enum):
 HELPMSG = {
     "backend": "Backend to use in verification mode.",
 
-    "bitvector": "Enable bitvector optimization where supported (default: true)",
+    "bitvector":
+        "Enable bitvector optimization where supported (default: true)",
 
     "cores": "Number of CPU cores for parallel analysis",
 
