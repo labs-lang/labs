@@ -58,7 +58,6 @@ class LabsExprVisitor(NodeVisitor):
         if node.func.id == "abs":
             return abs(self.visit(node.args[0]))
         else:
-            print("????")
             raise ValueError
 
 
@@ -180,7 +179,6 @@ class Variable:
         self.index = int(index)
         self.size = 1
         visitor = LabsExprVisitor(self.index)
-        print(">>>", index, name, init)
         if "[" in name:
             self.name, size = name.split("[")
             self.size = int(size[:-1])
@@ -192,7 +190,6 @@ class Variable:
                 for v in init[1:-1].split(",")]
         elif ".." in init:
             low, up = init.split("..")
-            print("low", low, "up", up)
             self.values = range(
                 visitor.visit_string(low),
                 visitor.visit_string(up))
@@ -200,7 +197,6 @@ class Variable:
             self.values = [-32767]  # UNDEF
         else:
             self.values = [visitor.visit_string(init)]
-        print("values", list(self.values))
 
     def rnd_value(self):
         """Returns a random, feasible initial value for the variable.
