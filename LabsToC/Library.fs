@@ -58,6 +58,7 @@ let private encodeHeader trKit bound isSimulation noBitvectors (table:SymbolTabl
             "MAXKEYL", max table.m.nextL 1
             "MAXKEYE", max table.m.nextE 1
             "MAXTUPLE", maxTuple
+            "DISABLELSTIG", (if table.m.nextL = 0 then 1 else 0)
         ]
         |> (fun l -> if isSimulation then ("SIMULATION", 1)::l else l)
         |> Map.ofList

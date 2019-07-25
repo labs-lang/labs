@@ -16,16 +16,19 @@ void finally() {
 int main(void) {
     init();
     TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0{% endif %};
-    Bool sys_or_not[BOUND];
 
+    #if DISABLELSTIG == 0
+    Bool sys_or_not[BOUND];
+    #endif
 
     unsigned __LABS_step;
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
         // if (terminalState()) break;
         
         // _Bool sys_or_not;
-
+        #if DISABLELSTIG == 0
         if (sys_or_not[__LABS_step]) {
+        #endif
             LABSassume(firstAgent < MAXCOMPONENTS);
 
             {%- for item in schedule -%}
@@ -49,6 +52,7 @@ pc[firstAgent][{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- end
             {%- else -%}
             firstAgent = nondet();
             {%- endif -%}
+        #if DISABLELSTIG == 0 
         }
         else {
             Bool propagate_or_confirm; 
@@ -56,6 +60,7 @@ pc[firstAgent][{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- end
             if (propagate_or_confirm) propagate();
             else confirm();
         }
+        #endif
         monitor();
     }
     
