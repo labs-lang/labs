@@ -120,7 +120,9 @@ void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, Bool check) {
     __VERIFIER_assume((!check) | (HinCnt[id] == 0));
 
     I[id][key] = value;
+    #if DISABLELSTIG == 0
     now(); // local step
+    #endif
 }
 
 void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, Bool check) {
@@ -128,7 +130,9 @@ void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, Bool check) {
     __VERIFIER_assume((!check) | (HinCnt[id] == 0));
     
     E[key] = value;
+    #if DISABLELSTIG == 0
     now(); // local step
+    #endif
 }
 
 #if DISABLELSTIG == 0
