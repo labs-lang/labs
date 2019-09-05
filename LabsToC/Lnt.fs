@@ -8,7 +8,8 @@ let translateLocation loc n e =
     let name =
         match n with
         | "agent.id" -> "agent"
-        | "firstAgent" | "a1" | "a2" -> n
+        | "firstAgent" -> "tid"
+        | "a1" | "a2" -> n
         | _ -> sprintf "agents[%s]" n 
     match loc with
     | I -> sprintf "%s.I[%O]" 
