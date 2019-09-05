@@ -210,7 +210,7 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
     Set.map (encodeTransition) a.lts
     |> Seq.reduce (<??>)
 
-let private encodeMain trKit fair (table:SymbolTable) =
+let private encodeMain trKit isSimulation fair (table:SymbolTable) =
     let scheduleTransition t =
         Dict [
             "name", funcName t |> Str
@@ -225,8 +225,8 @@ let private encodeMain trKit fair (table:SymbolTable) =
     
     [
         "firstagent", if table.spawn.Count = 1 then Int 0 else Int -1
-        "fair", Bool fair;
-        
+        "fair", Bool fair
+        "simulation", Bool isSimulation
         "schedule",
             table.agents
             |> Map.mapValues (fun a -> Seq.map scheduleTransition a.lts)
@@ -250,5 +250,5 @@ let encode encodeTo bound (fair, nobitvector, sim, sync) table =
             (Map.values x.agents)
             |> Seq.map (encodeAgent trKit goto sync x)
             |> Seq.reduce (<??>))
-    <?> (encodeMain trKit fair)
+    <?> (encodeMain trKit fair sim)
     <~~> zero () 
