@@ -116,8 +116,10 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
 //  If check is true, transition is guarded by HoutCnt == HinCnt == 0
 //
 void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, Bool check) {
+    #if DISABLELSTIG == 0
     __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
     __VERIFIER_assume((!check) | (HinCnt[id] == 0));
+    #endif
 
     I[id][key] = value;
     #if DISABLELSTIG == 0
@@ -126,9 +128,11 @@ void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, Bool check) {
 }
 
 void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, Bool check) {
+    #if DISABLELSTIG == 0
     __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
     __VERIFIER_assume((!check) | (HinCnt[id] == 0));
-    
+    #endif
+
     E[key] = value;
     #if DISABLELSTIG == 0
     now(); // local step
