@@ -33,10 +33,14 @@ process INITAGENT(in out agent:Agent, in out t:Nat) is
 end process
 
 process INITENV(in out e: Env) is
+    {%- if initenv.size > 0 -%}
     var x: Int in 
         {% for item in initenv %}
         x := any Int where {{ item.bexpr }};
         e[{{ item.index }}] := x{%- unless forloop.last-%};{%- endunless -%}
         {% endfor %}
     end var
+    {%- else -%}
+    null
+    {%- endif -%}
 end process
