@@ -28,7 +28,7 @@ let private translateExpr trRef trId =
         | Plus -> sprintf "(%s) + (%s)"
         | Minus -> sprintf "(%s) - (%s)"
         | Times -> sprintf "(%s) * (%s)"
-        | Div -> sprintf "(%s) / (%s)"
+        | Div -> sprintf "(%s) div (%s)"
         | Mod -> sprintf "(%s) mod (%s)"
         | Max -> sprintf "max(%s, %s)"
         | Min -> sprintf "min(%s, %s)"
