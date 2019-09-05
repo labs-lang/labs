@@ -52,17 +52,17 @@
         if {%- for i in (0..cnt) -%}(agents[{{i}}].init) {% unless forloop.last %}and {% endunless %} {%- endfor -%}then 
             {%- for p in alwaysasserts -%}
             -- {{ p.name }}
-            if not({{ p.value }}) then mon(false); stop end if{% unless forloop.last %};{% endunless %}{%if finallyasserts.size > 0 %};{% endif %}
+            if not({{ p.value }}) then mon(false){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}{%if finallyasserts.size > 0 %};{% endif %}
             {%- endfor -%}
             {%- for p in finallyasserts -%}
             -- {{ p.name }}
-            if {{ p.value }} then mon(true); stop end if{% unless forloop.last %};{% endunless %}
+            if {{ p.value }} then mon(true){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}
             {%- endfor -%}
         end if
         {%- endif -%}
     end process
 
-    process MAIN [monitor:Boolch] is
+    process MAIN [{%- if simulation -%}o:Any, {% endif %}monitor:Boolch] is
         var sys: Sys, agents: Agents, e:Env in
             agents := Agents(emptyAgent);
             
@@ -82,7 +82,9 @@
                     scheduler [sched]
                     ||
                     loop
-                        --o(sys);
+                        {%- if simulation -%}
+                        o(sys);
+                        {%- endif -%}
                         monitor[monitor](sys.agents);
                         select
                             step[sched](!?sys)
