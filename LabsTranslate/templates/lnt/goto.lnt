@@ -1,9 +1,9 @@
-process action{{label}} (in out agent: Agent, t: Nat) is
+process action{{label}} (in out agent: Agent, t: Nat, in out E: Env) is
     --{{ labs }}
 
     {%- for item in assignments -%}{%- if item.size != 0 -%}
-    {{loc}}(!?agent, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});{%- else -%}
-    {{loc}}(!?agent, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});
+    {{loc}}(!?{% if loc != "env" %}agent{% else %}E{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});{%- else -%}
+    {{loc}}(!?{% if loc != "env" %}agent{% else %}E{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});
     {%- endif -%}{%- endfor -%}
 
     {%- if qrykeys.size > 0 -%}

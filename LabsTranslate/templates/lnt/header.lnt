@@ -34,7 +34,7 @@ module HEADER is
     type LstigEntry is LstigEntry (value: Int, tstamp: Nat) with "get", "set" end type
     type Lstig is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of LstigEntry with "get", "set" end type
 
-    --type Env is array [ 0 .. (*{{ MAXKEYE | minus : 1 }}*) ] of Int with "get", "set" end type
+    type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
 
     type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
 
@@ -75,7 +75,7 @@ module HEADER is
 
     type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool, pc:PC) with "get", "set" end type
     type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
-    type Sys is sys(agents: Agents, time: Nat (*, env: Env*)) with "get", "set" end type
+    type Sys is sys(agents: Agents, time: Nat , env: Env) with "get", "set" end type
 
     function emptyAgent: Agent is
         return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), false, PC(0))
@@ -86,12 +86,13 @@ module HEADER is
     end function
 
     function link(a1: Agent, a2: Agent, key: Nat):Bool is
-        {% for l in links %}
-        {% unless forloop.first %}else {% endunless %}if ((key >= {{l.start}}) and (key <= {{l.end}})) then
+        {% if links.size > 0 %}{% for l in links %}
+        {% if forloop.first %}if{% else %}elsif{% endif %} ((key >= {{l.start}}) and (key <= {{l.end}})) then
             return {{l.link}}
         {% endfor %}
         else return false
         end if
+        {% else %}return false {% endif %}
     end function
 
     process attr(in out a:Agent, key:Nat, val:Int) is 
@@ -101,6 +102,11 @@ module HEADER is
             a := a.{I => Inew}
         end var
     end process
+
+    process env(in out E:Env, key:Nat, val:Int) is 
+        E[key] := val
+    end process
+
 
     process lstig(in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
         var Lnew: Lstig in 

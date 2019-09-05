@@ -1,10 +1,11 @@
     process step [sched:Sched] (in out sys: Sys) is
-        var a:Agent, tid:ID, agents:Agents, t:Nat in
+        var a:Agent, tid:ID, agents:Agents, t: Nat, E: Env in
             agents := sys.agents;
             sched(?tid) where empty(agents[Nat(tid)].Zput) and empty(agents[Nat(tid)].Zqry);
 
-            t := sys.time;
             a := agents[Nat(tid)];
+            t := sys.time;
+            E := sys.env;
             if a.init == false then INITAGENT(!?a, !?t) end if;
 
             select
@@ -13,12 +14,12 @@
             {%- for pc in item.siblings -%}
             (a.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
             {%- endfor -%}
-            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}(!?a, sys.time) end if
+            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}(!?a, sys.time, !?e) end if
             {% unless forloop.last %}[]{%- endunless %}
             {%- endfor -%}
             end select;
             agents[Nat(tid)] := a;
-            sys := sys.{ agents => agents, time => incr(sys.time) }
+            sys := sys.{ agents => agents, time => t, env => e}
         end var
     end process
 
@@ -62,7 +63,7 @@
     end process
 
     process MAIN [monitor:Boolch] is
-        var sys: Sys, agents: Agents in
+        var sys: Sys, agents: Agents, e:Env in
             agents := Agents(emptyAgent);
             
             var tid: Nat, a: Agent, time: Nat in
@@ -71,7 +72,9 @@
                     a := agents[tid].{id => ID(tid)};
                     agents[tid] := a; i
                 end loop;
-                sys := Sys(agents, time)
+                e := Env(0);
+                INITENV(!?e);
+                sys := Sys(agents, time, e)
             end var;
 
             hide sched:Sched in
