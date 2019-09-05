@@ -89,9 +89,9 @@ let private encodeHeader trKit bound isSimulation noBitvectors (table:SymbolTabl
     
     [
         "MAXPC", maxpc + 1 |> Int
-        "MAXKEYI", max table.m.nextI 1 |> Int
-        "MAXKEYL", max table.m.nextL 1 |> Int
-        "MAXKEYE", max table.m.nextE 1 |> Int
+        "MAXKEYI", defines.["MAXKEYI"] |> Int
+        "MAXKEYL", defines.["MAXKEYL"] |> Int
+        "MAXKEYE", defines.["MAXKEYE"] |> Int
         "MAXCOMPONENTS", table.spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
         "defines", defines |> Map.toSeq |> makeDict Str Int
         "typedefs", makeDict Str Str typedefs
