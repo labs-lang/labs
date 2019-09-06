@@ -9,7 +9,7 @@ function existsEnabledAgent (sys: Sys): Bool is
 end function
 
 
-process lastAgent [last: Any] is
+process lastAgent [last: IdChannel] is
     var tid: ID in
         tid := any ID;
         loop
@@ -19,7 +19,7 @@ process lastAgent [last: Any] is
     end var
 end process
 
-process step [last:Sched] (in out sys: Sys) is
+process step [last: IdChannel] (in out sys: Sys) is
     var a:Agent, tid:ID, agents:Agents, t: Nat, firstAgent: Int, E: Env in
         agents := sys.agents;
         --sched(?tid) where empty(agents[Nat(tid)].Zput) and empty(agents[Nat(tid)].Zqry);
@@ -113,7 +113,7 @@ end process
                 sys := Sys(agents, time, e)
             end var;
 
-            hide last:Sched in
+            hide last:IdChannel in
                 par last in
                     lastAgent [last]
                     ||
