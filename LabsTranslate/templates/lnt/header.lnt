@@ -9,7 +9,7 @@ module HEADER is
     type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
     type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
 
-    channel Sched is (ID) end channel
+    channel IdChannel is (ID) end channel
     channel Boolch is (Bool) end channel
 
     function TUPLESTART(n:IndexL): IndexL is
