@@ -1,11 +1,11 @@
-process INITAGENT(in out agent:Agent, in out t:Nat) is
+process INITAGENT(in out a:Agent, in out t:Nat) is
     var I:Iface, L:Lstig, x: Int, p:PC in
-        I := agent.I;
-        L := agent.L;
-        p := agent.pc;
+        I := a.I;
+        L := a.L;
+        p := a.pc;
 
         {%- for agent in agents -%}
-        {% unless forloop.first %}els{% endunless %}if (Nat(agent.id) >= {{agent.start}}) and (Nat(agent.id) < {{agent.end}}) then
+        {% unless forloop.first %}els{% endunless %}if (Nat(a.id) >= {{agent.start}}) and (Nat(a.id) < {{agent.end}}) then
 
         {%- for p in agent.pcs -%}
         {%- if p.value.size == 1 -%}
@@ -28,7 +28,7 @@ process INITAGENT(in out agent:Agent, in out t:Nat) is
         
         end if;
 
-        agent := agent.{I => I, L => L, init => true, pc => p}
+        a := a.{I => I, L => L, init => true, pc => p}
     end var 
 end process
 
