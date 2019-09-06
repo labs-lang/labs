@@ -250,5 +250,5 @@ let encode encodeTo bound (fair, nobitvector, sim, sync) table =
             (Map.values x.agents)
             |> Seq.map (encodeAgent trKit goto sync x)
             |> Seq.reduce (<??>))
-    <?> (encodeMain trKit fair sim)
+    <?> (encodeMain trKit sim fair)
     <~~> zero () 
