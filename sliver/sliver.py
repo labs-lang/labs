@@ -28,7 +28,7 @@ HELPMSG = {
     "backend": "Backend to use in verification mode.",
 
     "bitvector":
-        "Enable bitvector optimization where supported (default: true)",
+        "Enable bitvector optimization where supported",
 
     "cores": "Number of CPU cores for parallel analysis",
 
@@ -46,9 +46,11 @@ HELPMSG = {
 
     "steps": "Number of system evolutions.",
 
-    "sync": "Force synchronous stigmergy messages",
+    "sync": "Force synchronous stigmergy messages.",
 
-    "timeout": """configure time limit (seconds). If 0, no timeout"""
+    "timeout": (
+        "Configure time limit (seconds).",
+        "Set to 0 to disable timeout.")
 }
 
 backends = {
