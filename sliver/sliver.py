@@ -49,7 +49,7 @@ HELPMSG = {
     "sync": "Force synchronous stigmergy messages.",
 
     "timeout": (
-        "Configure time limit (seconds).",
+        "Configure time limit (seconds)."
         "Set to 0 to disable timeout.")
 }
 
