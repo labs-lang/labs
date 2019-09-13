@@ -44,7 +44,9 @@ HELPMSG = {
         "Number of simulation traces to analyze. "
         "If 0, run in verification mode."),
 
-    "steps": "Number of system evolutions.",
+    "steps": (
+        "Number of system evolutions."
+        "If 0, generate an unbounded system."),
 
     "sync": "Force synchronous stigmergy messages.",
 
@@ -157,7 +159,7 @@ def DEFAULTS(name):
 @click.option('--bv/--no-bv', default=True, **DEFAULTS("bitvector"))
 @click.option('--simulate', default=0, type=int, **DEFAULTS("simulate"))
 @click.option('--show', default=False, is_flag=True, **DEFAULTS("show"))
-@click.option('--steps', default=1, type=int, **DEFAULTS("steps"))
+@click.option('--steps', default=0, type=int, **DEFAULTS("steps"))
 @click.option('--sync/--no-sync', default=False, **DEFAULTS("sync"))
 @click.option('--timeout', default=0, type=int, **DEFAULTS("timeout"))
 @click.option('--cores', default=4, type=int, **DEFAULTS("cores"))
