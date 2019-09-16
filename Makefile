@@ -15,7 +15,7 @@ linux: publishlinux sliverlinux
 	cp -r linux/ build/linux_x64/;
 	mv build/linux_x64/libunwind build/linux_x64/labs/libunwind;
 	cp examples/*.labs build/linux_x64;
-	cp -r LabsTranslate/templates build/linux_x64;
+	cp -r LabsTranslate/templates build/linux_x64/labs;
 
 publishmac: build/osx_64/labs/LabsTranslate.dll
 
@@ -24,5 +24,5 @@ build/osx_64/labs/LabsTranslate.dll:
 
 mac: publishmac slivermac
 	cp examples/*.labs build/osx_x64;
-	cp -r LabsTranslate/templates build/osx_x64;
+	cp -r LabsTranslate/templates build/osx_x64/labs;
 

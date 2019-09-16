@@ -6,11 +6,14 @@ from subprocess import check_output, DEVNULL, CalledProcessError
 from enum import Enum
 from os import remove
 import uuid
+from pathlib import Path
 
 from cex import translateCPROVER
 from modules.info import raw_info
+from __about__ import __date__, __summary__, __version__
 
 SYS = platform.system()
+__DIR = Path(__file__).parent
 
 
 class Backends(Enum):
@@ -87,7 +90,8 @@ backends_debug = {
 
 def check_cbmc_version():
     cbmc_check = backends["cbmc"] + ["--version"]
-    CBMC_V, CBMC_SUBV = check_output(cbmc_check).decode().strip().split(".")
+    CBMC_V, CBMC_SUBV = check_output(
+        cbmc_check, cwd=__DIR).decode().strip().split(".")
     if not (int(CBMC_V) <= 5 and int(CBMC_SUBV) <= 4):
         additional_flags = ["--trace", "--stop-on-fail"]
         backends["cbmc"].extend(additional_flags)
@@ -104,7 +108,7 @@ else:
 
 def parse_linux(file, values, bound, fair, simulate, bv, sync, lang):
     call = [
-        "labs/LabsTranslate",
+        __DIR / Path("labs/LabsTranslate"),
         "--file", file,
         "--bound", str(bound),
         "--enc", lang]
@@ -223,7 +227,7 @@ VALUES -- assign values for parameterised specification (key=value)
             print(
                 "{} with backend {}...".format(sim_or_verify, backend),
                 file=sys.stderr)
-            out = check_output(backend_call, stderr=DEVNULL)
+            out = check_output(backend_call, stderr=DEVNULL, cwd=__DIR)
         except KeyboardInterrupt:
             print("Verification stopped (keyboard interrupt)", file=sys.stderr)
             out = b""
