@@ -24,6 +24,7 @@ int main(void) {
     #endif
 
     #if BOUND > 0
+    unsigned char switchnondet[BOUND];
     unsigned __LABS_step;
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
     #else
@@ -43,7 +44,7 @@ int main(void) {
             #if BOUND > 0
             switch (switchnondet[__LABS_step]) {
             #else
-                switch (__VERIFIER_nondet()) {
+            switch (__VERIFIER_nondet()) {
             #endif
 
             {%- for item in schedule -%}
