@@ -24,6 +24,15 @@ class Languages(Enum):
     LNT = "lnt"
 
 
+SHORTDESCR = "SLiVER"
+LONGDESCR = """
+* * * {} - {} v{} ({}) * * *
+
+FILE -- path of LABS file to analyze
+
+VALUES -- assign values for parameterised specification (key=value)
+""".format(SHORTDESCR, __summary__, __version__, __date__)
+
 HELPMSG = {
     "backend": "Backend to use in verification mode.",
 
@@ -148,6 +157,7 @@ def DEFAULTS(name):
 
 
 @click.command()
+@click.version_option(__version__, prog_name=SHORTDESCR)
 @click.argument('file', required=True, type=click.Path(exists=True))
 @click.argument('values', nargs=-1)
 @click.option(
