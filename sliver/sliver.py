@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 
 from cex import translateCPROVER
-from .info import raw_info
+from info import raw_info
 from __about__ import __date__, __summary__, __version__
 
 SYS = platform.system()
@@ -74,7 +74,7 @@ backends = {
         "--no-pointer-check", "--no-align-check",
         "--no-unwinding-assertions", "--z3"],
     "cseq": [
-        "./cseq.py", "-l", "labs_parallel", "--split", "_I"]
+        "cseq/cseq.py", "-l", "labs_parallel", "--split", "_I"]
 }
 
 

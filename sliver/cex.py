@@ -1,5 +1,5 @@
 import re
-from .info import Info, get_var
+from info import Info, get_var
 
 
 ATTR = re.compile(r"I\[([0-9]+)l?\]\[([0-9]+)l?\]")
