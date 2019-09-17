@@ -1,5 +1,5 @@
 import re
-from modules.info import Info
+from modules.info import Info, get_var
 
 
 ATTR = re.compile(r"I\[([0-9]+)l?\]\[([0-9]+)l?\]")
@@ -13,6 +13,14 @@ CONFIRM = re.compile(r"propagate_or_confirm=FALSE")
 
 
 UNDEF = "16960"
+
+
+def pprint_assign(lst, key, arrow, value):
+    v = get_var(lst, key)
+    if v.is_array:
+        return "\t{}[{}] {} {}\n".format(v.name, key - v.index, arrow, value)
+    else:
+        return "\t{} {} {}\n".format(v.name, arrow, value)
 
 
 def translateCPROVER(cex, fname, info, offset=-1):
@@ -69,6 +77,7 @@ last_agent = -1
 
 
 def _mapCPROVERstate(A, B, C, info):
+
     global last_return, last_step, last_sys, last_agent
     '''
     'Violated property:'
@@ -105,24 +114,21 @@ def _mapCPROVERstate(A, B, C, info):
         is_attr = ATTR.match(keys["lvalue"])
         if is_attr and keys["rvalue"] != UNDEF:
             tid, k = is_attr.group(1), is_attr.group(2)
-            if int(k) >= len(info.i):
-                return ""
+            agent = "{} {}:".format(info.spawn[int(tid)], tid)
             last_return = "attr"
-            return "{} {}:\t{} <- {}\n".format(
-                info.spawn[int(tid)],
-                tid, info.i[int(k)].name, keys["rvalue"])
+            return "{}{}".format(
+                agent,
+                pprint_assign(info.i, int(k), "<-", keys["rvalue"]))
 
         is_lstig = LSTIG.match(keys["lvalue"])
         if is_lstig and keys["rvalue"] != UNDEF:
             tid, k = is_lstig.group(1), is_lstig.group(2)
-            if int(k) >= len(info.lstig):
-                return ""
             agent = "{} {}:".format(info.spawn[int(tid)], tid)
             last_return = "lstig"
             last_agent = agent
-            return "{}\t{} <~ {}\n".format(
-                agent,  # if last_agent != agent else "",
-                info.lstig[int(k)].name, keys["rvalue"])
+            return "{}{}".format(
+                agent,
+                pprint_assign(info.lstig, int(k), "<~", keys["rvalue"]))
 
         if (keys["lvalue"].startswith("__LABS_step") and
                 keys["rvalue"] != last_step):
@@ -133,13 +139,11 @@ def _mapCPROVERstate(A, B, C, info):
         is_env = ENV.match(keys["lvalue"])
         if is_env and keys["rvalue"] != UNDEF:
             k = is_env.group(1)
-            if int(k) >= len(info.e):
-                return ""
             last_return = "env"
-            return "\t{} <-- {}\n".format(info.e[int(k)].name, keys["rvalue"])
-
+            return pprint_assign(info.e, int(k), "<--", keys["rvalue"])
         return ""
 
     except Exception as e:
             print('unable to parse state %s' % keys['State'])
+            print(e)
             return ""  # (A,B,C + '\n')

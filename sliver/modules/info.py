@@ -169,21 +169,16 @@ class Variable:
     """
 
     def __init__(self, index, name, init):
-        """Summary
-
-        Args:
-            index (TYPE): Description
-            name (TYPE): Description
-            init (TYPE): Description
-        """
         self.index = int(index)
         self.size = 1
         visitor = LabsExprVisitor(self.index)
         if "[" in name:
             self.name, size = name.split("[")
             self.size = int(size[:-1])
+            self.is_array = True
         else:
             self.name = name
+            self.is_array = False
         if init[0] == "[":
             self.values = [
                 visitor.visit_string(v)
@@ -202,6 +197,29 @@ class Variable:
         """Returns a random, feasible initial value for the variable.
         """
         return choice(self.values)
+
+
+def get_var(lst, index):
+    """Gets the (possibly array) variable for a given index.
+
+    E.g. if lst contains an array X of size 3 and a scalar Y,
+    get_var(lst, 2) returns X
+    """
+    if type(index) != int:
+        raise TypeError()
+
+    if type(lst) == dict:
+        lst = list(lst.values())
+        lst.sort(key=lambda x: x.index)
+
+    _len = sum(v.size for v in lst)
+    if not (0 <= index < _len):
+        raise KeyError("Out of bounds")
+    count = 0
+    for v in lst:
+        count += v.size
+        if count > index:
+            return v
 
 
 class Agent:
