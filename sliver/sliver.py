@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 
 from cex import translateCPROVER
-from modules.info import raw_info
+from .info import raw_info
 from __about__ import __date__, __summary__, __version__
 
 SYS = platform.system()
