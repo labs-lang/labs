@@ -17,15 +17,6 @@ module Expr =
 module BExpr =
     let replaceExterns externs = BExpr.map (BLeaf) (Expr.replaceExterns externs)
 
-module Process =
-    open LabsCore.Process
-    let replaceExterns externs =
-        let base_ b =
-            match b.def with
-            | Act a -> BaseProcess {b with def= Act {a with updates = List.map (fun (x, e) -> x, Expr.replaceExterns externs e) a.updates}}
-            | _ -> BaseProcess b
-        map base_ (BExpr.replaceExterns externs)
-        
 module Var =
     let replaceExterns externs v =
         let replace = Expr.replaceExterns externs
@@ -39,4 +30,15 @@ module Var =
             | Array e -> Array (replace e)
             | Scalar -> Scalar
         {v with init=init'; vartype=vartype'}
-        
+
+module Process =
+    open LabsCore.Process
+    let replaceExterns externs =
+        let base_ b =
+            let doUpdate (ref_, expr) =
+                {ref_ with offset=Option.map (Expr.replaceExterns externs) ref_.offset}, Expr.replaceExterns externs expr
+            match b.def with
+            | Act a -> BaseProcess {b with def= Act {a with updates = List.map doUpdate a.updates}}
+            | _ -> BaseProcess b
+        map base_ (BExpr.replaceExterns externs)
+                
