@@ -1,0 +1,6 @@
+[submodule "sliver"]
+	path = sliver
+	url = https://github.com/labs-lang/sliver/
+[submodule "click"]
+	path = click
+	url = https://github.com/pallets/click
