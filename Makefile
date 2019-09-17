@@ -24,6 +24,7 @@ build/osx_64/labs/LabsTranslate.dll:
 	dotnet publish -r osx.10.10-x64 -c Release -o ../build/osx_x64/labs
 
 mac: publishmac slivermac
-	cp examples/*.labs build/osx_x64;
+	mkdir -p build/osx_x64/examples;
+	cp examples/*.labs build/osx_x64/examples/;
 	cp -r LabsTranslate/templates build/osx_x64/labs;
 
