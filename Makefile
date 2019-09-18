@@ -13,22 +13,22 @@ dir :
 
 build/%/labs/LabsTranslate.dll : $(sources) dir
 	@echo Building LabsTranslate...
-	dotnet publish -r $(platform) -c Release --self-contained -o ../build/$(platform)/labs &&
+	dotnet publish -r $(platform) -c Release --self-contained -o ../build/$(platform)/labs
 	@cp -r LabsTranslate/templates build/$(platform)/labs;
 
 build/%/sliver.py : $(sliver_sources) build/%/click
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
 
-build/%/click :
+build/%/click : dir
 	@echo Copying click...
 	@cp -r click/click build/$(platform)/click ;
 
-build/%/cseq :
+build/%/cseq : dir
 	@echo Copying CSeq...
 	@cp -r cseq build/$(platform)/cseq ;
 
-build/%/examples :
+build/%/examples : dir
 	@echo Copying examples...
 	@mkdir -p build/$(platform)/examples ;
 	@cp examples/*.labs build/$(platform)/examples/;
