@@ -4,3 +4,6 @@
 [submodule "click"]
 	path = click
 	url = https://github.com/pallets/click
+[submodule "cseq"]
+	path = cseq
+	url = git@github.com:lou1306/cseq.git
