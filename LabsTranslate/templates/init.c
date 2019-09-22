@@ -44,8 +44,8 @@ void init() {
     {%- for item in tstamps -%}
     Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();
     {%- endfor -%}
-#endif
     now();
+#endif
 
 
     for (i=0; i<MAXKEYE; i++) {
