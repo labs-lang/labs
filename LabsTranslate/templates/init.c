@@ -1,13 +1,16 @@
 void init() {
 
     TYPEOFVALUES _I[MAXCOMPONENTS][MAXKEYI];
-    TYPEOFVALUES _Lvalue[MAXCOMPONENTS][MAXKEYL];
     TYPEOFVALUES _E[MAXKEYE];
     TYPEOFPC _pc[MAXCOMPONENTS][MAXPC];
+    #if DISABLELSTIG == 0
+    TYPEOFVALUES _Lvalue[MAXCOMPONENTS][MAXKEYL];
+    #endif
 
     unsigned char i, j;
     for (i=0; i<MAXCOMPONENTS; i++) {
         terminated[i] = 0;
+#if DISABLELSTIG == 0    
         for (j=0; j<MAXKEYL; j++) {
             Ltstamp[i][j] = 0;
             Hin[i][j] = 0;
@@ -15,13 +18,14 @@ void init() {
         }
         HinCnt[i] = 0;
         HoutCnt[i] = 0;
+#endif
     }
 
-    {%- for item in initpcs -%}
-    {%- assign a = item.end | minus: 1 -%}
-    {%- for i in (item.start..a) -%}
+    {%- for agent in agents -%}
+    {%- assign a = agent.end | minus: 1 -%}
+    {%- for i in (agent.start..a) -%}
 
-    {%- for p in item.pcs -%}
+    {%- for p in agent.pcs -%}
     {%- if p.value.size == 1 -%}
     _pc[{{i}}][{{ p.name }}] = {{ p.value.first }};
     {%- else -%}
@@ -29,15 +33,20 @@ void init() {
     {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
         
     {%- for item in initenv -%}
-    LABSassume({{item}});
+    LABSassume({{ item.bexpr }});
     {%- endfor -%}
-    {%- for item in initvars -%}
-    LABSassume({{item}});
+    {%- for agent in agents -%}
+    {%- for item in agent.initvars -%}
+    LABSassume({{ item.bexpr }});
     {%- endfor -%}
+    {%- endfor -%}
+#if DISABLELSTIG == 0
     {%- for item in tstamps -%}
     Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();
     {%- endfor -%}
     now();
+#endif
+
 
     for (i=0; i<MAXKEYE; i++) {
         E[i] = _E[i];
@@ -50,9 +59,10 @@ void init() {
         for (j=0; j<MAXKEYI; j++) {
             I[i][j] = _I[i][j];
         }
-
+#if DISABLELSTIG == 0
         for (j=0; j<MAXKEYL; j++) {
             Lvalue[i][j] = _Lvalue[i][j];
         }
+#endif
     }
 }

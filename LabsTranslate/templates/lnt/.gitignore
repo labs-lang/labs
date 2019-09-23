@@ -1,3 +1,6 @@
 *
 !.gitignore
 !header.lnt
+!init.lnt
+!goto.lnt
+!main.lnt

@@ -1,53 +1,84 @@
 module HEADER is
 
-    --{% for item in defines -%}
-    --function {{item.name}}:Int is return {{item.value}} end function
-    --{% endfor -%}
-
-    function MAXKEYI:Nat is return (*{{MAXKEYI}}*)1 end function
-    function MAXKEYL:Nat is return (*{{MAXKEYL}}*)1 end function
-    function MAXCOMPONENTS:Nat is return (*{{MAXCOMPONENTS}}*)5 end function
+    {% for item in defines -%}
+    function {{item.name}}:Nat is return {{item.value}} end function
+    {% endfor -%}
 
     type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
     type IndexI is X:Nat where X < MAXKEYI with "==", "!=" end type
     type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
+    type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
 
+    channel IdChannel is (ID) end channel
+    channel Boolch is (Bool) end channel
 
-    function TUPLESTART(n:Nat): Nat is
+    function TUPLESTART(n:IndexL): IndexL is
         case n in
-        (*todo must be generated*)
-          0 -> return 0
-        | any -> return 255
+        {%- for i in tupleStart -%}
+            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
+        {%- endfor -%}
+            | any -> raise unexpected (* should never match *)
         end case
     end function
 
-    function TUPLEEND(n:Nat): Nat is
+    function TUPLEEND(n:IndexL): IndexL is
         case n in
-        (*todo must be generated*)
-          0 -> return 1
-        | any -> return 255
+        {%- for i in tupleEnd -%}
+            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
+        {%- endfor -%}
+            | any -> raise unexpected (* should never match *)
         end case
     end function
 
-    type Iface is array [ 0 .. (*{{MAXKEYI}}-1*)0 ] of Int with "get", "set" end type
+    type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with "get", "set" end type
     type LstigEntry is LstigEntry (value: Int, tstamp: Nat) with "get", "set" end type
-    type Lstig is array [ 0 .. (*{{MAXKEYL}}-1*)0 ] of LstigEntry with "get", "set" end type
+    type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of LstigEntry with "get", "set" end type
 
-    --type Env is array [ 0 .. (*{{MAXKEYE-1}}*)0 ] of Int with "get", "set" end type
+    type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
 
-    type Pending is set of IndexL with "length", "remove" end type
+    type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
 
-    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending) with "get", "set" end type
-    type Agents is array [0 .. (*{{MAXCOMPONENTS-1}}*)4 ] of Agent with "get", "set" end type
-    type Sys is sys(agents: Agents, time: Nat (*, env: Env*)) with "get", "set" end type
+    function length(p:Pending): Nat is
+        var n, j:Nat in
+            n := 0;
+            for j := 0 while j < MAXKEYL by j := j + 1 loop
+                if (p[j]) then n := n + 1 end if
+            end loop;
+            return n
+        end var
+    end function
+
+    function empty(p:Pending): Bool is
+        return (length(p) == 0)
+    end function
+
+    function insert(k: IndexL, p:Pending): Pending is
+        var p1 : Pending in
+            p1 := p;
+            p1[Nat(k)] := true;
+            return p1
+        end var
+    end function
+
+    function remove(k: IndexL, p:Pending): Pending is
+        var p1 : Pending in
+            p1 := p;
+            p1[Nat(k)] := false;
+            return p1
+        end var
+    end function
+
+    function member(k: IndexL, p:Pending): Bool is
+        return p[Nat(k)]
+    end function
 
 
-    channel Agentch is (Agent) end channel
-    channel DEBUG is (String) end channel
-    channel Sysch is (Sys) end channel
+    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool, pc:PC) with "get", "set" end type
+    type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
+    type Sys is sys(agents: Agents, time: Nat , env: Env) with "get", "set" end type
 
-    function emptyAgent:Agent is
-        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), nil, nil)
+    function emptyAgent: Agent is
+        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), false, PC(0))
     end function
 
     function incr(x: Nat): Nat is 
@@ -55,138 +86,94 @@ module HEADER is
     end function
 
     function link(a1: Agent, a2: Agent, key: Nat):Bool is
-        return {{link}}
+        {% if links.size > 0 %}{% for l in links %}
+        {% if forloop.first %}if{% else %}elsif{% endif %} ((key >= {{l.start}}) and (key <= {{l.end}})) then
+            return {{l.link}}
+        {% endfor %}
+        else return false
+        end if
+        {% else %}return false {% endif %}
     end function
 
-    process attr(in out a:Agent, key:Nat, val:Int, check: Bool) is 
-        only if (not(check) or ((length(a.Zput) == 0) and (length(a.Zqry) == 0))) then
-            var Inew: Iface in 
-                Inew := a.I;
-                Inew[key] := val;
-                a := a.{I => Inew}
-            end var
-        end if
+    process attr(in out a:Agent, key:Nat, val:Int) is 
+        var Inew: Iface in 
+            Inew := a.I;
+            Inew[key] := val;
+            a := a.{I => Inew}
+        end var
     end process
 
-    process lstig(in out a:Agent, key:IndexL, val:Int, tstamp: Nat, check: Bool) is 
-        only if (not(check) or ((length(a.Zput) == 0) and (length(a.Zqry) == 0))) then
-            var Lnew: Lstig in 
-                Lnew := a.L;
-                Lnew[Nat(key)] := LstigEntry(val, tstamp);
-                a := a.{L => Lnew, Zput => insert(IndexL(TUPLESTART(Nat(key))), a.Zput)}
-            end var
-        end if
+    process env(in out E:Env, key:Nat, val:Int) is 
+        E[key] := val
     end process
 
-    process propagate [debug: DEBUG] (in out sys:Sys) is
-    var senderId:ID, key: Nat, sender:Agent, agents:Agents in
-        agents := sys.agents;
-        senderId := any ID where length(agents[Nat(senderId)].Zput) > 0;
-        sender := agents[Nat(senderId)];
-        key := any Nat where member(IndexL(key), sender.Zput);
-        key := TUPLESTART(key);
-        var j, k: Nat, L: Lstig, entry: LstigEntry in
-            for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
-                if (agents[j].id != sender.id) and link(sender, agents[j], key) and 
-                (agents[j].L[key].tstamp < sender.L[key].tstamp) then
-                    L := agents[j].L;
-                    for k := key while k <= TUPLEEND(key) by k := k + 1 loop
-                        L[k] := sender.L[k]
-                    end loop;
-                    agents[j] := agents[j].{
-                        L => L, 
-                        Zput => insert(IndexL(key), agents[j].Zput),
-                        Zqry => remove(IndexL(key), agents[j].Zqry)
-                    }
-                end if
-            end loop
-        end var;
-        agents[Nat(senderId)] := sender.{Zput => remove(IndexL(key), sender.Zput)};
-        sys := sys.{agents => agents};
-        debug("put")
-    end var
+
+    process lstig(in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
+        var Lnew: Lstig in 
+            Lnew := a.L;
+            Lnew[key] := LstigEntry(val, tstamp);
+            a := a.{L => Lnew, Zput => insert(TUPLESTART(IndexL(key)), a.Zput)}
+        end var
     end process
 
-    process confirm [debug: DEBUG] (in out sys:Sys) is
-    var senderId:ID, key: Nat, sender:Agent, agents:Agents in
-        agents := sys.agents;
-        senderId := any ID where length(agents[Nat(senderId)].Zqry) > 0;
-        sender := agents[Nat(senderId)];
-        key := any Nat where member(IndexL(key), sender.Zqry);
-        key := TUPLESTART(key);
-        var j, k: Nat, L: Lstig, entry: LstigEntry in
-            for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
-                if (agents[j].id != sender.id) and link(sender, agents[j], key) and
-                (agents[j].L[key].tstamp != sender.L[key].tstamp) then 
-                    agents[j] := agents[j].{Zput => insert(IndexL(key), agents[j].Zput)};
-                    if (agents[j].L[key].tstamp < sender.L[key].tstamp) then
-                        L := agents[j].L;
-                        for k := key while k <= TUPLEEND(key) by k := k + 1 loop
+    process propagate (in out sys:Sys) is
+        var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
+            senderId := any ID where length(sys.agents[Nat(senderId)].Zput) > 0;
+            agents := sys.agents;
+            sender := agents[Nat(senderId)];
+            key := any IndexL where member(key, sender.Zput);
+            var j, k, t: Nat, L: Lstig, a:Agent in
+                t := sys.time;
+                for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
+                    a := agents[j];
+                    if a.init == false then INITAGENT(!?a, !?t) end if;
+
+                    if (a.id != sender.id) and link(sender, a, Nat(key)) and 
+                    (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
+                        L := a.L;
+                        for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
                             L[k] := sender.L[k]
                         end loop;
-                        agents[j] := agents[j].{L => L, Zqry => remove(IndexL(key), agents[j].Zqry)}
+                        agents[j] := a.{
+                            L => L, 
+                            Zput => insert(key, a.Zput),
+                            Zqry => remove(key, a.Zqry)
+                        }
                     end if
-                end if
-            end loop
-        end var;
-        agents[Nat(senderId)] := sender.{Zqry => remove(IndexL(key), sender.Zqry)};
-        sys := sys.{agents => agents};
-        debug("qry")
-    end var
-    end process
-
-    (* example of an individual transition *)
-    process action_0_2 (in out agent: Agent, t: Nat) is 
-        var I:Iface in
-            attr(!?agent, 0, (agent.I[0] + 1 mod 2), false)--{%- if qrykeys.size > 0 -%};{%- endif -%}
-            (* -- TODO ADD keys to >qry
-            {%- if qrykeys.size > 0 -%}
-            var Zqry: Pending in
-                Zqry := agent.Zqry;
-                {%- for item in qrykeys -%}
-                Zqry := insert({{item}}, Zqry);
-                {%- endfor -%}
-                agent := agent.{Zqry := Zqry}
+                end loop;
+                agents[Nat(senderId)] := sender.{Zput => remove(key, sender.Zput)};
+                sys := sys.{agents => agents, time => t}
             end var
-            {%- endif -%}
-            *)
         end var
     end process
 
-
-    process step (in out sys: Sys) is
-        var next:Nat, a:Agent, t:Nat, agents:Agents in
-            next := any ID; --unfair scheduler
+    process confirm (in out sys:Sys) is
+        var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
+            senderId := any ID where length(sys.agents[Nat(senderId)].Zqry) > 0;
             agents := sys.agents;
-            a := agents[Nat(next)];
-
-            (* SELECT only if (pc[....]) and (guards) then action... else... *)
-            action_0_2 (!?a, sys.time);
-            (* END SELECT *)
-            agents[Nat(next)] := a;
-            sys := sys.{ agents => agents, time => incr(sys.time) }
-        end var
-    end process 
-
-    process MAIN [o: Sysch, debug: DEBUG] is
-        var sys: Sys, agents: Agents, next:Nat in
-            agents := Agents(emptyAgent);
-            for next := 0 while next < MAXCOMPONENTS by next := next + 1 loop
-                agents[next] := agents[next].{id => ID(next)}
-            end loop;
-            sys := Sys(agents, 0); --todo adjust initial time
-
-            while true loop
-                select
-                    step(!?sys);
-                    o(sys)
-                []
-                    propagate [debug] (!?sys)
-                []
-                    confirm [debug] (!?sys)  
-                end select
-            end loop
+            sender := agents[Nat(senderId)];
+            key := any IndexL where member(key, sender.Zqry);
+            var j, k, t: Nat, L: Lstig, a:agent in
+                t:=sys.time;
+                for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
+                    
+                    a := agents[j];
+                    if a.init == false then INITAGENT(!?a, !?t) end if;
+                    
+                    if (a.id != sender.id) and link(sender, a, Nat(key)) and
+                    (a.L[Nat(key)].tstamp != sender.L[Nat(key)].tstamp) then 
+                        a := a.{Zput => insert(key, a.Zput)};
+                        if (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
+                            L := a.L;
+                            for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
+                                L[k] := sender.L[k]
+                            end loop;
+                            agents[j] := a.{L => L, Zqry => remove(key, a.Zqry)}
+                        end if
+                    end if
+                end loop;
+                agents[Nat(senderId)] := sender.{Zqry => remove(key, sender.Zqry)};
+                sys := sys.{agents => agents, time => t}
+            end var
         end var
     end process
-
-end module

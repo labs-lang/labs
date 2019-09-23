@@ -33,7 +33,7 @@ with
 type AgentTable = {
     lts: TransitionSystem
     processes: Map<string, Process<Var<int>*int>>
-    init: ExitCond
+    initCond: ExitCond
     variables: Var<int> list
     lstig: Set<string>
 }
@@ -42,7 +42,7 @@ with
         {
             lts=Set.empty
             processes=Map.empty
-            init=Map.empty
+            initCond=Map.empty
             variables=[]
             lstig=Set.empty
         }
@@ -129,6 +129,15 @@ module internal SymbolTable =
             |> fun def' -> {def=def'; pos=b.pos; name=b.name}
         Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
     
+    let private handleProcessNode externs table p =
+        map (Process.simplify >> Process.fixGuardedPar >> toVarProcess table >> Process.replaceExterns externs) p
+    
+    /// <summary>Builds a map from actions to guards.</summary>
+    /// <remarks>This function assumes that all occurrences of the form
+    /// (guard -> Par(...))
+    /// have been transformed into
+    /// (guard -> Seq([Skip; Par(...)). 
+    /// </remarks>
     let setGuards proc =
         let base_ (guards, acc) b = (guards, Map.add b guards acc)
         let guard_ (guards, acc) g = (Set.add g guards, acc)
@@ -146,7 +155,7 @@ module internal SymbolTable =
         |> snd
     
     let tryAddProcess externs (p: Node<Process<_>>) table =
-        let p' = map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs) p
+        let p' = handleProcessNode externs table p
         zero {table with processes=Map.add p.name p'.def table.processes; guards=Map.union table.guards (setGuards p'.def)}
     
     let tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
@@ -159,7 +168,7 @@ module internal SymbolTable =
         <~> fun t -> zero {t with agents = table.agents.Add(a.name, {AgentTable.empty with variables=iface |> List.sortBy t.m.IndexOf})}
     
     let tryAddAgent externs (a:Node<Agent>) (table, state) =
-        map (Process.simplify >> toVarProcess table >> Process.replaceExterns externs)
+        handleProcessNode externs table
         |> fun f -> List.map f a.def.processes
         |> List.map (fun node -> node.name, node.def)
         |> (Map.ofList >> zero)
@@ -169,7 +178,7 @@ module internal SymbolTable =
             let (lts, acc), initCond = LTS.makeTransitions state p'.["Behavior"]
             let lts' = LTS.removeNames p' lts
             let guards = Map.union table.guards (setGuards p'.["Behavior"])
-            let agent = {table.agents.[a.name] with processes=p'; lts=lts'; init=initCond; lstig=a.def.lstig |> Set.ofList}
+            let agent = {table.agents.[a.name] with processes=p'; lts=lts'; initCond=initCond; lstig=a.def.lstig |> Set.ofList}
             zero ({table with agents = table.agents.Add(a.name, agent); guards=guards}, (Set.empty, acc))        
     
     let makeSpawnRanges externs spawn table =

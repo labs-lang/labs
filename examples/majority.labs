@@ -52,7 +52,7 @@ agent No {
 
 check {
     NoYConsensus = always exists Yes y, exists No n,
-    (state of y == 0 or state of y == 2)
+    (state of y = 0 or state of y = 2)
     or 
-    (state of n == 0 or state of n == 2)
+    (state of n = 0 or state of n = 2)
 }

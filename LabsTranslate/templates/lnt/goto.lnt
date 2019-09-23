@@ -1,0 +1,33 @@
+process action{{label}} (in out agent: Agent, t: Nat, in out E: Env) is
+    --{{ labs }}
+
+    {%- for item in assignments -%}{%- if item.size != 0 -%}
+    {{loc}}(!?{% if loc != "env" %}agent{% else %}E{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});{%- else -%}
+    {{loc}}(!?{% if loc != "env" %}agent{% else %}E{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});
+    {%- endif -%}{%- endfor -%}
+
+    {%- if qrykeys.size > 0 -%}
+    var Zqry: Pending in
+        Zqry := agent.Zqry;
+        {%- for item in qrykeys -%}
+        Zqry := insert(TUPLESTART(IndexL({{ item }})), Zqry);
+        {%- endfor -%}
+        agent := agent.{Zqry => Zqry}
+    end var;
+    {%- endif -%}
+
+    var p: PC in
+        p := agent.pc;
+        
+        {%- for item in exitcond -%}
+        {%- if item.value.size == 1-%}
+        p[{{ item.name }}] := {{ item.value.first }};
+        {%- else -%}
+        var x: Nat in
+            x := any Nat where {%- for val in item.value -%}(x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
+            p[{{ item.name }}] := x
+        end var;
+        {%- endif -%}{%- endfor -%}
+        agent := agent.{pc => p}
+    end var
+end process

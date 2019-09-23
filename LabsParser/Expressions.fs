@@ -3,6 +3,7 @@
 open Types
 open Tokens
 open FParsec
+open LabsCore
 
 let simpleRef p = 
     KEYNAME .>>. (opt (betweenBrackets p))
@@ -15,7 +16,7 @@ type ParseBExpr<'a, 'b> =
 module ParseBExpr =
     let getB p =
         match p with
-        | B b -> preturn b
+        | B b -> preturn (BExpr.simplify b)
         | E e -> fail (sprintf "%O is not a boolean expression" e)
     let getE p =
         match p with
@@ -32,7 +33,7 @@ module ParseBExpr =
     
     let compose op p1 p2 = 
         match p1, p2 with 
-        | B b1, B b2 -> Compound(b1, op, b2) |> B
+        | B b1, B b2 -> Compound(op, [b1; b2]) |> B
         | _ -> failwith "?"
     let mapE f = function
         | E e -> E (f e)
@@ -48,7 +49,7 @@ let makeBExprParser pexpr =
     let expr = opp.ExpressionParser
     
     let notInArrow = notFollowedBy (anyOf ['-'; '~']) |> ws
-    
+         
     let term : Parser<_> = 
         choice [
             safeStrReturn tTRUE (BLeaf true |> B)
@@ -74,7 +75,7 @@ let makeBExprParser pexpr =
 
     opp.AddOperator(PrefixOperator("!", ws_, 3, false, ParseBExpr.mapB Neg))
 
-    expr >>= ParseBExpr.getB 
+    expr >>= ParseBExpr.getB
 
 let makeExprParser pref pid : Parser<_> =
     let opp = new OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()

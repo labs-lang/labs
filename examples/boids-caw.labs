@@ -9,12 +9,6 @@ stigmergy Cohesion {
     leader, posX, posY, count: id, -1, -1, 1
 }
 
-stigmergy Separation {
-    link = abs(x of c1 - x of c2) < 2 and abs(y of c1 - y of c2) < 2
-
-    repX, repY: -1, -1
-}
-
 stigmergy Alignment {
     link =
         (((x of c1 - x of c2) * (x of c1 - x of c2)) + 

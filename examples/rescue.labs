@@ -1,6 +1,6 @@
 system {
     extern = _n, _grid, _delta
-    spawn = Victim: 1, Searcher: _n
+    spawn = Victim: 1, Searcher: _n, Rescuer: 1
 
     # "Global" processes
     MoveUpDown =
@@ -76,8 +76,8 @@ check {
         and
         y of s >= 0 and y of s < _grid
 
-    ReachedVictim = finally exists Searcher s, exists Victim v,
-        x of s = x of v and y of s = y of v
+    ReachedVictim = finally exists Rescuer r, exists Victim v,
+        x of r = x of v and y of r = y of v
 
     VictimFound = finally exists Victim v, found of v = 2
 }

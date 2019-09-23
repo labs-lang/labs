@@ -14,9 +14,9 @@ void {{label}}(int tid) {
     {%- for item in assignments -%}
     {%- capture check -%}{%- if forloop.first -%}1{%- else -%}0{%- endif -%}{%- endcapture -%}
     {%- if item.size != 0 -%}
-    {{type}}(tid, {{item.key}} + offset{{forloop.index0}}, val{{forloop.index0}}, {{check}});
+    {{loc}}(tid, {{item.key}} + offset{{forloop.index0}}, val{{forloop.index0}}, {{check}});
     {%- else -%}
-    {{type}}(tid, {{item.key}}, val{{forloop.index0}}, {{check}});
+    {{loc}}(tid, {{item.key}}, val{{forloop.index0}}, {{check}});
     {%- endif -%}{%- endfor -%}
     {%- for k in qrykeys -%}
     setHin(tid, {{k}});
@@ -28,7 +28,7 @@ void {{label}}(int tid) {
 
     {%- if sync -%}
     {% if qrykeys.size > 0 -%}confirm();{% endif %}
-    {% if type == "lstig" -%}propagate();{% endif %}
+    {% if loc == "lstig" -%}propagate();{% endif %}
     {%- endif -%}
 
     {%- for item in exitcond -%}

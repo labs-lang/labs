@@ -1,28 +1,44 @@
-.PHONY: publishlinux linux publishmac mac sliverlinux slivermac
+.PHONY: all linux osx dir
 
-all: linux mac
+all: linux osx
 
-publishlinux:
-	dotnet publish -r linux-x64 -c Release --self-contained -o ../build/linux_x64/labs
+osx: platform = osx.10.10-x64
+linux: platform = linux-x64
 
-sliverlinux:
-	cp -r sliver/ build/linux_x64/;
+sources = $(wildcard **/*.fs)
+sliver_sources = $(wildcard sliver/**/*.py) 
 
-slivermac:
-	cp -r sliver/ build/osx_x64/;
+dir :
+	@mkdir -p build/$(platform)
 
-linux: publishlinux sliverlinux
-	cp -r linux/ build/linux_x64/;
-	mv build/linux_x64/libunwind build/linux_x64/labs/libunwind;
-	cp examples/*.labs build/linux_x64;
-	cp -r LabsTranslate/templates build/linux_x64;
+build/%/labs/LabsTranslate.dll : $(sources) dir
+	@echo Building LabsTranslate...
+	dotnet publish -r $(platform) -c Release --self-contained -o ../build/$(platform)/labs
+	@cp -r LabsTranslate/templates build/$(platform)/labs;
 
-publishmac: build/osx_64/labs/LabsTranslate.dll
+build/%/sliver.py : $(sliver_sources) build/%/click
+	@echo Copying SLiVER...
+	@cp -r sliver/ build/$(platform)/ ;
 
-build/osx_64/labs/LabsTranslate.dll:
-	dotnet publish -r osx.10.10-x64 -c Release -o ../build/osx_x64/labs
+build/%/click : dir
+	@echo Copying click...
+	@cp -r click/click build/$(platform)/click ;
 
-mac: publishmac slivermac
-	cp examples/*.labs build/osx_x64;
-	cp -r LabsTranslate/templates build/osx_x64;
+build/%/cseq : dir
+	@echo Copying CSeq...
+	@cp -r cseq build/$(platform)/cseq ;
 
+build/%/examples : dir
+	@echo Copying examples...
+	@mkdir -p build/$(platform)/examples ;
+	@cp examples/*.labs build/$(platform)/examples/;
+
+osx : build/osx.10.10-x64/labs/LabsTranslate.dll \
+	  build/osx.10.10-x64/sliver.py \
+	  build/osx.10.10-x64/cseq \
+	  build/osx.10.10-x64/examples
+
+linux : build/linux-x64/labs/LabsTranslate.dll \
+	build/linux-x64/sliver.py \
+	build/linux-x64/cseq \
+	build/linux-x64/examples

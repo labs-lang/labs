@@ -1,11 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp2.2</TargetFramework>
+        <TargetFramework>netstandard2.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Expressions.fs" />
+        <Compile Include="Common.fs" />
+        <Compile Include="C.fs" />
+        <Compile Include="Lnt.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 

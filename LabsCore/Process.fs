@@ -57,11 +57,6 @@ module Process =
 
     let rec print proc =
         let print_ b = string b.def
-//            match b.def with
-//            | Nil -> "0"
-//            | Skip -> "√"
-//            | Act a -> string a
-//            | Name s -> s
         let printGuard_ g =
             sprintf "%O %s %s" g tGUARD
         let rec printComp_ typ l = 
@@ -83,6 +78,16 @@ module Process =
         let guard_ n p =
             Guard(setl (_def << _2) p n)
         cata (BaseProcess) guard_ comp_ proc
+    
+    /// Transforms g -> Par(...) into g -> (Skip; Par(...)).
+    let fixGuardedPar proc =
+        let guard_ n p = 
+            let p' =
+                match p with
+                | Comp(Par, l) -> Comp(Seq, [BaseProcess({name=""; pos=n.pos; def=Skip}); p])
+                | _ -> p
+            Guard(setl (_def << _2) p' n)
+        cata (BaseProcess) guard_ (fun typ l -> Comp(typ, l)) proc
     
     let usedNames proc = 
         let used_ acc b = 
