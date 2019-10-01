@@ -4,6 +4,8 @@ module HEADER is
     function {{item.name}}:Nat is return {{item.value}} end function
     {% endfor -%}
 
+    function undef_value:Int is return -128 end function
+
     type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
     type IndexI is X:Nat where X < MAXKEYI with "==", "!=" end type
     type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
