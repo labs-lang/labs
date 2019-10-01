@@ -7,7 +7,8 @@ open Common
 let translateLocation loc n e =
     let name =
         match n with
-        | "agent.id" -> "agent"
+        | "agent.id"
+        | "NatToInt(Nat(agent.id))" -> "agent"
         | "firstAgent" -> "a"
         | "a1" | "a2" -> n
         | _ -> sprintf "agents[%s]" n 
@@ -48,7 +49,7 @@ let rec private BExprLnt filter trExpr bexpr =
     
 let wrapper = { new Wrapper with
                 member __.templateInfo = {baseDir = "templates/lnt"; extension = "lnt"}
-                member __.agentName = "agent.id"
+                member __.agentName = "NatToInt(Nat(agent.id))"
                 member __.initId _ = Extern "NatToInt(Nat(a.id))"
                 member __.trLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
                 member __.trBExpr filter trExpr b = BExprLnt filter trExpr b
