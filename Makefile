@@ -33,6 +33,10 @@ build/%/examples : dir
 	@mkdir -p build/$(platform)/examples ;
 	@cp examples/*.labs build/$(platform)/examples/;
 
+build/%/cbmc-simulator: dir
+	@echo Copying CBMC...
+	@cp linux/cbmc/* build/$(platform)/ ;
+
 osx : build/osx.10.10-x64/labs/LabsTranslate.dll \
 	  build/osx.10.10-x64/sliver.py \
 	  build/osx.10.10-x64/cseq \
@@ -41,4 +45,6 @@ osx : build/osx.10.10-x64/labs/LabsTranslate.dll \
 linux : build/linux-x64/labs/LabsTranslate.dll \
 	build/linux-x64/sliver.py \
 	build/linux-x64/cseq \
-	build/linux-x64/examples
+	build/linux-x64/examples \
+	build/linux-x64/cbmc-simulator
+
