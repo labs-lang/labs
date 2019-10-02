@@ -79,11 +79,11 @@ module Expr =
 module BExpr = 
     /// Returns a "canonical" version of bexpr.
     /// It uses structural comparison on the inner expressions 
-    let canonical bexpr =
+    let rec canonical bexpr =
         match bexpr with
         | Compare(e1, Equal, e2) when e1 > e2 -> Compare(e2, Equal, e1)
         | Compare(e1, Neq, e2) when e1 > e2 -> Compare(e2, Neq, e1)
-        | Compound(op, l) -> Compound(op, List.sort l)
+        | Compound(op, l) -> Compound(op, l |> List.map canonical |> List.sort)
         // TODO add other cases
         | _ -> bexpr
     
