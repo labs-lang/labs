@@ -63,7 +63,12 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
             | Some c ->
                 {var=((v, i), (Some <| (string << propId) c)); offset=offset}
 
-        BExpr.map (BLeaf) (Expr.map id (fun r o -> propRef1 r.var o))
+        let trLeaf leaf =
+            match leaf with
+            | Id name -> (string << propId) name |> Id
+            | _ -> leaf
+        
+        BExpr.map (BLeaf) (Expr.map trLeaf (fun r o -> propRef1 r.var o))
         
     if (ex && fa) then 
         p.name
