@@ -104,12 +104,43 @@ module BExpr =
         | Compound(op, b) -> fcompound op (List.map recurse b)
 
     let simplify bexpr =
+        let compare_ op e1 e2 =
+            match op with  
+            | Equal when (Expr.equal e1 e2) -> BLeaf(true)
+            | Neq when (Expr.equal e1 e2) -> BLeaf(false)
+            | _ -> Compare(e1, op, e2)
         let compound_ op ls =
+            // Flatten nested Compound nodes
             let sameOp, others = List.partition (function | Compound(o, _) when o=op -> true | _ -> false) ls 
             sameOp
             |> List.map (function Compound(_, l) -> l | _ -> [])
             |> List.concat
             |> List.append others
+            // Remove duplicate predicates
             |> List.distinctBy (canonical)
             |> fun l -> Compound(op, l)
-        cata BLeaf Neg (fun op e1 e2 -> Compare(e1, op, e2)) compound_ bexpr
+            
+        /// Propagates boolean constants across compound bexprs    
+        let constPropagation bexpr =
+            // (true | bexpr) -> true 
+            // (false & bexpr) -> false
+            // (false | bexpr) -> bexpr 
+            // (true & bexpr) -> bexpr
+            let compound_ op ls =
+                match op with
+                | Disj ->
+                    if List.contains (BLeaf(true)) ls
+                    then BLeaf(true)
+                    else 
+                        ls |> List.filter (function BLeaf false -> false | _ -> true)
+                        |> fun l -> Compound(Disj, l)
+                | Conj ->
+                    if List.contains (BLeaf(false)) ls
+                    then BLeaf(false)
+                    else 
+                        ls |> List.filter (function BLeaf true -> false | _ -> true)
+                        |> fun l -> Compound(Conj, l)
+            cata BLeaf Neg (fun op e1 e2 -> Compare(e1, op, e2)) compound_ bexpr
+            
+        cata BLeaf Neg compare_ compound_ bexpr
+        |> constPropagation
