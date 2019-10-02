@@ -3,6 +3,24 @@ open Types
 
 module Expr =
 
+    // Syntactic equality
+    let rec equal e1 e2 =
+        match e1, e2 with
+        | Leaf l1, Leaf l2 ->
+            match l1, l2 with
+            | Const x, Const y -> x = y
+            | Id i, Id j -> i = j
+            | Extern e1, Extern e2 -> e1 = e2
+            | _ -> false
+        | Arithm(e11, op1, e12), Arithm(e21, op2, e22) when op1 = op2 ->
+            (equal e11 e21) && (equal e12 e22)
+        | Unary(o1, e1_), Unary(o2, e2_) when o1 = o2 -> equal e1_ e2_
+        | Ref r1, Ref r2 when r1.var = r2.var ->
+            match r1.offset, r2.offset with
+            | Some o1, Some o2 -> equal o1 o2
+            | _ -> false
+        | _ -> false    
+            
     let rec fold fleaf fref acc expr = 
         let recurse = fold fleaf fref
         match expr with
