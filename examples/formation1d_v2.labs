@@ -1,5 +1,5 @@
 system {
-    extern = _range, _n, _max
+    extern = _range, _n, _size
     spawn = Robot: _n
 }
 
@@ -24,8 +24,8 @@ stigmergy Right {
 
 agent Robot {
 
-    interface = pos: 1.._max
-    stigmergies = Left, Right
+    interface = pos: 0.._size
+    stigmergies = Left; Right
 
     Behavior =
         idLeft, idRight <~ id, id;
@@ -36,15 +36,15 @@ agent Robot {
                 (pos = 0 -> pos <- pos + 1))
             ++
             (idRight != id ->
-                (pos < _max -> pos <- pos + 1)
+                (pos < _size - 1  -> pos <- pos + 1)
                 ++
-                (pos = _max -> pos <- pos - 1))
+                (pos = _size - 1 -> pos <- pos - 1))
         ); Behavior
 
 }
 
 check {
-    Ppos = always forall Robot a, pos of a >= 0 and pos of a <= _max
+    # Ppos = always forall Robot a, pos of a >= 0 and pos of a < _size
 
     P1 = 
         finally forall Robot a, forall Robot b,
