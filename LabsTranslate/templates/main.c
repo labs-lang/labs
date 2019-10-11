@@ -4,6 +4,7 @@ void monitor() {
     {%- endfor -%}
 }
 
+#if BOUND > 0
 void finally() {
     {%- for item in finallyasserts -%}
     LABSassert({{item.value}}, {{item.name}});
@@ -12,6 +13,7 @@ void finally() {
     assert(0);
     #endif
 }
+#endif
 
 int main(void) {
     init();
@@ -73,8 +75,18 @@ int main(void) {
         }
         #endif
         monitor();
+
+        #if BOUND = 0
+        {%- if finallyasserts -%}
+        if ({%- for item in finallyasserts -%}{{item.value}}{%- endfor -%}) { 
+            return 0; 
+        }
+        {%- endif -%}
+        #endif
+
     }
-    
+    #if BOUND > 0
     finally();
+    #endif
 }
 
