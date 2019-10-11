@@ -17,7 +17,9 @@ void finally() {
 
 int main(void) {
     init();
-    TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0{% endif %};
+    TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0;{% else %};
+    LABSassume(firstAgent < MAXCOMPONENTS);
+    {% endif %};
 
     #if DISABLELSTIG == 0
         #if BOUND > 0
@@ -41,18 +43,22 @@ int main(void) {
         if ((Bool) __VERIFIER_nondet()) {
             #endif
         #endif
-            LABSassume(firstAgent < MAXCOMPONENTS);
+            {%- unless fair -%}
+            TYPEOFAGENTID nextAgent;
+            LABSassume(nextAgent < MAXCOMPONENTS);
+            firstagent = nextAgent;
+            {%- endunless -%}
 
             #if BOUND > 0
             switch (switchnondet[__LABS_step]) {
             #else
-            switch (__VERIFIER_nondet()) {
+            switch (pc[firstAgent][0]) {
             #endif
 
             {%- for item in schedule -%}
-                case {{ forloop.index0 }}: {{ item.name }}(firstAgent); break;
+                case {{ item.entry.first.value }}: {{ item.name }}(firstAgent); break;
             {%- endfor -%}
-              default: LABSassume(0);
+              default: {}
             }
             
             {%- if fair -%}
@@ -62,8 +68,6 @@ int main(void) {
             else {
                 firstAgent++;
             }
-            {%- else -%}
-            firstAgent = nondet();
             {%- endif -%}
         #if DISABLELSTIG == 0 
         }
