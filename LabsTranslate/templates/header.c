@@ -43,7 +43,6 @@ unsigned char HinCnt[MAXCOMPONENTS];
 unsigned char HoutCnt[MAXCOMPONENTS];
 
 TYPEOFTIME now(void) {
-    assert((TYPEOFTIME) (__LABS_time+1) > (TYPEOFTIME)__LABS_time);
     return ++__LABS_time;
 }
 
@@ -77,7 +76,7 @@ void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     Hin[id][tupleStart[key]] = 1;
     //     HinCnt[id] = HinCnt[id] + 1;
     // }
-    HinCnt[id] = HinCnt[id] + (!Hin[id][tupleStart[key]]);
+    if (!Hin[id][tupleStart[key]]) ++HinCnt[id];
     Hin[id][tupleStart[key]] = 1;
 }
 
@@ -96,7 +95,7 @@ void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     Hout[id][tupleStart[key]] = 1;
     //     HoutCnt[id] = HoutCnt[id] + 1;
     // }
-    HoutCnt[id] = HoutCnt[id] + (!Hout[id][tupleStart[key]]);
+    if (!Hout[id][tupleStart[key]]) ++HoutCnt[id];
     Hout[id][tupleStart[key]] = 1;
 }
 
