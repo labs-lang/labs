@@ -46,7 +46,7 @@ int main(void) {
             {%- unless fair -%}
             TYPEOFAGENTID nextAgent;
             LABSassume(nextAgent < MAXCOMPONENTS);
-            firstagent = nextAgent;
+            firstAgent = nextAgent;
             {%- endunless -%}
 
             #if BOUND > 0
@@ -80,7 +80,7 @@ int main(void) {
         #endif
         monitor();
 
-        #if BOUND = 0
+        #if BOUND == 0
         {%- if finallyasserts -%}
         if ({%- for item in finallyasserts -%}{{item.value}}{%- endfor -%}) { 
             return 0; 
