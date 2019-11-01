@@ -58,7 +58,12 @@ int main(void) {
             {%- for item in schedule -%}
                 case {{ item.entry.first.value }}: {{ item.name }}(firstAgent); break;
             {%- endfor -%}
-              default: {}
+              default: 
+                #if BOUND > 0
+                LABSassume(0);
+                #else
+                {}
+                #endif
             }
             
             {%- if fair -%}
