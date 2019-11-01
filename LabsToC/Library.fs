@@ -3,7 +3,6 @@
 open Frontend
 open Frontend.LTS
 open Frontend.Liquid
-open Expressions
 open Types
 open Tokens
 open LabsCore
