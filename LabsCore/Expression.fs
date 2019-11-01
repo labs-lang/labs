@@ -106,8 +106,8 @@ module BExpr =
     let simplify bexpr =
         let compare_ op e1 e2 =
             match op with  
-            | Equal when (Expr.equal e1 e2) -> BLeaf(true)
-            | Neq when (Expr.equal e1 e2) -> BLeaf(false)
+            | Equal when (Expr.equal e1 e2) -> BLeaf true
+            | Neq when (Expr.equal e1 e2) -> BLeaf false
             | _ -> Compare(e1, op, e2)
         let compound_ op ls =
             // Flatten nested Compound nodes
@@ -118,7 +118,7 @@ module BExpr =
             |> List.append others
             // Remove duplicate predicates
             |> List.distinctBy (canonical)
-            |> fun l -> Compound(op, l)
+            |> fun l -> if l.Length = 0 then BLeaf true else Compound(op, l)
             
         /// Propagates boolean constants across compound bexprs    
         let constPropagation bexpr =
@@ -129,17 +129,17 @@ module BExpr =
             let compound_ op ls =
                 match op with
                 | Disj ->
-                    if List.contains (BLeaf(true)) ls
-                    then BLeaf(true)
+                    if List.contains (BLeaf true) ls
+                    then BLeaf true
                     else 
                         ls |> List.filter (function BLeaf false -> false | _ -> true)
-                        |> fun l -> Compound(Disj, l)
+                        |> fun l -> if l.Length = 0 then BLeaf true else  Compound(Disj, l)
                 | Conj ->
-                    if List.contains (BLeaf(false)) ls
-                    then BLeaf(false)
+                    if List.contains (BLeaf false) ls
+                    then BLeaf false
                     else 
                         ls |> List.filter (function BLeaf true -> false | _ -> true)
-                        |> fun l -> Compound(Conj, l)
+                        |> fun l -> if l.Length = 0 then BLeaf true else Compound(Conj, l)
             cata BLeaf Neg (fun op e1 e2 -> Compare(e1, op, e2)) compound_ bexpr
             
         cata BLeaf Neg compare_ compound_ bexpr
