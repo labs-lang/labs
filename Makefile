@@ -16,7 +16,7 @@ build/%/labs/LabsTranslate.dll : $(sources) dir
 	dotnet publish -r $(platform) -c Release --self-contained -o build/$(platform)/labs
 	@cp -r LabsTranslate/templates build/$(platform)/labs;
 
-build/osx.10.10-x64/sliver.py : $(sliver_sources) build/%/click
+build/osx.10.10-x64/sliver.py : $(sliver_sources) build/osx.10.10-x64/click
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
 
@@ -30,7 +30,8 @@ build/%/click : dir
 
 build/%/cseq : dir
 	@echo Copying CSeq...
-	@cp -r cseq build/$(platform)/cseq ;
+	@cp -r cseq/ build/$(platform)/cseq/ ;
+	@cp -r sliver/info.py build/$(platform)/cseq/info.py ;
 
 build/%/examples : dir
 	@echo Copying examples...
