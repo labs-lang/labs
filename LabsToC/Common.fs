@@ -26,7 +26,7 @@ let private trref trLocation name (v:Var<int>, i:int) offset =
         | Some off -> sprintf "%i + %s" i off
     trLocation v.location name index
 
-let translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr =
+let translateBExpr bleaf_ neg_ compare_ compound_ filter trExpr bexpr =
     let undefs =
         match filter with
         | None -> Set.empty
@@ -35,8 +35,6 @@ let translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr =
                 Set.filter f (Expr.getRefs expr)
                 |> Set.map (fun r -> Compare(Ref(r), Neq, Leaf(Extern "undef_value")))
             BExpr.cata (fun _ -> Set.empty) id (fun _ e1 e2 -> Set.union (undef_ e1) (undef_ e2)) (fun _ -> Set.unionMany) bexpr
-    
-    let compare_ op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2) //TODO
         
     if undefs.IsEmpty then bexpr
     else

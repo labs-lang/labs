@@ -29,10 +29,11 @@ let translate trRef trId =
 let rec private BExprC filter trExpr bexpr =
     let bleaf_ b = if b then "1" else "0"
     let neg_ = sprintf "!(%s)"
+    let compare_ op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2) //TODO
     let compound_ = function
         | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
         | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
-    translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr
+    translateBExpr bleaf_ neg_ compare_ compound_ filter trExpr bexpr
 
  
 let wrapper = { new Wrapper with

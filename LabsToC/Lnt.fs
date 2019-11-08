@@ -41,11 +41,12 @@ let private translateExpr trRef trId =
 let rec private BExprLnt filter trExpr bexpr =
     let bleaf_ b = if b then "true" else "false"
     let neg_ = sprintf "(not(%s))"
+    let compare_ op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2)
     let compound_ = function
         | Conj -> List.map (sprintf "(%s)") >> String.concat " and "
         | Disj -> List.map (sprintf "(%s)") >> String.concat " or "
         
-    translateBExpr bleaf_ neg_ compound_ filter trExpr bexpr
+    translateBExpr bleaf_ neg_ compare_ compound_ filter trExpr bexpr
     
 let wrapper = { new Wrapper with
                 member __.templateInfo = {baseDir = "templates/lnt"; extension = "lnt"}
