@@ -82,6 +82,16 @@ function canProceed(a: Agent): Bool is
     end var
 end function
 
+function existsRunningAgent(sys: Sys): Bool is
+    var check: Bool, n: Nat in
+        check := false;
+        for n := 0 while ((n < MAXCOMPONENTS) and (not(check))) by n := n + 1 loop
+            check := check or not(sys.agents[n].pc[0] == 0)
+        end loop;
+        return check
+    end var
+end function 
+
 function existsEnabledAgent (sys: Sys): Bool is
     var check: Bool, n: Nat in
         check := false;
@@ -125,7 +135,7 @@ process MAIN [{%- if simulation -%}o:Any, {% endif %}monitor:any] is
                     {%- if simulation -%}
                     o(sys);
                     {%- endif -%}
-                    if not(existsEnabledAgent(sys)) and not(existsSystemTransition(sys)) then 
+                    if existsRunningAgent(sys) and not(existsEnabledAgent(sys)) and not(existsSystemTransition(sys)) then 
                         monitor("deadlock"); --vacuous pass
                         stop
                     end if;
