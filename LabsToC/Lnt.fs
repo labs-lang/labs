@@ -22,8 +22,8 @@ let translateInitLocation loc n e = "x"
 
 let private translateExpr trRef trId =
     let leaf_ = function
-        | Id i -> trId i
-        | Const i -> string i
+        | Id i -> sprintf "(%s of Int)" (trId i)
+        | Const i -> sprintf "(%i of Int)" i
         | Extern s -> s (*THIS SHOULD NEVER MATCH *)
     let arithm_ = function
         | Plus -> sprintf "(%s) + (%s)"
