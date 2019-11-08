@@ -168,8 +168,7 @@ module internal SymbolTable =
         <~> fun t -> zero {t with agents = table.agents.Add(a.name, {AgentTable.empty with variables=iface |> List.sortBy t.m.IndexOf})}
     
     let tryAddAgent externs (a:Node<Agent>) (table, state) =
-        handleProcessNode externs table
-        |> fun f -> List.map f a.def.processes
+        List.map (handleProcessNode externs table) a.def.processes
         |> List.map (fun node -> node.name, node.def)
         |> (Map.ofList >> zero)
         <~> fun p ->
