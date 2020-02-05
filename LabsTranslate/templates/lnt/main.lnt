@@ -18,7 +18,7 @@ process step [last: IdChannel] (in out sys: Sys) is
         t := sys.time;
         if (a.init == false) then INITAGENT(!?a, !?t) end if;
 
-        if canProceed(a) then
+        if canProceed(a, sys.env) then
             firstAgent := NatToInt(Nat(tid));
             E := sys.env;
             select
@@ -64,7 +64,7 @@ process monitor [mon: any] (agents: Agents) is
     {%- endif -%}
 end process
 
-function canProceed(a: Agent): Bool is
+function canProceed(a: Agent, E: Env): Bool is
     var firstAgent: Int in
     firstAgent := NatToInt(Nat(a.id));
     return 
@@ -96,7 +96,7 @@ function existsEnabledAgent (sys: Sys): Bool is
     var check: Bool, n: Nat in
         check := false;
         for n := 0 while ((n < MAXCOMPONENTS) and (not(check))) by n := n + 1 loop
-            check := check or not(sys.agents[n].init) or canProceed(sys.agents[n])
+            check := check or not(sys.agents[n].init) or canProceed(sys.agents[n], sys.env)
         end loop;
         return check
     end var
