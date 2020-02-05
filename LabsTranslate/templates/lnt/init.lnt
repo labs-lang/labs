@@ -38,7 +38,7 @@ process INITENV(in out e: Env) is
         {% for item in initenv %}
         x := any Int where {{ item.bexpr }};
         e[{{ item.index }}] := x{%- unless forloop.last-%};{%- endunless -%}
-        {% endfor %}
+        {%- endfor -%}
     end var
     {%- else -%}
     null
