@@ -105,8 +105,8 @@ module HEADER is
         end var
     end process
 
-    process env(in out E:Env, key:Nat, val:Int) is 
-        E[key] := val
+    process env(in out E:Env, key:Int, val:Int) is 
+        E[IntToNat(key)] := val
     end process
 
 
