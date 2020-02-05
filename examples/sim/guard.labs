@@ -1,0 +1,15 @@
+system {
+    extern = _mx
+    environment = a: 0
+    spawn = Proc1: 1
+}
+
+agent Proc1 {
+
+    Behavior = a = 0 -> (a <-- a+1); Behavior
+
+}
+
+check {
+    P1 = always a >= 0
+}
