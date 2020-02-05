@@ -109,7 +109,7 @@ let private encodeInit trKit (table:SymbolTable) =
         |> Seq.map (fun v ->
                 let info = table.m.[v.name]
                 trKit.initTr (v, snd table.m.[v.name]) -1
-                |> List.map (fun x -> Dict ["type", Str "E"; "index", Int (snd info); "bexpr", Str x])
+                |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
         |> Seq.concat
 
