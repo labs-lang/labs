@@ -13,9 +13,9 @@ let translateLocation loc n e =
         | "a1" | "a2" -> n
         | _ -> sprintf "agents[%s]" n 
     match loc with
-    | I -> sprintf "%s.I[%O]" 
-    | L _ -> sprintf "%s.L[%O].value" 
-    | E -> fun _ -> sprintf "E[%O]"
+    | I -> sprintf "%s.I[IntToNat(%O)]" 
+    | L _ -> sprintf "%s.L[IntToNat(%O)].value"
+    | E -> fun _ -> sprintf "E[IntToNat(%O)]"
     |> fun f -> f name e
 
 let translateInitLocation loc n e = "x"
