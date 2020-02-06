@@ -2,7 +2,7 @@
 
 all: linux osx
 
-osx: platform = osx.10.10-x64
+osx: platform = osx.10.12-x64
 linux: platform = linux-x64
 
 sources = $(wildcard **/*.fs)
@@ -51,11 +51,11 @@ build/%/cbmc-simulator :
 	@cp linux/cbmc/* build/$(platform)/ ;
 
 osx : rmsliver \
-	  build/osx.10.10-x64/labs/LabsTranslate.dll \
-	  build/osx.10.10-x64/labs/templates/main.c \
-	  build/osx.10.10-x64/sliver.py \
-	  build/osx.10.10-x64/cseq \
-	  build/osx.10.10-x64/examples
+	  build/osx.10.12-x64/labs/LabsTranslate.dll \
+	  build/osx.10.12-x64/labs/templates/main.c \
+	  build/osx.10.12-x64/sliver.py \
+	  build/osx.10.12-x64/cseq \
+	  build/osx.10.12-x64/examples
 
 linux : rmsliver \
 	build/linux-x64/labs/LabsTranslate.dll \
