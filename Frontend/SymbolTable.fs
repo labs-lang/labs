@@ -222,5 +222,10 @@ module internal SymbolTable =
             printfn "%s %i,%i\n%s\n%s" agentName _start _end iface lstig
         printfn "%s" (table.variables |> Map.filter (fun _ v -> isEnvVar v) |> Map.values |> Seq.sortBy table.m.IndexOf |> Seq.map dumpVar |> String.concat ";")
         Map.map (dumpSpawn) table.spawn |> ignore
+        table.properties
+        |> Map.mapValues (fun p -> match p.def.modality with Always -> "always" | Finally -> "finally")
+        |> Map.values
+        |> String.concat ";"
+        |> printfn "%s"
         
 type SymbolTable with member this.dump() = SymbolTable.dump this
