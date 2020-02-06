@@ -22,8 +22,10 @@ void {{label}}(int tid) {
     setHin(tid, {{k}});
     {%- endfor -%}
     {%- else -%}
+    #if DISABLELSTIG == 0
     __VERIFIER_assume(HoutCnt[tid] == 0);
     __VERIFIER_assume(HinCnt[tid] == 0);
+    #endif
     {%- endif -%}
 
     {%- if sync -%}

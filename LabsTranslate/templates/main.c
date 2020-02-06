@@ -85,17 +85,18 @@ int main(void) {
         #endif
         monitor();
 
+        {%- if finallyasserts and finallyasserts.size > 0 -%}
         #if BOUND == 0
-        {%- if finallyasserts -%}
         if ({%- for item in finallyasserts -%}{{item.value}}{%- endfor -%}) { 
             return 0; 
         }
-        {%- endif -%}
         #endif
-
+        {%- endif -%}
     }
+    {%- if finallyasserts and finallyasserts.size > 0 -%}
     #if BOUND > 0
     finally();
     #endif
+    {%- endif -%}
 }
 

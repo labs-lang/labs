@@ -6,7 +6,9 @@
 {%- endif -%}
 
 {%- if loc == "" -%}
+    #if DISABLELSTIG == 0
     LABSassume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
+    #endif
 {%- endif -%}
 {%- for guard in guards %}
     LABSassume({{ guard }});
