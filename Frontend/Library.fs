@@ -89,26 +89,3 @@ let initBExprs idfn (v:Var<_>, i: int) =
     | Range (start_, end_) -> 
         let between r = Compound(Conj, [Compare(Ref r, Geq, map_ r start_); Compare(Ref r, Less, map_ r end_)])
         List.map (fun r -> between r) refs
-
-// TODO turn this function below into a check
-//let initBExprs undefvalue evalfn (v:Var<_>, i: int) =
-//    let refs =
-//        let r = {var=(v, i); offset = None}
-//        match v.vartype with
-//        | Scalar -> [r]
-//        | Array s -> List.map (fun i -> {r with offset = Some (Leaf (Const i))}) [0 .. s-1]
-//    match v.init with
-//    | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Const undefvalue))) refs
-//    | Choose l ->
-//        let choice r =
-//            List.map (evalfn >> (fun i -> Compare(Ref r, Equal, Leaf(Const i)))) l
-//            |> fun l -> Compound(Disj, l)
-//        List.map choice refs
-//    | Range (_start, _end) ->
-//        let s', e' = evalfn _start, evalfn _end
-//        if s' > e' then
-//            {what=(Generic (sprintf "Invalid range initializer for %s" v.name)); where=[]}
-//            |> LabsException |> raise
-//        else    
-//            let between r = Compound(Conj, [Compare(Ref r, Geq, Leaf(Const s')); Compare(Ref r, Less, Leaf(Const e'))])
-//            List.map (fun r -> between r) refs    
