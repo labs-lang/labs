@@ -36,6 +36,5 @@ let main argv =
             let bound = cli.GetResult (Bound, defaultValue=1)
             let enc = cli.GetResult (Enc, defaultValue=C)
             LabsToC.encode enc (bound) (flags cli) x)
-    |> Result.mapError (eprintfn "%A") // TODO Format errors and set exit code
-    |> ignore
-    0 // return an integer exit code
+    |> Result.mapError (eprintfn "%A") // TODO Format errors
+    |> function Result.Ok _ -> 0 | Result.Error _ -> 1 // TODO more expressive error codes 
