@@ -1,6 +1,6 @@
 process lastAgent [last: IdChannel] is
     var tid: ID in
-        tid := {% if firstagent == 0}0{% else %}any ID{%-endif-%};
+        tid := {% if firstagent == 0 %} 0{% else %}any ID{%-endif-%};
         loop
             last(tid);
             last(?tid)
