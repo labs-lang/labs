@@ -1,6 +1,6 @@
 _Bool canProceed(int tid) {
     // Returns 1 if agent tid can perform at least one transition
-    if (terminated[tid]) return 0;
+    if (pc[tid][0] == 0) return 0;
     {%- for g in guards -%}
     if ({{ g | join: " && " }}) return 1;
     {%- endfor -%}

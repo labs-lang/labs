@@ -30,15 +30,14 @@ TYPEOFVALUES mod(TYPEOFVALUES n, TYPEOFVALUES m) {
 
 TYPEOFVALUES I[MAXCOMPONENTS][MAXKEYI];
 TYPEOFVALUES E[MAXKEYE];
-Bool terminated[MAXCOMPONENTS];
 
 TYPEOFPC pc[MAXCOMPONENTS][MAXPC];
 
 #if DISABLELSTIG == 0
 
 TYPEOFTIME __LABS_time;
-Bool Hin[MAXCOMPONENTS][MAXKEYL];
-Bool Hout[MAXCOMPONENTS][MAXKEYL]; 
+_Bool Hin[MAXCOMPONENTS][MAXKEYL];
+_Bool Hout[MAXCOMPONENTS][MAXKEYL]; 
 unsigned char HinCnt[MAXCOMPONENTS];
 unsigned char HoutCnt[MAXCOMPONENTS];
 
@@ -52,8 +51,8 @@ TYPEOFTIME Ltstamp[MAXCOMPONENTS][MAXKEYL];
 const TYPEOFKEYLID tupleStart[MAXKEYL] = { {{ tupleStart | join: ", " }} };
 const TYPEOFKEYLID tupleEnd[MAXKEYL] = { {{ tupleEnd | join: ", " }} };
 
-Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID key) {
-    Bool __LABS_link = 0;
+_Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID key) {
+    _Bool __LABS_link = 0;
     {%- for l in links -%}
         {%- if forloop.first -%}
     if ((key >= {{l.start}}) & (key <= {{l.end}})){
@@ -115,7 +114,7 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
 //  Component component_id  assigns to key the evaluated expression
 //  If check is true, transition is guarded by HoutCnt == HinCnt == 0
 //
-void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, Bool check) {
+void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, _Bool check) {
     #if DISABLELSTIG == 0
     __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
     __VERIFIER_assume((!check) | (HinCnt[id] == 0));
@@ -127,7 +126,7 @@ void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, Bool check) {
     #endif
 }
 
-void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, Bool check) {
+void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
     #if DISABLELSTIG == 0
     __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
     __VERIFIER_assume((!check) | (HinCnt[id] == 0));
@@ -143,7 +142,7 @@ void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, Bool check) {
 //
 //  Rule LSTIG
 //
-void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, Bool check) {
+void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, _Bool check) {
     __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
     __VERIFIER_assume((!check) | (HinCnt[id] == 0));
 
@@ -154,7 +153,7 @@ void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, Bool check) {
     setHout(id, key);
 }
 
-Bool differentLstig(TYPEOFAGENTID comp1, TYPEOFAGENTID comp2, TYPEOFKEYLID key) {
+_Bool differentLstig(TYPEOFAGENTID comp1, TYPEOFAGENTID comp2, TYPEOFKEYLID key) {
     TYPEOFKEYLID k  = tupleStart[key];
     return ((Lvalue[comp1][k] != Lvalue[comp1][k]) | (Ltstamp[comp1][k] != Ltstamp[comp2][k]));
 }

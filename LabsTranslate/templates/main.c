@@ -23,7 +23,7 @@ int main(void) {
 
     #if DISABLELSTIG == 0
         #if BOUND > 0
-    Bool sys_or_not[BOUND];
+    _Bool sys_or_not[BOUND];
         #endif
     #endif
 
@@ -40,7 +40,7 @@ int main(void) {
             #if BOUND > 0
         if (sys_or_not[__LABS_step]) {
             #else
-        if ((Bool) __VERIFIER_nondet()) {
+        if ((_Bool) __VERIFIER_nondet()) {
             #endif
         #endif
             {%- unless fair -%}
@@ -77,7 +77,7 @@ int main(void) {
         #if DISABLELSTIG == 0 
         }
         else {
-            Bool propagate_or_confirm; 
+            _Bool propagate_or_confirm; 
 
             if (propagate_or_confirm) propagate();
             else confirm();
