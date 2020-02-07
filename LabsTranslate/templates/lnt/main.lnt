@@ -8,10 +8,9 @@ process lastAgent [last: IdChannel] is
     end var
 end process
 
-process step [last: IdChannel] (in out sys: Sys) is
-    var a:Agent, tid:ID, agents:Agents, t: Nat, firstAgent: Int, E: Env in
+process step [last: IdChannel, mon: Any] (in out sys: Sys) is
+    var a:Agent, tid:ID, agents:Agents, t: Nat, firstAgent: Int{%- if hasEnvironment -%}, E: Env{%- endif %} in
         agents := sys.agents;
-        --sched(?tid) where empty(agents[Nat(tid)].Zput) and empty(agents[Nat(tid)].Zqry);
 
         last(?tid);
         a := agents[Nat(tid)];
@@ -33,6 +32,8 @@ process step [last: IdChannel] (in out sys: Sys) is
             end select;
             agents[Nat(tid)] := a;
             sys := sys.{ agents => agents, time => t, env => e}
+        else
+            mon("deadlock"); stop --vacuous pass
         end if;
 
         --- scheduler ---
@@ -82,35 +83,6 @@ function canProceed(a: Agent, E: Env): Bool is
     end var
 end function
 
-function existsRunningAgent(sys: Sys): Bool is
-    var check: Bool, n: Nat in
-        check := false;
-        for n := 0 while ((n < MAXCOMPONENTS) and (not(check))) by n := n + 1 loop
-            check := check or not(sys.agents[n].pc[0] == 0)
-        end loop;
-        return check
-    end var
-end function 
-
-function existsEnabledAgent (sys: Sys): Bool is
-    var check: Bool, n: Nat in
-        check := false;
-        for n := 0 while ((n < MAXCOMPONENTS) and (not(check))) by n := n + 1 loop
-            check := check or not(sys.agents[n].init) or canProceed(sys.agents[n], sys.env)
-        end loop;
-        return check
-    end var
-end function
-
-function existsSystemTransition(sys: Sys): Bool is
-    var check: Bool, n: Nat in
-        check := false;
-        for n := 0 while ((n < MAXCOMPONENTS) and (not(check))) by n := n + 1 loop
-            check := check or not(empty(sys.agents[n].Zput)) or not(empty(sys.agents[n].Zqry))
-        end loop;
-        return check
-    end var
-end function
 
 process MAIN [{%- if simulation -%}o:Any, {% endif %}monitor:any] is
     var sys: Sys, agents: Agents, e:Env in
@@ -135,13 +107,9 @@ process MAIN [{%- if simulation -%}o:Any, {% endif %}monitor:any] is
                     {%- if simulation -%}
                     o(sys);
                     {%- endif -%}
-                    if existsRunningAgent(sys) and not(existsEnabledAgent(sys)) and not(existsSystemTransition(sys)) then 
-                        monitor("deadlock"); --vacuous pass
-                        stop
-                    end if;
                     monitor[monitor](sys.agents);
                     select
-                        step[last](!?sys)
+                        step[last, monitor](!?sys)
                     []
                         propagate (!?sys)
                     []
