@@ -8,9 +8,8 @@ void init() {
     #endif
 
     unsigned char i, j;
+#if DISABLELSTIG == 0        
     for (i=0; i<MAXCOMPONENTS; i++) {
-        terminated[i] = 0;
-#if DISABLELSTIG == 0    
         for (j=0; j<MAXKEYL; j++) {
             Ltstamp[i][j] = 0;
             Hin[i][j] = 0;
@@ -18,8 +17,8 @@ void init() {
         }
         HinCnt[i] = 0;
         HoutCnt[i] = 0;
-#endif
     }
+#endif
 
     {%- for agent in agents -%}
     {%- assign a = agent.end | minus: 1 -%}
