@@ -13,11 +13,11 @@ templates = $(wildcard LabsTranslate/templates/**/*)
 rmsliver :
 	@rm -f build/${platform}/sliver.py
 
-build/*/labs/templates/main.c : $(templates)
+build/%/labs/templates/main.c : $(templates)
 	@echo Copying templates...
 	@cp -r LabsTranslate/templates build/$(platform)/labs;
 
-build/*/labs/LabsTranslate.dll : $(sources)
+build/%/labs/LabsTranslate.dll : $(sources)
 	@mkdir -p build/$(platform)
 	@echo Building LabsTranslate...
 	dotnet publish -r $(platform) -c Release --self-contained -o build/$(platform)/labs
