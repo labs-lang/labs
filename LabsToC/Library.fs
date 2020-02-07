@@ -96,6 +96,8 @@ let private encodeHeader trKit bound isSimulation noBitvectors (table:SymbolTabl
         "links", Lst links
         "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
         "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst
+        "hasStigmergy", Bool (table.m.nextL > 0)
+        "hasEnvironment", Bool (table.m.nextE > 0)
     ]
     |> render (Liquid.parse (trKit.templateInfo.Get "header"))
 
@@ -138,7 +140,13 @@ let private encodeInit trKit (table:SymbolTable) =
         |> Map.values
         |> Seq.concat
     
-    ["initenv", Lst env; "agents", Lst agents; "tstamps", Lst tstamps]
+    [
+        "initenv", Lst env
+        "agents", Lst agents
+        "tstamps", Lst tstamps
+        "hasStigmergy", Bool (table.m.nextL > 0)
+        "hasEnvironment", Bool (table.m.nextE > 0)
+    ]
     |> render (Liquid.parse (trKit.templateInfo.Get "init"))
 
 let private funcName t =
@@ -179,6 +187,8 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             ]
         
         [
+            "hasStigmergy", Bool (table.m.nextL > 0)
+            "hasEnvironment", Bool (table.m.nextE > 0)
             "label", funcName t |> Str
             "last", t.last |> Bool
             "siblings", t.siblings |> Seq.map Int |> Lst
@@ -234,6 +244,8 @@ let private encodeMain trKit isSimulation fair (table:SymbolTable) =
         "alwaysasserts", alwaysP
         "finallyasserts", finallyP
         "agentscount", table.spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
+        "hasStigmergy", Bool (table.m.nextL > 0)
+        "hasEnvironment", Bool (table.m.nextE > 0)
     ]
     |> render (Liquid.parse (trKit.templateInfo.Get "main"))
 
