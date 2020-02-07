@@ -1,4 +1,4 @@
-process action{{label}} (in out agent: Agent, t: Nat, in out E: Env) is
+process action{{label}} (in out agent: Agent{%- if hasStigmergy-%}, t: Nat{%-endif-%}{%-if hasEnvironment-%}, in out E: Env{%- endif -%}) is
     --{{ labs }}
 
     {%- for item in assignments -%}{%- if item.size != 0 -%}
@@ -6,7 +6,7 @@ process action{{label}} (in out agent: Agent, t: Nat, in out E: Env) is
     {{loc}}(!?{% if loc != "env" %}agent{% else %}E{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});
     {%- endif -%}{%- endfor -%}
 
-    {%- if qrykeys.size > 0 -%}
+    {%- if hasStigmergy and qrykeys.size > 0 -%}
     var Zqry: Pending in
         Zqry := agent.Zqry;
         {%- for item in qrykeys -%}

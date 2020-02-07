@@ -1,5 +1,5 @@
 module HEADER is
-
+    
     {% for item in defines -%}
     function {{item.name}}:Nat is return {{item.value}} end function
     {% endfor -%}
@@ -7,12 +7,19 @@ module HEADER is
     function undef_value:Int is return -128 end function
 
     type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
-    type IndexI is X:Nat where X < MAXKEYI with "==", "!=" end type
-    type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
     type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
+    type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with "get", "set" end type
 
     channel IdChannel is (ID) end channel
     channel Boolch is (Bool) end channel
+
+    {%- if hasStigmergy -%}
+
+    (* Stigmergy *)
+    type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
+    type LstigEntry is LstigEntry (value: Int, tstamp: Nat) with "get", "set" end type
+    type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of LstigEntry with "get", "set" end type
+    type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
 
     function TUPLESTART(n:IndexL): IndexL is
         case n in
@@ -31,14 +38,6 @@ module HEADER is
             | any -> raise unexpected (* should never match *)
         end case
     end function
-
-    type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with "get", "set" end type
-    type LstigEntry is LstigEntry (value: Int, tstamp: Nat) with "get", "set" end type
-    type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of LstigEntry with "get", "set" end type
-
-    type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
-
-    type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
 
     function length(p:Pending): Nat is
         var n, j:Nat in
@@ -73,28 +72,36 @@ module HEADER is
     function member(k: IndexL, p:Pending): Bool is
         return p[Nat(k)]
     end function
+    {%- endif -%}
 
+    {%- if hasEnvironment -%}
+    type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
 
+    process env(in out E:Env, key:Int, val:Int) is 
+        E[IntToNat(key)] := val
+    end process
+    {%- endif -%}
+
+    {%- if hasStigmergy -%}
     type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool, pc:PC) with "get", "set" end type
+    {%- else -%}
+    type Agent is agent(id: ID, I: Iface, init:Bool, pc:PC) with "get", "set" end type
+    {%- endif -%}
     type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
-    type Sys is sys(agents: Agents, time: Nat , env: Env) with "get", "set" end type
+
+    {%- if hasEnvironment -%}
+    type Sys is sys(agents: Agents, {%- if hasStigmergy -%}time: Nat,{%- endif-%} env: Env) with "get", "set" end type
+    {%- else -%}
+    type Sys is sys(agents: Agents{%- if hasStigmergy -%}, time: Nat{%- endif-%}) with "get", "set" end type
+    {%- endif -%}
+
 
     function emptyAgent: Agent is
+        {%- if hasStigmergy -%}
         return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), false, PC(0))
-    end function
-
-    function incr(x: Nat): Nat is 
-        if x < 255 then return x + 1 else return 0 end if
-    end function
-
-    function link(a1: Agent, a2: Agent, key: Nat):Bool is
-        {% if links.size > 0 %}{% for l in links %}
-        {% if forloop.first %}if{% else %}elsif{% endif %} ((key >= {{l.start}}) and (key <= {{l.end}})) then
-            return {{l.link}}
-        {% endfor %}
-        else return false
-        end if
-        {% else %}return false {% endif %}
+        {%- else -%}
+        return Agent(ID(0), Iface(0), false, PC(0))
+        {%- endif -%}
     end function
 
     process attr(in out a:Agent, key:Nat, val:Int) is 
@@ -105,10 +112,20 @@ module HEADER is
         end var
     end process
 
-    process env(in out E:Env, key:Int, val:Int) is 
-        E[IntToNat(key)] := val
-    end process
-
+    {%- if hasStigmergy -%}
+    function incr(x: Nat): Nat is 
+        if x < 255 then return x + 1 else return 0 end if
+    end function
+    
+    function link(a1: Agent, a2: Agent, key: Nat):Bool is
+        {% if links.size > 0 %}{% for l in links %}
+        {% if forloop.first %}if{% else %}elsif{% endif %} ((key >= {{l.start}}) and (key <= {{l.end}})) then
+            return {{l.link}}
+        {% endfor %}
+        else return false
+        end if
+        {% else %}return false {% endif %}
+    end function
 
     process lstig(in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
         var Lnew: Lstig in 
@@ -179,3 +196,4 @@ module HEADER is
             end var
         end var
     end process
+    {%- endif -%}

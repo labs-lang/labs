@@ -1,6 +1,6 @@
 process lastAgent [last: IdChannel] is
     var tid: ID in
-        tid := any ID;
+        tid := {% if firstagent == 0}0{% else %}any ID{%-endif-%};
         loop
             last(tid);
             last(?tid)
@@ -14,24 +14,27 @@ process step [last: IdChannel, mon: Any] (in out sys: Sys) is
 
         last(?tid);
         a := agents[Nat(tid)];
-        t := sys.time;
+        {%-if hasStigmergy-%} t := sys.time;
         if (a.init == false) then INITAGENT(!?a, !?t) end if;
+        {%- else -%}
+        if (a.init == false) then INITAGENT(!?a) end if;
+        {%- endif -%}
 
-        if canProceed(a, sys.env) then
+        if canProceed(a{%- if hasEnvironment -%}, sys.env{%-endif-%}) then
             firstAgent := NatToInt(Nat(tid));
-            E := sys.env;
+            {%- if hasEnvironment -%}E := sys.env;{%- endif -%}
             select
             {%- for item in schedule -%}
                 only if {% for pc in item.entry -%}(a.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
             {%- for pc in item.siblings -%}
             (a.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
             {%- endfor -%}
-            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}(!?a, sys.time, !?e) end if
+            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}(!?a{%-if hasStigmergy-%}, sys.time{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%}) end if
             {% unless forloop.last %}[]{%- endunless %}
             {%- endfor -%}
             end select;
             agents[Nat(tid)] := a;
-            sys := sys.{ agents => agents, time => t, env => e}
+            sys := sys.{ agents => agents{%-if hasStigmergy-%}, time => t{%-endif-%}{%- if hasEnvironment -%}, env => e{%-endif-%}}
         else
             mon("deadlock"); stop --vacuous pass
         end if;
@@ -65,11 +68,11 @@ process monitor [mon: any] (agents: Agents) is
     {%- endif -%}
 end process
 
-function canProceed(a: Agent, E: Env): Bool is
+function canProceed(a: Agent{%- if hasEnvironment -%}, E: Env{%- endif -%}): Bool is
     var firstAgent: Int in
     firstAgent := NatToInt(Nat(a.id));
     return 
-        empty(a.Zput) and empty(a.Zqry) and
+        {%- if hasStigmergy -%}empty(a.Zput) and empty(a.Zqry) and {%- endif %}
         (
             {%- for item in schedule -%}
                 ({% for pc in item.entry -%}(a.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
@@ -83,20 +86,22 @@ function canProceed(a: Agent, E: Env): Bool is
     end var
 end function
 
-
-process MAIN [{%- if simulation -%}o:Any, {% endif %}monitor:any] is
-    var sys: Sys, agents: Agents, e:Env in
+process MAIN [o, monitor: Any] is
+    var sys: Sys, agents: Agents{%- if hasEnvironment -%}, e:Env{%- endif %} in
         agents := Agents(emptyAgent);
         
-        var tid: Nat, a: Agent, time: Nat in
-            time := 0;
+        var tid: Nat, a: Agent in
             for tid := 0 while tid < MAXCOMPONENTS by tid := tid + 1 loop
                 a := agents[tid].{id => ID(tid)};
                 agents[tid] := a; i
             end loop;
+            {%- if hasEnvironment -%}
             e := Env(0);
             INITENV(!?e);
-            sys := Sys(agents, time, e)
+            sys := Sys(agents{%-if hasStigmergy-%}, 0{%-endif-%}, e)
+            {%- else -%}
+            sys := Sys(agents{%-if hasStigmergy-%}, 0{%-endif-%})
+            {%- endif -%}
         end var;
 
         hide last:IdChannel in
@@ -104,10 +109,9 @@ process MAIN [{%- if simulation -%}o:Any, {% endif %}monitor:any] is
                 lastAgent [last]
                 ||
                 loop
-                    {%- if simulation -%}
                     o(sys);
-                    {%- endif -%}
                     monitor[monitor](sys.agents);
+                    {%-if hasStigmergy-%}
                     select
                         step[last, monitor](!?sys)
                     []
@@ -115,6 +119,9 @@ process MAIN [{%- if simulation -%}o:Any, {% endif %}monitor:any] is
                     []
                         confirm (!?sys)
                     end select
+                    {%- else -%}
+                    step[last, monitor](!?sys)
+                    {%- endif -%}
                 end loop
             end par
         end hide

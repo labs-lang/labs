@@ -1,7 +1,7 @@
-process INITAGENT(in out a:Agent, in out t:Nat) is
-    var I:Iface, L:Lstig, x: Int, p:PC in
+process INITAGENT(in out a:Agent{%-if hasStigmergy-%}, in out t:Nat{%-endif-%}) is
+    var I:Iface, x: Int, p:PC{%-if hasStigmergy-%}, L:Lstig{%- endif %} in
         I := a.I;
-        L := a.L;
+        {%-if hasStigmergy-%}L := a.L;{%- endif -%}
         p := a.pc;
 
         {%- for agent in agents -%}
@@ -18,7 +18,7 @@ process INITAGENT(in out a:Agent, in out t:Nat) is
         {%- for item in agent.initvars -%}
 
         x := any Int where {{ item.bexpr }};
-        {%- if item.loc == "L" -%}
+        {%- if hasStigmergy and item.loc == "L" -%}
         L[{{ item.index }}] := LstigEntry(x, t);
         t := incr(t){%- else -%}
         {{item.loc}}[{{ item.index }}] := x{%- endif -%}
@@ -28,10 +28,11 @@ process INITAGENT(in out a:Agent, in out t:Nat) is
         
         end if;
 
-        a := a.{I => I, L => L, init => true, pc => p}
+        a := a.{I => I{%-if hasStigmergy-%}, L => L{%- endif -%}, init => true, pc => p}
     end var 
 end process
 
+{%- if hasEnvironment -%}
 process INITENV(in out e: Env) is
     {%- if initenv.size > 0 -%}
     var x: Int in 
@@ -44,3 +45,4 @@ process INITENV(in out e: Env) is
     null
     {%- endif -%}
 end process
+{%- endif -%}
