@@ -71,7 +71,6 @@ let private encodeHeader trKit bound isSimulation noBitvectors (table:SymbolTabl
             "TYPEOFKEYIID", getTypedef defines.["MAXKEYI"]
             "TYPEOFKEYLID", getTypedef defines.["MAXKEYL"]
             "TYPEOFKEYEID", getTypedef defines.["MAXKEYE"]
-            "Bool", getTypedef 1
         ]
     
     let links =
