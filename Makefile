@@ -43,7 +43,7 @@ build/%/examples :
 	@mkdir -p build/$(platform)
 	@echo Copying examples...
 	@mkdir -p build/$(platform)/examples ;
-	@cp examples/*.labs build/$(platform)/examples/;
+	@cp labs-examples/*.labs build/$(platform)/examples/;
 
 build/%/cbmc-simulator :
 	@mkdir -p build/$(platform)
