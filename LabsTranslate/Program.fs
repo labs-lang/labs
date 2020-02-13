@@ -36,5 +36,11 @@ let main argv =
             let bound = cli.GetResult (Bound, defaultValue=1)
             let enc = cli.GetResult (Enc, defaultValue=C)
             LabsToC.encode enc (bound) (flags cli) x)
-    |> Result.mapError (eprintfn "%A") // TODO Format errors
-    |> function Result.Ok _ -> 0 | Result.Error _ -> 1 // TODO more expressive error codes 
+    |> function
+       | Result.Ok (_, warns) ->
+            warns |> List.map(Message.pprintWarn >> eprintfn "%s") |> ignore
+            0
+       | Result.Error (warns, errs) ->
+           warns |> List.map(Message.pprintWarn >> eprintfn "%s") |> ignore
+           errs |> List.map(Message.pprintErr >> eprintfn "%s") |> ignore
+           1 // TODO more expressive error codes 
