@@ -129,20 +129,22 @@ module HEADER is
         {% else %}return false {% endif %}
     end function
 
-    process lstig(in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
+    process lstig [action: Any] (in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
         var Lnew: Lstig in 
             Lnew := a.L;
             Lnew[key] := LstigEntry(val, tstamp);
             a := a.{L => Lnew, Zput => insert(TUPLESTART(IndexL(key)), a.Zput)}
-        end var
+        end var;
+        action("L", a.id, key, val)
     end process
 
-    process propagate (in out sys:Sys) is
+    process propagate [action: Any] (in out sys: Sys) is
         var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
             senderId := any ID where length(sys.agents[Nat(senderId)].Zput) > 0;
             agents := sys.agents;
             sender := agents[Nat(senderId)];
             key := any IndexL where member(key, sender.Zput);
+            action("propagate", Nat(senderId), Nat(key));
             var j, k, t: Nat, L: Lstig, a:Agent in
                 t := sys.time;
                 for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
@@ -153,7 +155,8 @@ module HEADER is
                     (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
                         L := a.L;
                         for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
-                            L[k] := sender.L[k]
+                            L[k] := sender.L[k];
+                            action("L", j, k, L[k].value)
                         end loop;
                         agents[j] := a.{
                             L => L, 
@@ -163,17 +166,19 @@ module HEADER is
                     end if
                 end loop;
                 agents[Nat(senderId)] := sender.{Zput => remove(key, sender.Zput)};
-                sys := sys.{agents => agents, time => t}
+                sys := sys.{agents => agents, time => t};
+                action("end propagate", Nat(senderId), Nat(key))
             end var
         end var
     end process
 
-    process confirm (in out sys:Sys) is
+    process confirm [action: Any] (in out sys:Sys) is
         var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
             senderId := any ID where length(sys.agents[Nat(senderId)].Zqry) > 0;
             agents := sys.agents;
             sender := agents[Nat(senderId)];
             key := any IndexL where member(key, sender.Zqry);
+            action("confirm", Nat(senderId), Nat(key));
             var j, k, t: Nat, L: Lstig, a:agent in
                 t:=sys.time;
                 for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
@@ -187,14 +192,16 @@ module HEADER is
                         if (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
                             L := a.L;
                             for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
-                                L[k] := sender.L[k]
+                                L[k] := sender.L[k];
+                                action("L", j, k, L[k].value)
                             end loop;
                             agents[j] := a.{L => L, Zqry => remove(key, a.Zqry)}
                         end if
                     end if
                 end loop;
                 agents[Nat(senderId)] := sender.{Zqry => remove(key, sender.Zqry)};
-                sys := sys.{agents => agents, time => t}
+                sys := sys.{agents => agents, time => t};
+                action("end confirm", Nat(senderId), Nat(key))
             end var
         end var
     end process
