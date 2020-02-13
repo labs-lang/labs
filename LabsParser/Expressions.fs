@@ -45,7 +45,7 @@ module ParseBExpr =
 /// Creates a parser for boolean expressions
 let makeBExprParser pexpr =
 
-    let opp = new OperatorPrecedenceParser<_, _, _>()
+    let opp = OperatorPrecedenceParser<_, _, _>()
     let expr = opp.ExpressionParser
     
     let notInArrow = notFollowedBy (anyOf ['-'; '~']) |> ws
@@ -78,7 +78,7 @@ let makeBExprParser pexpr =
     expr >>= ParseBExpr.getB
 
 let makeExprParser pref pid : Parser<_> =
-    let opp = new OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
+    let opp = OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser
     let arithm op x y = Arithm(x, op, y)
     

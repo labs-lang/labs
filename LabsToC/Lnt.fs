@@ -1,5 +1,4 @@
 module internal LabsToC.Lnt
-open Frontend
 open LabsCore
 open Types
 open Common
@@ -18,7 +17,7 @@ let translateLocation loc n e =
     | E -> fun _ -> sprintf "E[IntToNat(%O)]"
     |> fun f -> f name e
 
-let translateInitLocation loc n e = "x"
+let translateInitLocation _ _ _ = "x"
 
 let private translateExpr trRef trId =
     let leaf_ = function

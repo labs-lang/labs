@@ -12,7 +12,7 @@ let private envAndLstigVars sys lstigs =
     List.concat (List.map (fun x -> x.def.vars |> Set.unionMany |> Set.toList) lstigs)
     |> List.append sys.def.environment
 
-let check (sys, lstigs, agents', properties) =
+let check (sys, lstigs, agents', _) =
     let vars = envAndLstigVars sys lstigs
     
     let undefSpawned =
@@ -66,11 +66,6 @@ let run externs (sys, lstigs, agents', properties) =
 /// Turn a variable initializer into a list of BExpr
 /// (multiple BExprs are returned when v is an array).
 let initBExprs idfn (v:Var<_>, i: int) =
-    let refs =
-        let r = {var=(v, i); offset = None}
-        match v.vartype with
-        | Scalar -> [r]
-        | Array s -> List.map (fun i -> {r with offset = Some (Leaf (Const i))}) [0 .. s-1]
     let map_ r =
         let leaf_ l = match l with | Id _ -> idfn | _ -> l
         Expr.map leaf_ (fun _ o -> {r with offset=o})

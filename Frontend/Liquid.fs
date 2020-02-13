@@ -16,7 +16,7 @@ and LiquidVal =
     | Lst of LiquidVal seq
     | Dict of LiquidDict
 
-let fs = new FileSystems.LocalFileSystem("")
+let fs = FileSystems.LocalFileSystem("")
 
 let private internalRender strfun (template:Template) values =
     let rec hashval = function
