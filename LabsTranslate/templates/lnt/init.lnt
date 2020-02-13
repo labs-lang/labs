@@ -1,7 +1,7 @@
-process INITAGENT(in out a:Agent{%-if hasStigmergy-%}, in out t:Nat{%-endif-%}) is
+process INITAGENT (in out a:Agent{%-if hasStigmergy-%}, in out t:Nat{%-endif-%}) is
     var I:Iface, x: Int, p:PC{%-if hasStigmergy-%}, L:Lstig{%- endif %} in
         I := a.I;
-        {%-if hasStigmergy-%}L := a.L;{%- endif -%}
+        {% if hasStigmergy %}L := a.L;{%- endif %}
         p := a.pc;
 
         {%- for agent in agents -%}
@@ -24,7 +24,7 @@ process INITAGENT(in out a:Agent{%-if hasStigmergy-%}, in out t:Nat{%-endif-%}) 
         {{item.loc}}[{{ item.index }}] := x{%- endif -%}
         {%- unless forloop.last-%};{%- endunless -%}
         {%- endfor -%}
-        {%- endfor-%}
+        {%- endfor -%}
         
         end if;
 

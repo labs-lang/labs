@@ -77,8 +77,9 @@ module HEADER is
     {%- if hasEnvironment -%}
     type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
 
-    process env(in out E:Env, key:Int, val:Int) is 
-        E[IntToNat(key)] := val
+    process env [action: Any] (in out E:Env, key:Int, val:Int) is 
+        E[IntToNat(key)] := val;
+        action("E", key, val)
     end process
     {%- endif -%}
 
@@ -104,12 +105,13 @@ module HEADER is
         {%- endif -%}
     end function
 
-    process attr(in out a:Agent, key:Nat, val:Int) is 
+    process attr [action: Any] (in out a:Agent, key:Nat, val:Int) is 
         var Inew: Iface in 
             Inew := a.I;
             Inew[key] := val;
             a := a.{I => Inew}
-        end var
+        end var;
+        action("I", a.id, key, val)
     end process
 
     {%- if hasStigmergy -%}
