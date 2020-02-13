@@ -24,6 +24,5 @@
     <Compile Include="Stigmergies.fs" />
     <Compile Include="System.fs" />
     <Compile Include="Parser.fs" />
-    <None Include="test.fsx" />
   </ItemGroup>
 </Project>
