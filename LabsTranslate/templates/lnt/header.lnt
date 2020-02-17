@@ -133,9 +133,9 @@ module HEADER is
         var Lnew: Lstig in 
             Lnew := a.L;
             Lnew[key] := LstigEntry(val, tstamp);
-            a := a.{L => Lnew, Zput => insert(TUPLESTART(IndexL(key)), a.Zput)}
-        end var;
-        action("L", a.id, key, val)
+            a := a.{L => Lnew, Zput => insert(TUPLESTART(IndexL(key)), a.Zput)};
+            action("L", a.id, Lnew[key])
+        end var
     end process
 
     process propagate [action: Any] (in out sys: Sys) is
@@ -156,7 +156,7 @@ module HEADER is
                         L := a.L;
                         for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
                             L[k] := sender.L[k];
-                            action("L", j, k, L[k].value)
+                            action("L", j, k, L[k])
                         end loop;
                         agents[j] := a.{
                             L => L, 
@@ -193,7 +193,7 @@ module HEADER is
                             L := a.L;
                             for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
                                 L[k] := sender.L[k];
-                                action("L", j, k, L[k].value)
+                                action("L", j, k, L[k])
                             end loop;
                             agents[j] := a.{L => L, Zqry => remove(key, a.Zqry)}
                         end if
