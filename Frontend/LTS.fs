@@ -127,7 +127,7 @@ let makeTransitions state proc =
             (* Recurse on l, accumulate the lts and the exec point but reset the exit *)
             List.fold (fun s x -> recurse (setl (_2 << _4) (acc^._4) s) x) (lts, acc) l
         | Par ->
-            let (k, v, parent, exit) = acc
+            let (k, v, _, exit) = acc
             let v', fresh = ExecPoint.freshpc k v
             let v'', newpcs = ExecPoint.newpc (l.Length) v'
             
