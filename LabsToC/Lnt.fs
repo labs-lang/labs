@@ -45,7 +45,7 @@ let rec private BExprLnt filter trExpr bexpr =
         | Conj -> List.map (sprintf "(%s)") >> String.concat " and "
         | Disj -> List.map (sprintf "(%s)") >> String.concat " or "
         
-    translateBExpr bleaf_ neg_ compare_ compound_ filter trExpr bexpr
+    translateBExpr bleaf_ neg_ compare_ compound_ filter bexpr
     
 let wrapper = { new Wrapper with
                 member __.templateInfo = {baseDir = "templates/lnt"; extension = "lnt"}

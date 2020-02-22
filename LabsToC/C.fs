@@ -33,7 +33,7 @@ let rec private BExprC filter trExpr bexpr =
     let compound_ = function
         | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
         | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
-    translateBExpr bleaf_ neg_ compare_ compound_ filter trExpr bexpr
+    translateBExpr bleaf_ neg_ compare_ compound_ filter bexpr
 
  
 let wrapper = { new Wrapper with

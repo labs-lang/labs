@@ -26,7 +26,7 @@ let private trref trLocation name (v:Var<int>, i:int) offset =
         | Some off -> sprintf "%i + %s" i off
     trLocation v.location name index
 
-let translateBExpr bleaf_ neg_ compare_ compound_ filter trExpr bexpr =
+let translateBExpr bleaf_ neg_ compare_ compound_ filter bexpr =
     let undefs =
         match filter with
         | None -> Set.empty
