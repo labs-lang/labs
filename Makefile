@@ -26,7 +26,7 @@ build/%/sliver.py : $(sliver_sources) build/%/click
 	@mkdir -p build/$(platform)
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
-
+	@cp -r cadp/ build/$(platform)/cadp ;
 
 build/%/click :
 	@mkdir -p build/$(platform)
@@ -60,7 +60,6 @@ osx : rmsliver \
 linux : rmsliver \
 	build/linux-x64/labs/LabsTranslate.dll \
 	build/linux-x64/labs/templates/main.c \
-	build/linux-x64/sliver.py \
 	build/linux-x64/sliver.py \
 	build/linux-x64/cseq \
 	build/linux-x64/examples \
