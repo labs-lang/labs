@@ -1,0 +1,4 @@
+library standard.mcl end_library
+
+
+FAIRLY("MONITOR !TRUE" or "MONITOR !\"deadlock\"") and SOME(true* . "MONITOR !TRUE") 
