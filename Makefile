@@ -22,11 +22,16 @@ build/%/labs/LabsTranslate.dll : $(sources)
 	@echo Building LabsTranslate...
 	dotnet publish -r $(platform) -c Release --self-contained -o build/$(platform)/labs
 
-build/%/sliver.py : $(sliver_sources) build/%/click
+build/%/sliver.py : $(sliver_sources) build/%/click build/%/pyparsing.py
 	@mkdir -p build/$(platform)
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
 	@cp -r cadp/ build/$(platform)/cadp ;
+
+build/%/pyparsing.py :
+	@mkdir -p build/$(platform)
+	@echo Copying pyparsing.py...
+	@cp -r pyparsing.py build/$(platform)/pyparsing.py ;
 
 build/%/click :
 	@mkdir -p build/$(platform)
@@ -53,6 +58,7 @@ build/%/cbmc-simulator :
 osx : rmsliver \
 	  build/osx.10.12-x64/labs/LabsTranslate.dll \
 	  build/osx.10.12-x64/labs/templates/main.c \
+	  build/osx.10.12-x64/pyparsing.py \
 	  build/osx.10.12-x64/sliver.py \
 	  build/osx.10.12-x64/cseq \
 	  build/osx.10.12-x64/examples
@@ -60,6 +66,7 @@ osx : rmsliver \
 linux : rmsliver \
 	build/linux-x64/labs/LabsTranslate.dll \
 	build/linux-x64/labs/templates/main.c \
+	build/linux-x64/pyparsing.py \
 	build/linux-x64/sliver.py \
 	build/linux-x64/cseq \
 	build/linux-x64/examples \
