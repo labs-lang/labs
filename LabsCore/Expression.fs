@@ -18,6 +18,7 @@ module Expr =
         | Ref r1, Ref r2 when r1.var = r2.var ->
             match r1.offset, r2.offset with
             | Some o1, Some o2 -> equal o1 o2
+            | None, None -> true
             | _ -> false
         | _ -> false    
             
@@ -103,15 +104,16 @@ module BExpr =
         | Compare(e1, op, e2) -> fcompare op e1 e2
         | Compound(op, b) -> fcompound op (List.map recurse b)
 
-    let simplify bexpr =
+    let rec simplify bexpr =
         let compare_ op e1 e2 =
             match op with  
             | Equal when (Expr.equal e1 e2) -> BLeaf true
             | Neq when (Expr.equal e1 e2) -> BLeaf false
             | _ -> Compare(e1, op, e2)
         let compound_ op ls =
+            let lsSimpl = List.map simplify ls
             // Flatten nested Compound nodes
-            let sameOp, others = List.partition (function | Compound(o, _) when o=op -> true | _ -> false) ls 
+            let sameOp, others = List.partition (function | Compound(o, _) when o=op -> true | _ -> false) lsSimpl 
             sameOp
             |> List.map (function Compound(_, l) -> l | _ -> [])
             |> List.concat
