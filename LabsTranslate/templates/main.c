@@ -17,6 +17,7 @@ void finally() {
 
 int main(void) {
     init();
+    monitor(); // Check invariants on the initial state
     TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0;{% else %};
     LABSassume(firstAgent < MAXCOMPONENTS);
     {% endif %};
