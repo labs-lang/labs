@@ -84,9 +84,9 @@ module HEADER is
     {%- endif -%}
 
     {%- if hasStigmergy -%}
-    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, init:Bool, pc:PC) with "get", "set" end type
+    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, pc:PC) with "get", "set" end type
     {%- else -%}
-    type Agent is agent(id: ID, I: Iface, init:Bool, pc:PC) with "get", "set" end type
+    type Agent is agent(id: ID, I: Iface, pc:PC) with "get", "set" end type
     {%- endif -%}
     type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
 
@@ -99,9 +99,9 @@ module HEADER is
 
     function emptyAgent: Agent is
         {%- if hasStigmergy -%}
-        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), false, PC(0))
+        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), PC(0))
         {%- else -%}
-        return Agent(ID(0), Iface(0), false, PC(0))
+        return Agent(ID(0), Iface(0), PC(0))
         {%- endif -%}
     end function
 
@@ -134,7 +134,7 @@ module HEADER is
             Lnew := a.L;
             Lnew[key] := LstigEntry(val, tstamp);
             a := a.{L => Lnew, Zput => insert(TUPLESTART(IndexL(key)), a.Zput)};
-            action("L", a.id, Lnew[key])
+            action("L", a.id, key, Lnew[key])
         end var
     end process
 
@@ -149,7 +149,6 @@ module HEADER is
                 t := sys.time;
                 for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
                     a := agents[j];
-                    if a.init == false then INITAGENT(!?a, !?t) end if;
 
                     if (a.id != sender.id) and link(sender, a, Nat(key)) and 
                     (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
@@ -184,7 +183,6 @@ module HEADER is
                 for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
                     
                     a := agents[j];
-                    if a.init == false then INITAGENT(!?a, !?t) end if;
                     
                     if (a.id != sender.id) and link(sender, a, Nat(key)) and
                     (a.L[Nat(key)].tstamp != sender.L[Nat(key)].tstamp) then 

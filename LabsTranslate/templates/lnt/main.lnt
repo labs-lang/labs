@@ -11,16 +11,11 @@ end process
 process step [last: IdChannel, mon, action: Any] (in out sys: Sys) is
     var a:Agent, tid:ID, agents:Agents{%-if hasStigmergy-%}, t: Nat{%-endif-%}, firstAgent: Int{%- if hasEnvironment -%}, E: Env{%- endif %} in
         agents := sys.agents;
+        {% if hasStigmergy-%}t := sys.time;{%- endif -%}
 
         last(?tid);
         action(tid);
         a := agents[Nat(tid)];
-        {%-if hasStigmergy-%} t := sys.time;
-        if (a.init == false) then INITAGENT(!?a, !?t); action(a) end if;
-        {%- else -%}
-        if (a.init == false) then INITAGENT(!?a); action(a) end if;
-        {%- endif -%}
-
         {%if hasEnvironment -%}E := sys.env;{%- endif %}
         if canProceed(a{%- if hasEnvironment -%}, sys.env{%-endif-%}) then
             firstAgent := NatToInt(Nat(tid));
@@ -37,7 +32,7 @@ process step [last: IdChannel, mon, action: Any] (in out sys: Sys) is
         end if;
 
         agents[Nat(tid)] := a;
-        sys := sys.{ agents => agents{%-if hasStigmergy-%}, time => t{%-endif-%}{%- if hasEnvironment -%}, env => e{%-endif-%}};
+        sys := sys.{ agents => agents{%-if hasStigmergy-%}, time => incr(t){%-endif-%}{%- if hasEnvironment -%}, env => e{%-endif-%}};
         --- scheduler ---
         {% if fair %}
         tid := ID(Nat(tid) + 1 mod MAXCOMPONENTS);
@@ -51,19 +46,19 @@ process step [last: IdChannel, mon, action: Any] (in out sys: Sys) is
 end process
 
 process monitor [mon: any] (agents: Agents) is
-    {%- if alwaysasserts.size == 0 and finallyasserts.size == 0 -%}null
+    {%- if alwaysasserts.size == 0 and finallyasserts.size == 0 %} null
     {%- else -%}
-    {%- assign cnt = agentscount | minus: 1 -%}
-    if {%- for i in (0..cnt) -%}(agents[{{i}}].init) {% unless forloop.last %}and {% endunless %} {%- endfor -%}then 
-        {%- for p in alwaysasserts -%}
-        -- {{ p.name }}
-        if not({{ p.value }}) then mon(false){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}{%if finallyasserts.size > 0 %};{% endif %}
-        {%- endfor -%}
-        {%- for p in finallyasserts -%}
-        -- {{ p.name }}
-        if {{ p.value }} then mon(true){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}
-        {%- endfor -%}
-    end if
+    --{%- assign cnt = agentscount | minus: 1 -%}
+    --if {%- for i in (0..cnt) -%}(agents[{{i}}].init) {% unless forloop.last %}and {% endunless %} {%- endfor -%}then 
+    {%- for p in alwaysasserts -%}
+    -- {{ p.name }}
+    if not({{ p.value }}) then mon(false){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}{%if finallyasserts.size > 0 %};{% endif %}
+    {%- endfor -%}
+    {%- for p in finallyasserts -%}
+    -- {{ p.name }}
+    if {{ p.value }} then mon(true){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}
+    {%- endfor -%}
+    --end if
     {%- endif -%}
 end process
 
@@ -88,7 +83,7 @@ end function
 function existsEnabledAgent (sys: Sys): Bool is
     var n: Nat in
         for n := 0 while (n < MAXCOMPONENTS) by n := n + 1 loop
-            if not(sys.agents[n].init) or canProceed(sys.agents[n]{%- if hasEnvironment -%}, sys.env{%- endif -%}) then
+            if canProceed(sys.agents[n]{%- if hasEnvironment -%}, sys.env{%- endif -%}) then
                 return true
             end if
         end loop;
@@ -110,21 +105,24 @@ end function
 {% endif %}
 
 process MAIN [monitor, action: Any] is
-    var sys: Sys, agents: Agents{%- if hasEnvironment -%}, e:Env{%- endif %} in
+    var sys: Sys, agents: Agents{%- if hasEnvironment -%}, e:Env{%- endif %}{%-if hasStigmergy-%}, t:Nat{%- endif %} in
         agents := Agents(emptyAgent);
+        {% if hasStigmergy-%}t := 0;{%- endif -%}
         
         var tid: Nat, a: Agent in
             for tid := 0 while tid < MAXCOMPONENTS by tid := tid + 1 loop
                 a := agents[tid].{id => ID(tid)};
-                agents[tid] := a; i
+                INITAGENT(!?a{%-if hasStigmergy-%}, !?t{%- endif -%});
+                agents[tid] := a;
+                action(a)
             end loop;
             {%- if hasEnvironment -%}
             e := Env(0);
             INITENV(!?e);
             action(e);
-            sys := Sys(agents{%-if hasStigmergy-%}, 0{%-endif-%}, e)
+            sys := Sys(agents{%-if hasStigmergy-%}, t{%-endif-%}, e)
             {%- else -%}
-            sys := Sys(agents{%-if hasStigmergy-%}, 0{%-endif-%})
+            sys := Sys(agents{%-if hasStigmergy-%}, t{%-endif-%})
             {%- endif -%}
         end var;
 
