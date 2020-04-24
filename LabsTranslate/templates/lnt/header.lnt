@@ -77,7 +77,7 @@ module HEADER is
     {%- if hasEnvironment -%}
     type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
 
-    process env [action: Any] (in out E:Env, key:Int, val:Int) is 
+    process env [action: any] (in out E:Env, key:Int, val:Int) is 
         E[IntToNat(key)] := val;
         action("E", key, val)
     end process
@@ -105,7 +105,7 @@ module HEADER is
         {%- endif -%}
     end function
 
-    process attr [action: Any] (in out a:Agent, key:Nat, val:Int) is 
+    process attr [action: any] (in out a:Agent, key:Nat, val:Int) is 
         var Inew: Iface in 
             Inew := a.I;
             Inew[key] := val;
@@ -129,7 +129,7 @@ module HEADER is
         {% else %}return false {% endif %}
     end function
 
-    process lstig [action: Any] (in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
+    process lstig [action: any] (in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
         var Lnew: Lstig in 
             Lnew := a.L;
             Lnew[key] := LstigEntry(val, tstamp);
@@ -138,7 +138,7 @@ module HEADER is
         end var
     end process
 
-    process propagate [action: Any] (in out sys: Sys) is
+    process propagate [action: any] (in out sys: Sys) is
         var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
             senderId := any ID where length(sys.agents[Nat(senderId)].Zput) > 0;
             agents := sys.agents;
@@ -171,7 +171,7 @@ module HEADER is
         end var
     end process
 
-    process confirm [action: Any] (in out sys:Sys) is
+    process confirm [action: any] (in out sys:Sys) is
         var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
             senderId := any ID where length(sys.agents[Nat(senderId)].Zqry) > 0;
             agents := sys.agents;

@@ -11,7 +11,7 @@ process INITAGENT (in out a:Agent{%-if hasStigmergy-%}, in out t:Nat{%-endif-%})
         {%- if p.value.size == 1 -%}
         p[{{ p.name }}] := {{ p.value.first }};
         {%- else -%}
-        x := Any Nat where {%- for val in p.value -%} (x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
+        x := any Nat where {%- for val in p.value -%} (x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
         p[{{ p.name }}] := x;
         {%- endif -%}{%- endfor -%}
 

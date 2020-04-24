@@ -8,7 +8,7 @@ process lastAgent [last: IdChannel] is
     end var
 end process
 
-process step [last: IdChannel, mon, action: Any] (in out sys: Sys) is
+process step [last: IdChannel, mon, action: any] (in out sys: Sys) is
     var a:Agent, tid:ID, agents:Agents{%-if hasStigmergy-%}, t: Nat{%-endif-%}, firstAgent: Int{%- if hasEnvironment -%}, E: Env{%- endif %} in
         agents := sys.agents;
         {% if hasStigmergy-%}t := sys.time;{%- endif -%}
@@ -104,7 +104,7 @@ function existsSystemTransition(sys: Sys): Bool is
 end function
 {% endif %}
 
-process MAIN [monitor, action: Any] is
+process MAIN [monitor, action: any] is
     var sys: Sys, agents: Agents{%- if hasEnvironment -%}, e:Env{%- endif %}{%-if hasStigmergy-%}, t:Nat{%- endif %} in
         agents := Agents(emptyAgent);
         {% if hasStigmergy-%}t := 0;{%- endif -%}

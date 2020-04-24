@@ -1,4 +1,4 @@
-process action{{label}} [action: Any] (in out agent: Agent{%- if hasStigmergy-%}, t: Nat{%-endif-%}{%-if hasEnvironment-%}, in out E: Env{%- endif -%}) is
+process action{{label}} [action: any] (in out agent: Agent{%- if hasStigmergy-%}, t: Nat{%-endif-%}{%-if hasEnvironment-%}, in out E: Env{%- endif -%}) is
     --{{ labs }}
 
     {%- for item in assignments -%}{%- if item.size != 0 -%}
