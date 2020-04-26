@@ -2,8 +2,8 @@ process action{{label}} [action: any] (in out agent: Agent{%- if hasStigmergy-%}
     --{{ labs }}
 
     {%- for item in assignments -%}{%- if item.size != 0 -%}
-    {{loc}}[action](!?{% if loc != "env" %}agent{% else %}E{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});{%- else -%}
-    {{loc}}[action](!?{% if loc != "env" %}agent{% else %}E{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});
+    {{loc}}[action](!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});{%- else -%}
+    {{loc}}[action](!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});
     {%- endif -%}{%- endfor -%}
 
     {%- if hasStigmergy and qrykeys.size > 0 -%}

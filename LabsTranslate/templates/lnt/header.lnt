@@ -77,9 +77,9 @@ module HEADER is
     {%- if hasEnvironment -%}
     type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
 
-    process env [action: any] (in out E:Env, key:Int, val:Int) is 
+    process env [action: any] (in out E:Env, id:ID, key:Int, val:Int) is 
         E[IntToNat(key)] := val;
-        action("E", key, val)
+        action("E", id, key, val)
     end process
     {%- endif -%}
 

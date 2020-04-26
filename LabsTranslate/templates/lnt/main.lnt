@@ -14,7 +14,6 @@ process step [last: IdChannel, mon, action: any] (in out sys: Sys) is
         {% if hasStigmergy-%}t := sys.time;{%- endif -%}
 
         last(?tid);
-        action(tid);
         a := agents[Nat(tid)];
         {%if hasEnvironment -%}E := sys.env;{%- endif %}
         if canProceed(a{%- if hasEnvironment -%}, sys.env{%-endif-%}) then
