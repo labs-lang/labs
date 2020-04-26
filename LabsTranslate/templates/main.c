@@ -29,7 +29,6 @@ int main(void) {
     #endif
 
     #if BOUND > 0
-    unsigned char switchnondet[BOUND];
     unsigned __LABS_step;
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
     #else
@@ -50,11 +49,7 @@ int main(void) {
             firstAgent = nextAgent;
             {%- endunless -%}
 
-            #if BOUND > 0
-            switch (switchnondet[__LABS_step]) {
-            #else
             switch (pc[firstAgent][0]) {
-            #endif
 
             {%- for item in schedule -%}
                 case {{ item.entry.first.value }}: {{ item.name }}(firstAgent); break;
