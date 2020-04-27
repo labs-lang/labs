@@ -1,9 +1,6 @@
 module HEADER is
-    
-    {% for item in defines -%}
-    function {{item.name}}:Nat is return {%if item.value < 256 %}{{item.value}}{%else%}255{%endif%} end function
-    {% endfor -%}
 
+    function MAXCOMPONENTS:Nat is return {{MAXCOMPONENTS}} end function
     function undef_value:Int is return -128 end function
 
     type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
@@ -16,7 +13,7 @@ module HEADER is
     {%- if hasStigmergy -%}
 
     (* Stigmergy *)
-    type IndexL is X:Nat where X < MAXKEYL with "==", "!=" end type
+    type IndexL is X:Nat where X < {{MAXKEYL}} with "==", "!=" end type
     type LstigEntry is LstigEntry (value: Int, tstamp: Nat) with "get", "set" end type
     type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of LstigEntry with "get", "set" end type
     type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
@@ -42,7 +39,7 @@ module HEADER is
     function length(p:Pending): Nat is
         var n, j:Nat in
             n := 0;
-            for j := 0 while j < MAXKEYL by j := j + 1 loop
+            for j := 0 while j < {{MAXKEYL}} by j := j + 1 loop
                 if (p[j]) then n := n + 1 end if
             end loop;
             return n
