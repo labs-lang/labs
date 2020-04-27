@@ -1,65 +1,60 @@
 void monitor() {
     {%- for item in alwaysasserts -%}
-    LABSassert({{item.value}}, {{item.name}});
+    __CPROVER_assert({{item.value}}, "{{item.name}}");
     {%- endfor -%}
 }
 
-#if BOUND > 0
+{%- if bound > 0 -%}
 void finally() {
     {%- for item in finallyasserts -%}
-    LABSassert({{item.value}}, {{item.name}});
+    __CPROVER_assert({{item.value}}, "{{item.name}}");
     {%- endfor -%}
-    #ifdef SIMULATION
-    assert(0);
-    #endif
+    {%- if simulation -%}
+    __CPROVER_assert(0);
+    {%- endif -%}
 }
-#endif
+{%- endif -%}
 
 int main(void) {
     init();
     monitor(); // Check invariants on the initial state
     TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0;{% else %};
-    LABSassume(firstAgent < MAXCOMPONENTS);
+    __CPROVER_assume(firstAgent < MAXCOMPONENTS);
     {% endif %};
 
-    #if DISABLELSTIG == 0
-        #if BOUND > 0
+    {%- if hasStigmergy and bound > 0 -%}
     _Bool sys_or_not[BOUND];
-        #endif
-    #endif
+    {%- endif -%}
 
-    #if BOUND > 0
+    {%- if bound > 0 -%}
     unsigned __LABS_step;
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
-    #else
+    {%- else -%}
     while(1) {        
-    #endif
+    {%- endif -%}
         // if (terminalState()) break;
         
-        #if DISABLELSTIG == 0
-            #if BOUND > 0
+        {%- if hasStigmergy -%}{%- if bound > 0 -%}
         if (sys_or_not[__LABS_step]) {
-            #else
-        if ((_Bool) __VERIFIER_nondet()) {
-            #endif
-        #endif
+        {%- else -%}
+        if ((_Bool) __CPROVER_nondet()) {
+        {%- endif -%}{%- endif -%}
             {%- unless fair -%}
             TYPEOFAGENTID nextAgent;
-            LABSassume(nextAgent < MAXCOMPONENTS);
+            __CPROVER_assume(nextAgent < MAXCOMPONENTS);
             firstAgent = nextAgent;
             {%- endunless -%}
 
             switch (pc[firstAgent][0]) {
-
             {%- for item in schedule -%}
                 case {{ item.entry.first.value }}: {{ item.name }}(firstAgent); break;
             {%- endfor -%}
               default: 
-                #if BOUND > 0
-                LABSassume(0);
-                #else
+                {%- if bound > 0 -%}
+                __CPROVER_assume(0);
+                {%- else -%}
                 {}
-                #endif
+                {%- endif -%}
             }
             
             {%- if fair -%}
@@ -70,29 +65,23 @@ int main(void) {
                 firstAgent++;
             }
             {%- endif -%}
-        #if DISABLELSTIG == 0 
+        {%- if hasStigmergy -%}
         }
         else {
             _Bool propagate_or_confirm; 
-
             if (propagate_or_confirm) propagate();
             else confirm();
         }
-        #endif
+        {%- endif -%}
         monitor();
 
-        {%- if finallyasserts and finallyasserts.size > 0 -%}
-        #if BOUND == 0
+        {%- if finallyasserts and finallyasserts.size > 0 and bound == 0 -%}
         if ({%- for item in finallyasserts -%}{{item.value}}{%- endfor -%}) { 
             return 0; 
         }
-        #endif
         {%- endif -%}
     }
-    {%- if finallyasserts and finallyasserts.size > 0 -%}
-    #if BOUND > 0
+    {%- if finallyasserts and finallyasserts.size > 0 and bound > 0 -%}
     finally();
-    #endif
     {%- endif -%}
 }
-

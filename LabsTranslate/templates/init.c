@@ -1,14 +1,15 @@
 void init() {
-
     TYPEOFVALUES _I[MAXCOMPONENTS][MAXKEYI];
-    TYPEOFVALUES _E[MAXKEYE];
     TYPEOFPC _pc[MAXCOMPONENTS][MAXPC];
-    #if DISABLELSTIG == 0
+    {%- if hasEnvironment -%}
+    TYPEOFVALUES _E[MAXKEYE];
+    {%- endif -%}
+    {%- if hasStigmergy -%}
     TYPEOFVALUES _Lvalue[MAXCOMPONENTS][MAXKEYL];
-    #endif
+    {%- endif -%}
 
     unsigned char i, j;
-#if DISABLELSTIG == 0        
+    {%- if hasStigmergy -%}
     for (i=0; i<MAXCOMPONENTS; i++) {
         for (j=0; j<MAXKEYL; j++) {
             Ltstamp[i][j] = 0;
@@ -18,7 +19,7 @@ void init() {
         HinCnt[i] = 0;
         HoutCnt[i] = 0;
     }
-#endif
+    {%- endif -%}
 
     {%- for agent in agents -%}
     {%- assign a = agent.end | minus: 1 -%}
@@ -28,28 +29,29 @@ void init() {
     {%- if p.value.size == 1 -%}
     _pc[{{i}}][{{ p.name }}] = {{ p.value.first }};
     {%- else -%}
-    LABSassume({%- for val in p.value -%} (_pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    __CPROVER_assume({%- for val in p.value -%} (_pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
     {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
         
     {%- for item in initenv -%}
-    LABSassume({{ item.bexpr }});
+    __CPROVER_assume({{ item.bexpr }});
     {%- endfor -%}
     {%- for agent in agents -%}
     {%- for item in agent.initvars -%}
-    LABSassume({{ item.bexpr }});
+    __CPROVER_assume({{ item.bexpr }});
     {%- endfor -%}
     {%- endfor -%}
-#if DISABLELSTIG == 0
+    {%- if hasStigmergy -%}
     {%- for item in tstamps -%}
     Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();
     {%- endfor -%}
     now();
-#endif
+    {%- endif -%}
 
-
+    {%- if hasEnvironment -%}
     for (i=0; i<MAXKEYE; i++) {
         E[i] = _E[i];
     }
+    {%- endif -%}
     for (i=0; i<MAXCOMPONENTS; i++) {
         for (j=0; j<MAXPC; j++) {
             pc[i][j] = _pc[i][j];
@@ -58,10 +60,10 @@ void init() {
         for (j=0; j<MAXKEYI; j++) {
             I[i][j] = _I[i][j];
         }
-#if DISABLELSTIG == 0
+        {%- if hasStigmergy -%}
         for (j=0; j<MAXKEYL; j++) {
             Lvalue[i][j] = _Lvalue[i][j];
         }
-#endif
+        {%- endif -%}
     }
 }

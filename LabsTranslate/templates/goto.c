@@ -8,7 +8,7 @@ void {{label}}(int tid) {
     TYPEOFVALUES val{{forloop.index0}} = {{item.expr}};
     {%- if item.size != 0 -%}
     TYPEOFVALUES offset{{forloop.index0}} = {{item.offset}};
-    assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}});
+    __CPROVER_assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endif -%}{%- endfor -%}
 
     {%- for item in assignments -%}
@@ -23,8 +23,8 @@ void {{label}}(int tid) {
     {%- endfor -%}
     {%- else -%}
     #if DISABLELSTIG == 0
-    __VERIFIER_assume(HoutCnt[tid] == 0);
-    __VERIFIER_assume(HinCnt[tid] == 0);
+    __CPROVER_assume(HoutCnt[tid] == 0);
+    __CPROVER_assume(HinCnt[tid] == 0);
     #endif
     {%- endif -%}
 
@@ -38,7 +38,7 @@ void {{label}}(int tid) {
     pc[tid][{{ item.name }}] = {{ item.value.first }};
     {%- else -%}
     TYPEOFPC pc{{item.name}};
-    LABSassume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
     pc[tid][{{ item.name }}] = pc{{ item.name }};
     {%- endif -%}{%- endfor -%}
 

@@ -1,17 +1,7 @@
-{% for item in defines -%}
-#define {{item.name}} {{item.value}}
-{% endfor -%}
-#define undef_value -128 // SHRT_MIN
-
-#define LABSassume(COND)            __VERIFIER_assume(COND)   
-
-#ifdef SIMULATION
-    #define LABScheck(pcs, guards)      ((pcs) & (guards))
-    #define LABSassert(COND, LABEL)     if(!(COND)) { printf(">>>" #LABEL " violated"); } else { printf(">>>" #LABEL " satisfied"); } 
-#else 
-    #define LABScheck(pcs, guards)      (pcs)
-    #define LABSassert(COND, LABEL)     /*#LABEL*/ assert(COND)
-#endif
+const char undef_value = -128;
+const {{typeofBOUND}} BOUND = {{ bound }};
+const {{ typeofMAXCOMPONENTS }} MAXCOMPONENTS = {{ MAXCOMPONENTS }};
+const {{ typeofMAXPC }} MAXPC = {{ MAXPC }};
 
 {% for item in typedefs -%}
 typedef {{item.value}} {{item.name}};
@@ -28,28 +18,29 @@ TYPEOFVALUES mod(TYPEOFVALUES n, TYPEOFVALUES m) {
   return n >= 0 ? n % m : m + (n % m);
 }
 
-TYPEOFVALUES I[MAXCOMPONENTS][MAXKEYI];
-TYPEOFVALUES E[MAXKEYE];
+const TYPEOFKEYIID MAXKEYI = {{ MAXKEYI }};
+TYPEOFVALUES I[{{ MAXCOMPONENTS }}][{{ MAXKEYI }}];
 
-TYPEOFPC pc[MAXCOMPONENTS][MAXPC];
+TYPEOFPC pc[{{ MAXCOMPONENTS }}][{{ MAXPC }}];
 
-#if DISABLELSTIG == 0
-
+{%- if hasStigmergy -%}
+const TYPEOFKEYLID MAXKEYL = {{ MAXKEYL }};
 TYPEOFTIME __LABS_time;
-_Bool Hin[MAXCOMPONENTS][MAXKEYL];
-_Bool Hout[MAXCOMPONENTS][MAXKEYL]; 
-unsigned char HinCnt[MAXCOMPONENTS];
-unsigned char HoutCnt[MAXCOMPONENTS];
+_Bool Hin[{{ MAXCOMPONENTS }}][{{ MAXKEYL }}];
+_Bool Hout[{{ MAXCOMPONENTS }}][{{ MAXKEYL }}]; 
+unsigned char HinCnt[{{ MAXCOMPONENTS }}];
+unsigned char HoutCnt[{{ MAXCOMPONENTS }}];
 
 TYPEOFTIME now(void) {
     return ++__LABS_time;
 }
 
-TYPEOFVALUES Lvalue[MAXCOMPONENTS][MAXKEYL];
-TYPEOFTIME Ltstamp[MAXCOMPONENTS][MAXKEYL];
+TYPEOFVALUES Lvalue[{{ MAXCOMPONENTS }}][{{ MAXKEYL }}];
+TYPEOFTIME Ltstamp[{{ MAXCOMPONENTS }}][{{ MAXKEYL }}];
 
-const TYPEOFKEYLID tupleStart[MAXKEYL] = { {{ tupleStart | join: ", " }} };
-const TYPEOFKEYLID tupleEnd[MAXKEYL] = { {{ tupleEnd | join: ", " }} };
+const {{ typeofMAXTUPLE }} MAXTUPLE = {{ MAXTUPLE }};
+const TYPEOFKEYLID tupleStart[{{ MAXKEYL }}] = { {{ tupleStart | join: ", " }} };
+const TYPEOFKEYLID tupleEnd[{{ MAXKEYL }}] = { {{ tupleEnd | join: ", " }} };
 
 _Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID key) {
     _Bool __LABS_link = 0;
@@ -107,7 +98,7 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     HoutCnt[id] = HoutCnt[id] - (Hout[id][tupleStart[key]]);
     Hout[id][tupleStart[key]] = 0;
 }
-#endif
+{%- endif -%}
 
 //
 //  Rule ATTR
@@ -115,36 +106,41 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
 //  If check is true, transition is guarded by HoutCnt == HinCnt == 0
 //
 void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, _Bool check) {
-    #if DISABLELSTIG == 0
-    __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
-    __VERIFIER_assume((!check) | (HinCnt[id] == 0));
-    #endif
+    {%- if hasStigmergy -%}
+    __CPROVER_assume((!check) | (HoutCnt[id] == 0));
+    __CPROVER_assume((!check) | (HinCnt[id] == 0));
+    {%- endif -%}
+
 
     I[id][key] = value;
-    #if DISABLELSTIG == 0
+    {%- if hasStigmergy -%}
     now(); // local step
-    #endif
+    {%- endif -%}
 }
 
+{%- if hasEnvironment -%}
+const TYPEOFKEYEID MAXKEYE = {{ MAXKEYE }};
+TYPEOFVALUES E[{{ MAXKEYE }}];
 void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
-    #if DISABLELSTIG == 0
-    __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
-    __VERIFIER_assume((!check) | (HinCnt[id] == 0));
-    #endif
+    {%- if hasStigmergy -%}
+    __CPROVER_assume((!check) | (HoutCnt[id] == 0));
+    __CPROVER_assume((!check) | (HinCnt[id] == 0));
+    {%- endif -%}
 
     E[key] = value;
-    #if DISABLELSTIG == 0
+    {%- if hasStigmergy -%}
     now(); // local step
-    #endif
+    {%- endif -%}
 }
+{%- endif -%}
 
-#if DISABLELSTIG == 0
+{%- if hasStigmergy -%}
 //
 //  Rule LSTIG
 //
 void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, _Bool check) {
-    __VERIFIER_assume((!check) | (HoutCnt[id] == 0));
-    __VERIFIER_assume((!check) | (HinCnt[id] == 0));
+    __CPROVER_assume((!check) | (HoutCnt[id] == 0));
+    __CPROVER_assume((!check) | (HinCnt[id] == 0));
 
     Lvalue[id][key] = value;
     // Only update the timestamp of the 1st element in the tuple
@@ -160,12 +156,12 @@ _Bool differentLstig(TYPEOFAGENTID comp1, TYPEOFAGENTID comp2, TYPEOFKEYLID key)
 
 void confirm(void) {
     TYPEOFAGENTID guessedcomp;
-    __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
-    __VERIFIER_assume(HinCnt[guessedcomp] > 0);
+    __CPROVER_assume(guessedcomp < MAXCOMPONENTS);
+    __CPROVER_assume(HinCnt[guessedcomp] > 0);
 
     TYPEOFKEYLID guessedkey;
-    __VERIFIER_assume(guessedkey < MAXKEYL);
-    __VERIFIER_assume(Hin[guessedcomp][guessedkey] == 1);
+    __CPROVER_assume(guessedkey < MAXKEYL);
+    __CPROVER_assume(Hin[guessedcomp][guessedkey] == 1);
 
     // NOTE: Since SetHin(), SetHout() only work on tupleStarts,
     // guessedkey is guaranteed to be the 1st element of some tuple
@@ -177,8 +173,7 @@ void confirm(void) {
     
     // Send data from guessedcomp to i
     for (i=0; i<MAXCOMPONENTS; i++) {
-        if (((guessedcomp!=i) & (timeof(i, guessedkey) != t)) && 
-            link(guessedcomp,i,guessedkey)) {
+        if (((guessedcomp!=i) & (timeof(i, guessedkey) != t)) & link(guessedcomp,i,guessedkey)) {
             
             setHout(i, guessedkey);
             // If data is fresh, agent i copies it to its stigmergy
@@ -200,12 +195,12 @@ void confirm(void) {
 
 void propagate(void) {
     TYPEOFAGENTID guessedcomp;
-    __VERIFIER_assume(guessedcomp < MAXCOMPONENTS);
-    __VERIFIER_assume(HoutCnt[guessedcomp] > 0);
+    __CPROVER_assume(guessedcomp < MAXCOMPONENTS);
+    __CPROVER_assume(HoutCnt[guessedcomp] > 0);
 
     TYPEOFKEYLID guessedkey;
-    __VERIFIER_assume(guessedkey < MAXKEYL);
-    __VERIFIER_assume(Hout[guessedcomp][guessedkey] == 1);
+    __CPROVER_assume(guessedkey < MAXKEYL);
+    __CPROVER_assume(Hout[guessedcomp][guessedkey] == 1);
 
     // assert(guessedkey == tupleStart[guessedkey]);
 
@@ -213,7 +208,7 @@ void propagate(void) {
     TYPEOFTIME t = timeof(guessedcomp, guessedkey);
 
     for (i=0; i<MAXCOMPONENTS; i++) {
-        if (((guessedcomp!=i) & (timeof(i, guessedkey)<t)) && (link(guessedcomp,i,guessedkey))) {
+        if (((guessedcomp!=i) & (timeof(i, guessedkey)<t)) & (link(guessedcomp,i,guessedkey))) {
             // If data is fresh, i copies it to its stigmergy and
             // will propagate it in the future (setHout)
             setHout(i, guessedkey);
@@ -231,4 +226,4 @@ void propagate(void) {
     }
     clearHout(guessedcomp, guessedkey);
 }
-#endif
+{%- endif -%}
