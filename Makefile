@@ -1,4 +1,4 @@
-.PHONY: all linux osx dir rmsliver
+.PHONY: all linux osx dir rmsentinels
 
 all: linux osx
 
@@ -9,9 +9,10 @@ sources = $(wildcard **/*.fs)
 sliver_sources = $(wildcard sliver/**/*.py) 
 templates = $(wildcard LabsTranslate/templates/**/*)
 
-# Always force to re-make py files
-rmsliver :
+# Always force to re-make py files and templates
+rmsentinels :
 	@rm -f build/${platform}/sliver.py
+	@rm -f build/${platform}/labs/templates/main.c
 
 build/%/labs/templates/main.c : $(templates)
 	@echo Copying templates...
@@ -55,7 +56,7 @@ build/%/cbmc-simulator :
 	@echo Copying CBMC...
 	@cp linux/cbmc/* build/$(platform)/ ;
 
-osx : rmsliver \
+osx : rmsentinels \
 	  build/osx.10.12-x64/labs/LabsTranslate.dll \
 	  build/osx.10.12-x64/labs/templates/main.c \
 	  build/osx.10.12-x64/pyparsing.py \
@@ -63,7 +64,7 @@ osx : rmsliver \
 	  build/osx.10.12-x64/cseq \
 	  build/osx.10.12-x64/examples
 
-linux : rmsliver \
+linux : rmsentinels \
 	build/linux-x64/labs/LabsTranslate.dll \
 	build/linux-x64/labs/templates/main.c \
 	build/linux-x64/pyparsing.py \
