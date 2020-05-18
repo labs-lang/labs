@@ -33,14 +33,18 @@ The included `Makefile` targets either x64 Linux or MacOs (version 10.12 "Sierra
 
 ## Build instruction
 
-```
+```bash
 git clone <this repository> labs/
 cd labs/
-git submodule init
+# Debug build (to edit/debug code) 
+dotnet publish
+# Release build
+git submodule init # Only needed the 1st time
+git submodule update
 make [osx|linux]
 ```
 
-The executables will be within `labs/build/`.
+The release binaries will be within `labs/build/`.
 
 ## Publications
 
