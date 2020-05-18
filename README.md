@@ -23,8 +23,9 @@ LabsTranslate, and a set of example files.
 
 SLiVER also uses:
 
-* [Click](click.palletsprojects.com/) for its CLI;
-* [pyparsing.py](https://pyparsing-docs.readthedocs.io) to translate counterexamples.
+* [Click](https://click.palletsprojects.com/) for its CLI;
+* [pyparsing.py](https://pyparsing-docs.readthedocs.io) to translate counterexamples;
+* [CSeq](https://github.com/omainv/cseq) for distributed bounded model checking (experimental).
 
 ## Build requirements
 
