@@ -1,4 +1,4 @@
-module LabsToC.Liquid
+module LabsTranslate.Liquid
 
 open System
 open Frontend.Outcome
@@ -53,9 +53,11 @@ let parse path =
 let renderFile path (vals:LiquidDict) =
     (strRender (parse path) vals)
 
+/// Turns a sequence of pairs into a Liquid dictionary.
 let makeDict typeofName typeofValue =
     Lst << Seq.map (fun (a, b) -> Dict ["name", typeofName a; "value", typeofValue b])
 
+/// Helper to make Liquid dictionaries out of program counters
 let liquidPcs pcset =
     pcset
     |> Map.toSeq |> makeDict Int (Lst << (Seq.map Int))

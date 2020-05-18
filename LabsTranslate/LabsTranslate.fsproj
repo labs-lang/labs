@@ -7,6 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Liquid.fs" />
+        <Compile Include="TranslationKit.fs" />
+        <Compile Include="Encode.fs" />
         <Compile Include="ArgParse.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
@@ -15,7 +18,6 @@
       <ProjectReference Include="..\Frontend\Frontend.fsproj" />
       <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
       <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
-      <ProjectReference Include="..\LabsToC\LabsToC.fsproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -24,6 +26,7 @@
     
     <ItemGroup>
       <PackageReference Include="Argu" Version="6.0.0" />
+      <PackageReference Include="DotLiquid" Version="2.0.298" />
     </ItemGroup>
 
 </Project>

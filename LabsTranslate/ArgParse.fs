@@ -1,7 +1,7 @@
-﻿module internal ArgParse
+﻿module internal LabsTranslate.ArgParse
 open Argu
 open Frontend.Message
-open LabsToC.LabsToC
+open Encode
 // open Types
 
 type Arguments =
