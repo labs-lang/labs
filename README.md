@@ -1,7 +1,7 @@
 # LAbS - a Language with Attribute-based Stigmergies
 
 This repository contains source code for the LAbS code generator,
-which are used by the [SLiVER tool](github.com/labs-lang/sliver) to verify
+which is used by the [SLiVER tool](https://github.com/labs-lang/sliver) to verify
 LAbS systems.
 
 * `LabsCore`: basic data types and function to describe and  manipulate LAbS syntax trees.
@@ -12,12 +12,16 @@ LAbS systems.
 The included `Makefile` creates a full distribution, containing SLiVER,
 LabsTranslate, and a set of example files. 
 
-
 ## Technologies used
 
-* [FParsec](https://www.quanttec.com/fparsec/) (parser combinators) for `LabsParser`
-* [Argu](http://fsprojects.github.io/Argu/) (argument parser) for the `LabsTranslate` CLI.
+* [FParsec](https://www.quanttec.com/fparsec/) (parser combinators) for `LabsParser`;
+* [Argu](http://fsprojects.github.io/Argu/) (argument parser) for the `LabsTranslate` CLI;
 * [DotLiquid](http://dotliquidmarkup.org/) for code generation.
+
+SLiVER also uses:
+
+* [Click](click.palletsprojects.com/) for its CLI;
+* [pyparsing.py](https://pyparsing-docs.readthedocs.io) to translate counterexamples.
 
 ## Build requirements
 
@@ -29,6 +33,7 @@ The included `Makefile` targets either x64 Linux or MacOs (version 10.12 "Sierra
 ```
 git clone <this repository> labs/
 cd labs/
+git submodule init
 make [osx|linux]
 ```
 
