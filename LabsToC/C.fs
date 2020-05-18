@@ -1,6 +1,6 @@
 module internal LabsToC.C
 open LabsCore
-open Types
+open LabsCore.Grammar
 open Common
 
 let translateLocation = function
@@ -9,11 +9,11 @@ let translateLocation = function
     | E -> (fun _ -> sprintf "E[%O]")
 
 let translate trRef trId =
-    let leaf_ = function
+    let leafFn = function
         | Id i -> trId i
         | Const i -> string i
         | Extern s -> s
-    let arithm_ = function
+    let arithmFn = function
         | Plus -> sprintf "(%s) + (%s)"
         | Minus -> sprintf "(%s) - (%s)"
         | Times -> sprintf "(%s) * (%s)"
@@ -21,27 +21,27 @@ let translate trRef trId =
         | Mod -> sprintf "mod(%s, %s)"
         | Max -> sprintf "__max(%s, %s)"
         | Min -> sprintf "__min(%s, %s)"
-    let unary_ = function
+    let unaryFn = function
         | UnaryMinus -> sprintf "-(%s)"
         | Abs -> sprintf "__abs(%s)"
-    Expr.cata leaf_ arithm_ unary_ trRef
+    Expr.cata leafFn arithmFn unaryFn trRef
 
-let rec private BExprC filter trExpr bexpr =
-    let bleaf_ b = if b then "1" else "0"
-    let neg_ = sprintf "!(%s)"
-    let compare_ op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2) //TODO
-    let compound_ = function
+let rec private trBExprC filter trExpr bexpr =
+    let bleafFn b = if b then "1" else "0"
+    let negFn = sprintf "!(%s)"
+    let compareFn op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2) //TODO
+    let compoundFn = function
         | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
         | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
-    translateBExpr bleaf_ neg_ compare_ compound_ filter bexpr
+    translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
 
  
-let wrapper = { new Wrapper with
-                member __.templateInfo = {baseDir = "templates"; extension = "c"}
-                member __.agentName = "tid"
-                member __.initId n = Const n
-                member __.trLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
-                member __.trBExpr filter trExpr b = BExprC filter trExpr b
-                member __.trExpr trRef trId e = translate trRef trId e
-                member __.trLoc loc x y = translateLocation loc x y
-                member __.trInitLoc loc x y = (sprintf "_%s") (translateLocation loc x y)}
+let wrapper = { new IWrapper with
+                member __.TemplateInfo = {BaseDir = "templates"; Extension = "c"}
+                member __.AgentName = "tid"
+                member __.InitId n = Const n
+                member __.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
+                member __.TrBExpr filter trExpr b = trBExprC filter trExpr b
+                member __.TrExpr trRef trId e = translate trRef trId e
+                member __.TrLoc loc x y = translateLocation loc x y
+                member __.TrInitLoc loc x y = (sprintf "_%s") (translateLocation loc x y)}

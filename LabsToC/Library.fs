@@ -2,15 +2,18 @@
 
 open Frontend
 open Frontend.LTS
-open Frontend.Liquid
-open Types
-open Tokens
-open LabsCore
+open LabsCore.BExpr
+open LabsCore.Grammar
+open LabsCore.Tokens
 open FSharpPlus
 
 open LabsToC
 open Outcome
-open Common 
+open Common
+open Liquid
+
+/// Supported target languages.
+type EncodeTo = | C | Lnt
 
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, (int*int)> =
@@ -18,12 +21,13 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
         |> Map.filter (fun _ -> isLstigVar)
         |> Map.values
         |> Seq.groupBy groupBy
-        |> Seq.map (fun (n, s) -> n, Seq.map (table.m.RangeOf) s)
-        |> Seq.map (fun (n, s) -> n, ((fst << Seq.minBy fst) s, (snd << Seq.maxBy snd) s))
+        |> Seq.map (fun (n, vars) ->
+            let extrema = Seq.map (table.m.RangeOf) vars
+            n, ((fst << Seq.minBy fst) extrema, (snd << Seq.maxBy snd) extrema))
         |> Map.ofSeq
         
     let tupleStart, tupleEnd, maxTuple = //TODO maybe move to frontend
-        let vars = stigmergyVarsFromTo (fun v -> v.location) |> Map.values |> Seq.sortBy fst
+        let vars = stigmergyVarsFromTo (fun v -> v.Location) |> Map.values |> Seq.sortBy fst
         let repeat fstOrSnd =
             Seq.concat << Seq.map (fun pair -> Seq.replicate (snd pair - fst pair + 1) (fstOrSnd pair))
         if Seq.isEmpty vars then seq [0], seq [0], 1 else
@@ -65,13 +69,13 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
         ]
     
     let links =
-        let fromTo = stigmergyVarsFromTo (fun v -> match v.location with L (n, _) -> n | _ -> "")
+        let fromTo = stigmergyVarsFromTo (fun v -> match v.Location with L (n, _) -> n | _ -> "")
         table.stigmergies
         |> Map.map (fun name link ->
             Dict [
                 "start", fst fromTo.[name] |> Int
                 "end", snd fromTo.[name] |> Int
-                "link", trKit.linkTr link |> Str
+                "link", trKit.LinkTr link |> Str
             ] 
         )
         |> Map.values
@@ -97,7 +101,7 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     ]
     |> List.append values
     |> List.append baseDict
-    |> render (Liquid.parse (trKit.templateInfo.Get "header"))
+    |> render (Liquid.parse (trKit.TemplateInfo.Get "header"))
 
 let private encodeInit trKit (table:SymbolTable) =
     let env =
@@ -105,12 +109,11 @@ let private encodeInit trKit (table:SymbolTable) =
         |> Map.filter (fun _ -> isEnvVar)
         |> Map.values
         |> Seq.sortBy table.m.IndexOf
-        |> Seq.map (fun v ->
-                let info = table.m.[v.name]
-                trKit.initTr (v, snd table.m.[v.name]) -1
+        |> Seq.collect (fun v ->
+                let info = table.m.[v.Name]
+                trKit.InitTr (v, snd table.m.[v.Name]) -1
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
-        |> Seq.concat
 
     let agents =
         table.spawn
@@ -118,12 +121,12 @@ let private encodeInit trKit (table:SymbolTable) =
             table.agents.[name].variables
             |> List.append (table.agents.[name].lstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
-                let loc = match v.location with I -> "I" | L _ -> "L" | E -> "E"
-                trKit.initTr (v, snd table.m.[v.name]) tid
-                |> List.map (fun x -> Dict ["loc", Str loc; "index", Int (snd table.m.[v.name]); "bexpr", Str x])
+                let loc = match v.Location with I -> "I" | L _ -> "L" | E -> "E"
+                trKit.InitTr (v, snd table.m.[v.Name]) tid
+                |> List.map (fun x -> Dict ["loc", Str loc; "index", Int (snd table.m.[v.Name]); "bexpr", Str x])
                 )
-            |> List.map (fun f -> List.map f [_start.._end-1])
-            |> List.concat |> List.concat |> List.distinct
+            |> List.collect (fun f -> List.map f [_start.._end-1])
+            |> List.concat |> List.distinct
             |> fun l -> Dict ["start", Int _start; "end", Int _end; "initvars", Lst l; "pcs", liquidPcs table.agents.[name].initCond]
             )
         |> Map.values
@@ -132,9 +135,8 @@ let private encodeInit trKit (table:SymbolTable) =
         table.spawn
         |> Map.map (fun name (_start, _end) ->
                 table.agents.[name].lstigVariables table
-                |> Seq.map (fun v tid -> Dict ["tid", Int tid; "index", Int (snd table.m.[v.name])])
-                |> Seq.map (fun f -> List.map f [_start.._end-1])
-                |> Seq.concat)
+                |> Seq.map (fun v tid -> Dict ["tid", Int tid; "index", Int (snd table.m.[v.Name])])
+                |> Seq.collect (fun f -> List.map f [_start.._end-1]))
         |> Map.values
         |> Seq.concat
     
@@ -145,7 +147,7 @@ let private encodeInit trKit (table:SymbolTable) =
         "hasStigmergy", Bool (table.m.nextL > 0)
         "hasEnvironment", Bool (table.m.nextE > 0)
     ]
-    |> render (Liquid.parse (trKit.templateInfo.Get "init"))
+    |> render (Liquid.parse (trKit.TemplateInfo.Get "init"))
 
 let private funcName t =
     Map.map (sprintf "_%i_%i") t.entry |> Map.values
@@ -158,15 +160,15 @@ let private guards table t =
 let private encodeAgent trKit goto sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
         let guards = guards table t
-        let assignments = t.action.def |> (function Act a -> Some a | _ -> None)
+        let assignments = t.action.Def |> (function Act a -> Some a | _ -> None)
         
         /// Set of keys that the agent will have to confirm
         let qrykeys =
             let getLstigVarsBExpr =
-                let compare_ _ e1 e2 = Set.union (getLstigVars e1) (getLstigVars e2)
-                BExpr.cata (fun _ -> Set.empty) id compare_ (fun _ -> Set.unionMany)
+                let compareFn _ e1 e2 = Set.union (getLstigVars e1) (getLstigVars e2)
+                cata (fun _ -> Set.empty) id compareFn (fun _ -> Set.unionMany)
             assignments
-            |>> (fun a -> List.map (getLstigVars << snd) a.updates)
+            |>> (fun a -> List.map (getLstigVars << snd) a.Updates)
             |>> Set.unionMany
             |> Option.orElse (Some Set.empty)
             |>> Set.union (guards |> Set.map getLstigVarsBExpr |> Set.unionMany)
@@ -175,13 +177,13 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             |> Lst
         
         let liquidAssignment (k:Ref<Var<int>*int, unit>, expr) =
-            let size = match (fst k.var).vartype with Array s -> s | _ -> 0
+            let size = match (fst k.Var).Vartype with Array s -> s | _ -> 0
             Dict [
-                "key",  Int (snd k.var)
+                "key",  Int (snd k.Var)
                 "offset",
-                    k.offset |>> (trKit.agentExprTr >> Str) |> Option.defaultValue (Int 0)
+                    k.Offset |>> (trKit.AgentExprTr >> Str) |> Option.defaultValue (Int 0)
                 "size", Int size
-                "expr", trKit.agentExprTr expr |> Str
+                "expr", trKit.AgentExprTr expr |> Str
             ]
         
         [
@@ -192,21 +194,22 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             "siblings", t.siblings |> Seq.map Int |> Lst
             "entrycond", liquidPcs (t.entry |> Map.mapValues Set.singleton)
             "exitcond", liquidPcs (t.exit)
-            "guards", guards |> Seq.map (Str << (trKit.agentGuardTr)) |> Lst
+            "guards", guards |> Seq.map (Str << (trKit.AgentGuardTr)) |> Lst
             "labs",
-                string t.action.def
+                // TODO do sth smart here
+                string t.action.Def
                 |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
                 |> Str
             "loc",
                 assignments
-                |>> fun a -> a.actionType
+                |>> fun a -> a.ActionType
                 |>> function | I -> "attr" | L _ -> "lstig" | E -> "env"
                 |> Option.defaultValue ""
                 |> Str
             "qrykeys", qrykeys
             "sync", sync |> Bool
             "assignments", assignments
-                |>> fun a -> a.updates
+                |>> fun a -> a.Updates
                 |>> Seq.map liquidAssignment
                 |> Option.defaultValue Seq.empty
                 |> Lst         
@@ -222,11 +225,11 @@ let private encodeMain trKit baseDict fair (table:SymbolTable) =
             "name", funcName t |> Str
             "siblings", seq t.siblings |> Seq.map Int |> Lst
             "entry", liquidPcs (t.entry |> Map.mapValues Set.singleton)
-            "guards", guards table t |> Seq.map (Str << trKit.mainGuardTr) |> Lst
+            "guards", guards table t |> Seq.map (Str << trKit.MainGuardTr) |> Lst
         ]
     let alwaysP, finallyP =
-        let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.name, trKit.propTr table n) props)
-        let m1, m2 = Map.partition (fun _ n -> n.def.modality = Always) table.properties
+        let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
+        let m1, m2 = Map.partition (fun _ n -> n.Def.Modality = Always) table.properties
         toLiquid <| Map.values m1, toLiquid <| Map.values m2
     
     [
@@ -243,11 +246,11 @@ let private encodeMain trKit baseDict fair (table:SymbolTable) =
         "agentscount", table.spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
     ]
     |> List.append baseDict
-    |> render (Liquid.parse (trKit.templateInfo.Get "main"))
+    |> render (Liquid.parse (trKit.TemplateInfo.Get "main"))
 
 let encode encodeTo bound (fair, nobitvector, sim, sync) table =
     let trKit = translateKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper
-    let goto = Liquid.parse (trKit.templateInfo.Get "goto")
+    let goto = Liquid.parse (trKit.TemplateInfo.Get "goto")
     
     let baseDict = [
         "bound", Int bound

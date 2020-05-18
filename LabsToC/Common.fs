@@ -1,5 +1,6 @@
 ﻿module internal LabsToC.Common
 open Frontend
+open LabsCore.Grammar
 open LabsCore
 open Types
 open System.IO
@@ -7,10 +8,10 @@ open System.IO
 let private refTypeCheck v (offset:'a option) =
     // TODO move to frontend
     let test, msg = 
-        match v.vartype with
+        match v.Vartype with
         | Scalar -> offset.IsSome, (sprintf "Scalar %s treated as Array")
         | Array _ -> offset.IsNone, (sprintf "Array %s treated as Scalar")
-    if test then failwith (msg v.name) else ()
+    if test then failwith (msg v.Name) else ()
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let getLstigVars expr =
@@ -24,27 +25,29 @@ let private trref trLocation name (v:Var<int>, i:int) offset =
         match offset with
         | None -> string i
         | Some off -> sprintf "%i + %s" i off
-    trLocation v.location name index
+    trLocation v.Location name index
 
-let translateBExpr bleaf_ neg_ compare_ compound_ filter bexpr =
+let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =
     let undefs =
         match filter with
         | None -> Set.empty
         | Some f ->
-            let undef_ expr =
+            /// Checks that expr is "well-defined"
+            /// (i.e., referenced vars must not be equal to "undef_value")
+            let checkWellDef expr =
                 Set.filter f (Expr.getRefs expr)
                 |> Set.map (fun r -> Compare(Ref(r), Neq, Leaf(Extern "undef_value")))
-            BExpr.cata (fun _ -> Set.empty) id (fun _ e1 e2 -> Set.union (undef_ e1) (undef_ e2)) (fun _ -> Set.unionMany) bexpr
+            BExpr.cata (fun _ -> Set.empty) id (fun _ e1 e2 -> Set.union (checkWellDef e1) (checkWellDef e2)) (fun _ -> Set.unionMany) bexpr
         
     if undefs.IsEmpty then bexpr
     else
         Set.add bexpr undefs
         |> fun s -> Compound(Conj, s |> Set.toList)
-    |> BExpr.cata bleaf_ neg_ compare_ compound_
+    |> BExpr.cata bleafFn negFn compareFn compoundFn
     
 let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property<_>>) =
-    let ex = Map.exists (fun _ (_, q)-> q = Exists) p.def.quantifiers
-    let fa = Map.exists (fun _ (_, q)-> q = All) p.def.quantifiers
+    let ex = Map.exists (fun _ (_, q)-> q = Exists) p.Def.Quantifiers
+    let fa = Map.exists (fun _ (_, q)-> q = All) p.Def.Quantifiers
     
     //TODO move checks to frontend
     let translateSub (sub:Map<_,_>) =
@@ -56,107 +59,110 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
         let propRef1 ((v:Var<_>, i), c) offset =
             match c with
             | None -> 
-                if v.location <> E then failwithf "%s is not an environment variable" v.name
-                {var=((v, i), c); offset=offset}
+                if v.Location <> E then failwithf "%s is not an environment variable" v.Name
+                {Var=((v, i), c); Offset=offset}
             | Some c ->
-                {var=((v, i), (Some <| (string << propId) c)); offset=offset}
+                {Var=((v, i), (Some <| (string << propId) c)); Offset=offset}
 
         let trLeaf leaf =
             match leaf with
             | Id name -> (string << propId) name |> Id
             | _ -> leaf
         
-        BExpr.map (BLeaf) (Expr.map trLeaf (fun r o -> propRef1 r.var o))
+        BExpr.map (BLeaf) (Expr.map trLeaf (fun r o -> propRef1 r.Var o))
         
     if (ex && fa) then 
-        p.name
+        p.Name
         |> failwithf "Property %s: alternating quantifiers are currently not supported"
 
     let rec trProp subs prop =
         let trQuantifier = function | All -> Conj | Exists -> Disj
-        if not prop.quantifiers.IsEmpty then
-            let nextId = Map.pick (fun k _ -> Some k) prop.quantifiers
-            let agent, quantifier = prop.quantifiers.[nextId]
+        if not prop.Quantifiers.IsEmpty then
+            let nextId = Map.pick (fun k _ -> Some k) prop.Quantifiers
+            let agent, quantifier = prop.Quantifiers.[nextId]
             let amin, amax = table.spawn.[agent]
 
+            let addToSubs i = Map.add nextId i subs
+            let translateWithSubs s =
+                trProp s {prop with Quantifiers=prop.Quantifiers.Remove nextId} 
+
             [amin..amax-1]
-            |> List.map (fun i -> Map.add nextId i subs)
-            |> List.map (fun s -> trProp s {prop with quantifiers=prop.quantifiers.Remove nextId})
+            |> List.map (addToSubs >> translateWithSubs)
             |> fun l -> Compound(trQuantifier quantifier, l)
             |> BExpr.simplify
         else
-            (translateSub subs) prop.predicate
+            (translateSub subs) prop.Predicate
     
     let propRef ((v:Var<_>, i), c) offset =
         match c with
         | None -> trref trLocation "" (v, i) offset
         | Some c -> (trref trLocation c (v, i) offset)
             
-    trProp Map.empty p.def
+    trProp Map.empty p.Def
     |> trBExpr (trExpr propRef id)
     
 
 type TemplateInfo = {
-    baseDir: string
-    extension: string
+    BaseDir: string
+    Extension: string
 }
 with
     member this.Get name =
-        Path.Combine(this.baseDir, name)
-        |> fun path -> Path.ChangeExtension(path, this.extension)
+        Path.Combine(this.BaseDir, name)
+        |> fun path -> Path.ChangeExtension(path, this.Extension)
 
     
 type TranslationKit = {
-    agentExprTr: Expr<Var<int> * int, unit> -> string
-    agentGuardTr: BExpr<Var<int> * int, unit> -> string
-    mainGuardTr: BExpr<Var<int> * int, unit> -> string
-    initTr: Var<int> * int -> int -> string list
-    linkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
-    propTr: SymbolTable -> Node<Property<Var<int> * int>> -> string
-    templateInfo : TemplateInfo
+    AgentExprTr: Expr<Var<int> * int, unit> -> string
+    AgentGuardTr: BExpr<Var<int> * int, unit> -> string
+    MainGuardTr: BExpr<Var<int> * int, unit> -> string
+    InitTr: Var<int> * int -> int -> string list
+    LinkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
+    PropTr: SymbolTable -> Node<Property<Var<int> * int>> -> string
+    TemplateInfo : TemplateInfo
 }
 
 type RefTranslator<'a> = 'a -> string option -> string
 
-type Wrapper =
-    abstract member initId : int -> LeafExpr<'b>
-    abstract member agentName : string
-    abstract member templateInfo : TemplateInfo
-    abstract member trLoc<'a> : Location -> string -> 'a -> string
-    abstract member trInitLoc<'a> : Location -> string -> 'a -> string
-    abstract member trLinkId : LinkComponent -> string
-    abstract member trExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> Expr<'a, 'b> -> string
-    abstract member trBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
+type IWrapper =
+    abstract member InitId : int -> LeafExpr<'b>
+    abstract member AgentName : string
+    abstract member TemplateInfo : TemplateInfo
+    abstract member TrLoc<'a> : Location -> string -> 'a -> string
+    abstract member TrInitLoc<'a> : Location -> string -> 'a -> string
+    abstract member TrLinkId : LinkComponent -> string
+    abstract member TrExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> Expr<'a, 'b> -> string
+    abstract member TrBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
         
-let makeTranslator (wrapper: Wrapper) trRef trId filter =
-    let expr = wrapper.trExpr trRef trId
-    expr, wrapper.trBExpr filter expr
+let makeTranslator (wrapper: IWrapper) trRef trId filter =
+    let expr = wrapper.TrExpr trRef trId
+    expr, wrapper.TrBExpr filter expr
 
-let translateKit (p:Wrapper) =
-    let agentExprTr = p.trExpr (trref p.trLoc p.agentName) (fun () -> p.agentName)
-    let agentGuardTr = p.trBExpr (Some <| fun r -> (fst r.var).init = Undef) agentExprTr
+let translateKit (p:IWrapper) =
+    let agentExprTr = p.TrExpr (trref p.TrLoc p.AgentName) (fun () -> p.AgentName)
+    let agentGuardTr = p.TrBExpr (Some <| fun r -> (fst r.Var).Init = Undef) agentExprTr
     
     let linkTr =
-        p.trExpr (fun (v, cmp) offset -> trref p.trLoc (p.trLinkId cmp) v offset) p.trLinkId
-        |> p.trBExpr (Some <| fun r -> ((fst << fst) r.var).init = Undef)
+        p.TrExpr (fun (v, cmp) offset -> trref p.TrLoc (p.TrLinkId cmp) v offset) p.TrLinkId
+        |> p.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)
     
     let initTr (v, i) tid =
-        let bexprs = Frontend.initBExprs (p.initId tid) (v, i)
-        p.trBExpr None (p.trExpr (trref p.trInitLoc (string tid)) (fun () -> (string tid)))
+        let bexprs = Frontend.initBExprs (p.InitId tid) (v, i)
+        p.TrBExpr None (p.TrExpr (trref p.TrInitLoc (string tid)) (fun () -> (string tid)))
         |> fun f -> List.map f bexprs
 
     let mainGuardTr =
-        p.trBExpr None (p.trExpr (trref p.trLoc "firstAgent") (fun () -> "firstAgent"))
+        p.TrBExpr None (p.TrExpr (trref p.TrLoc "firstAgent") (fun () -> "firstAgent"))
     
     let propTr =
-        translateProp p.trExpr (p.trBExpr (Some <| fun r -> ((fst << fst) r.var).init = Undef)) p.trLoc
+        translateProp p.TrExpr (p.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) p.TrLoc
     
     {
-        agentExprTr = agentExprTr
-        agentGuardTr = agentGuardTr
-        initTr = initTr
-        linkTr = linkTr
-        mainGuardTr = mainGuardTr
-        propTr = propTr
-        templateInfo = p.templateInfo
+        AgentExprTr = agentExprTr
+        AgentGuardTr = agentGuardTr
+        InitTr = initTr
+        LinkTr = linkTr
+        MainGuardTr = mainGuardTr
+        PropTr = propTr
+        TemplateInfo = p.TemplateInfo
     }

@@ -1,6 +1,6 @@
 module internal LabsToC.Lnt
 open LabsCore
-open Types
+open LabsCore.Grammar
 open Common
 
 let translateLocation loc n e =
@@ -47,12 +47,12 @@ let rec private BExprLnt filter trExpr bexpr =
         
     translateBExpr bleaf_ neg_ compare_ compound_ filter bexpr
     
-let wrapper = { new Wrapper with
-                member __.templateInfo = {baseDir = "templates/lnt"; extension = "lnt"}
-                member __.agentName = "NatToInt(Nat(agent.id))"
-                member __.initId _ = Extern "NatToInt(Nat(a.id))"
-                member __.trLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
-                member __.trBExpr filter trExpr b = BExprLnt filter trExpr b
-                member __.trExpr trRef trId e = translateExpr trRef trId e
-                member __.trLoc loc x y = translateLocation loc x y
-                member __.trInitLoc loc x y = translateInitLocation loc x y }    
+let wrapper = { new IWrapper with
+                member __.TemplateInfo = {BaseDir = "templates/lnt"; Extension = "lnt"}
+                member __.AgentName = "NatToInt(Nat(agent.id))"
+                member __.InitId _ = Extern "NatToInt(Nat(a.id))"
+                member __.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
+                member __.TrBExpr filter trExpr b = BExprLnt filter trExpr b
+                member __.TrExpr trRef trId e = translateExpr trRef trId e
+                member __.TrLoc loc x y = translateLocation loc x y
+                member __.TrInitLoc loc x y = translateInitLocation loc x y }    
