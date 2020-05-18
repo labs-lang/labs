@@ -4,6 +4,8 @@ This repository contains source code for the LAbS code generator,
 which is used by the [SLiVER tool](https://github.com/labs-lang/sliver) to verify
 LAbS systems.
 
+It contains four projects:
+
 * `LabsCore`: basic data types and function to describe and  manipulate LAbS syntax trees.
 * `LabsParser`: a parser for `.labs` files.
 * `Frontend`: static checks and intermediate representation for  LAbS systems.
