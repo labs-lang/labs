@@ -46,8 +46,18 @@ make [osx|linux]
 
 The release binaries will be within `labs/build/`.
 
-## Publications
+## Building with CSeq
 
+To add support for CSeq, follow these additional steps:
+
+1. Download [CSeq 1.9](https://github.com/omainv/cseq/releases/tag/SVCOMP2020)
+2. Extract the CSeq archive within the `labs` directory
+3. Rename the CSeq directory to `cseq`
+4. `make [osx|linux]_cseq`
+ 
+Notice that CSeq support has only been tested under Linux.
+
+## Publications
 
 [1] R. De Nicola, L. Di Stefano, and O. Inverso, “Multi-Agent Systems with Virtual Stigmergy,” in: Mazzara M., Ober I., Salaün G. (eds) Software Technologies: Applications and Foundations. STAF 2018. Lecture Notes in Computer Science, vol 11176. Springer, 2018. [Link](https://link.springer.com/chapter/10.1007%2F978-3-030-04771-9_26)
 
