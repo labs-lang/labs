@@ -10,7 +10,7 @@ open Argu
 
 let wrapParserResult p text =
     try
-        let x = CharParsers.run p text
+        let x = run p text
         match x with
         | Success(a, _, _) -> zero a
         | Failure(errorMsg, _, _) ->
@@ -26,11 +26,11 @@ let main argv =
     zero argv
     <~> (parseCLI >> zero)
     <~> fun cli ->
-        let input = File.ReadAllText (cli.GetResult Arguments.File)
+        let input = File.ReadAllText (cli.GetResult File)
         let externs = getExterns cli |> Map.mapValues int
         (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
     <?> (fun (cli, x) ->
-        if cli.Contains Info then zero (x.dump())
+        if cli.Contains Info then zero (x.Dump())
         else
             let bound = cli.GetResult (Bound, defaultValue=1)
             let enc = cli.GetResult (Enc, defaultValue=C)

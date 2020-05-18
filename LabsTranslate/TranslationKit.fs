@@ -81,7 +81,7 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
         if not prop.Quantifiers.IsEmpty then
             let nextId = Map.pick (fun k _ -> Some k) prop.Quantifiers
             let agent, quantifier = prop.Quantifiers.[nextId]
-            let amin, amax = table.spawn.[agent]
+            let amin, amax = table.Spawn.[agent]
 
             let addToSubs i = Map.add nextId i subs
             let translateWithSubs s =
@@ -252,15 +252,15 @@ module internal Lnt =
             | Abs -> sprintf "abs(%s)"
         Expr.cata leafFn arithmFn unaryFn trRef
 
-    let rec private BExprLnt filter trExpr bexpr =
-        let bleaf_ b = if b then "true" else "false"
-        let neg_ = sprintf "(not(%s))"
-        let compare_ op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2)
-        let compound_ = function
+    let rec private trBExprLnt filter trExpr bexpr =
+        let bleafFn b = if b then "true" else "false"
+        let negFn = sprintf "(not(%s))"
+        let compareFn op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2)
+        let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " and "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " or "
             
-        translateBExpr bleaf_ neg_ compare_ compound_ filter bexpr
+        translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
         
     let wrapper = { 
         new ITranslateConfig with
@@ -268,7 +268,7 @@ module internal Lnt =
             member __.AgentName = "NatToInt(Nat(agent.id))"
             member __.InitId _ = Extern "NatToInt(Nat(a.id))"
             member __.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
-            member __.TrBExpr filter trExpr b = BExprLnt filter trExpr b
+            member __.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
             member __.TrExpr trRef trId e = translateExpr trRef trId e
             member __.TrLoc loc x y = translateLocation loc x y
             member __.TrInitLoc loc x y = translateInitLocation loc x y

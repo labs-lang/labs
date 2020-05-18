@@ -72,9 +72,6 @@ module Outcome =
     /// <summary>
     /// Applies a function to each element of the collection, threading an
     /// outcome as the accumulator of the computation.
-    /// If the input function is <c>f</c> and the elements of the collection are
-    /// <c>i0...,iN<c> then <c>fold</c> computes
-    /// (zero state) <~> f i0 <~> ... <~> f iN.
     /// </summary>
     /// <param name="f">A function that updates the outcome with each element
     /// from the sequence.</param>
@@ -82,6 +79,5 @@ module Outcome =
     /// <param name="state">The initial outcome,</param>
     /// <typeparam name="'a"></typeparam>
     /// <typeparam name="'b"></typeparam>
-    /// <returns></returns>
     let fold f source state =
         Seq.fold (fun s x -> s <~> (f x)) (zero state) source

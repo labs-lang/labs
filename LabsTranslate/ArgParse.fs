@@ -2,7 +2,6 @@
 open Argu
 open Frontend.Message
 open Encode
-// open Types
 
 type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string

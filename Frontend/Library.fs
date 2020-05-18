@@ -2,7 +2,7 @@
 open Frontend.Checks
 open Frontend.SymbolTable
 open Frontend.Outcome
-open Frontend.LTS
+open Frontend.STS
 open Frontend.Message
 open LabsCore
 open LabsCore.Grammar
@@ -43,10 +43,10 @@ let run externs (sys, lstigs, agents', properties) =
     <??> check (sys, lstigs, agents', properties)
     (* map non-interface variables *)
     <~> fold (tryAddVar externs) vars
-    <~> fun x -> fold mapVar (Map.values x.variables |> Seq.filter (isEnvVar)) x
+    <~> fun x -> fold mapVar (Map.values x.Variables |> Seq.filter (isEnvVar)) x
     <~> fun x ->
             (* Ensure that variables in the same tuple get contiguous indices *)
-            Map.values x.variables
+            Map.values x.Variables
             |> Seq.filter (isLstigVar)
             |> Seq.groupBy (fun v -> v.Location)
             |> Seq.map snd

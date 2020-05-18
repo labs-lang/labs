@@ -1,4 +1,4 @@
-module Frontend.LTS
+module Frontend.STS
 open LabsCore
 open Grammar
 open FSharpPlus.Lens
@@ -6,12 +6,12 @@ open FSharpPlus.Lens
 type ExecPoint = Map<int, int>
 type EntryCond = Map<int,int>
 type ExitCond = Map<int,Set<int>>
-type Transition = { entry: EntryCond; siblings: Set<int>; last: bool; exit: ExitCond; action: Node<Stmt<Var<int>*int>>}
+type Transition = { Entry: EntryCond; Siblings: Set<int>; Last: bool; Exit: ExitCond; Action: Node<Stmt<Var<int>*int>>}
 type TransitionSystem = Set<Transition>
 
 type State = {
-    lts: TransitionSystem
-    initCond: ExitCond
+    Sts: TransitionSystem
+    InitCond: ExitCond
 }
 
 module internal ExitCond =
@@ -71,27 +71,27 @@ let removeNames (procs:Map<string,Process<_>>) lts =
             Process.initial procs.[name]
             |> Set.map (if name = "Behavior" then id else (Process.tag pos.StreamName))
         lts
-        |> Set.filter (fun t -> inits.Contains t.action)
-        |> Set.map (fun t -> t.entry)
+        |> Set.filter (fun t -> inits.Contains t.Action)
+        |> Set.map (fun t -> t.Entry)
         |> ExitCond.ofEntryConds
     
     let removeName (l:TransitionSystem) tr =
         let exit =
-            match tr.action.Def with
-            | Name s -> newexit s tr.action.Pos
+            match tr.Action.Def with
+            | Name s -> newexit s tr.Action.Pos
             | _ -> failwith "Something wrong happened"
         
         let affected, others =
             l
             |> Set.remove tr
-            |> Set.partition (fun t -> tr.entry |- t.exit && (t.siblings.IsEmpty || t.last)) 
+            |> Set.partition (fun t -> tr.Entry |- t.Exit && (t.Siblings.IsEmpty || t.Last)) 
         
         affected
-        |> Set.map (fun t -> {t with exit= (ExitCond.remove tr.entry t.exit) >>. exit})
+        |> Set.map (fun t -> {t with Exit= (ExitCond.remove tr.Entry t.Exit) >>. exit})
         |> Set.union others
 
     lts
-    |> Set.filter (fun t -> match t.action.Def with Name _ -> true | _ -> false)
+    |> Set.filter (fun t -> match t.Action.Def with Name _ -> true | _ -> false)
     |> Seq.fold removeName lts
     
 
@@ -109,7 +109,7 @@ let makeTransitions (state: Accumulator) proc =
        let entry = (Map.add k vk parent)
        (* If b is an initial action of procs, add its entry condition to initCond *)
        initCond <- (initCond) .>>. (if initials.Contains b then ExitCond.ofEntryConds [entry] else Map.empty)
-       let lts' = (Set.add {entry=entry; exit=exit; action=b; siblings=Set.empty; last=false}) lts
+       let lts' = (Set.add {Entry=entry; Exit=exit; Action=b; Siblings=Set.empty; Last=false}) lts
        lts', (setl _2 v' acc)
    let rec compFn typ recurse (lts, acc) l =
        match typ with
@@ -117,8 +117,8 @@ let makeTransitions (state: Accumulator) proc =
            let p = List.last l
            let lts', acc' = recurse (Set.empty, acc) p
            let exit': Map<int, Set<int>> =
-               Set.filter (fun t -> (Process.initial p).Contains t.action) lts'
-               |> Set.map (fun t -> t.entry)
+               Set.filter (fun t -> (Process.initial p).Contains t.Action) lts'
+               |> Set.map (fun t -> t.Entry)
                |> ExitCond.ofEntryConds
            let acc'' = setl _4 exit' acc'
            match l with
@@ -138,11 +138,11 @@ let makeTransitions (state: Accumulator) proc =
                let siblings = Set.filter ((<>) pc) newpcs
                let a' = (setl _1 pc >> setl _4 ([(pc, Set.singleton 0)] |> Map.ofList)) a
                let l', a'' = recurse (Set.empty, a') child
-               let last, others = Set.partition (fun t -> (Process.final child).Contains t.action) l'
+               let last, others = Set.partition (fun t -> (Process.final child).Contains t.Action) l'
                Set.map (
                    fun t ->
-                       let t' = {t with siblings=siblings}
-                       Set.singleton t' |> Set.add {t' with last=true; exit=t'.exit .>>. exit}
+                       let t' = {t with Siblings=siblings}
+                       Set.singleton t' |> Set.add {t' with Last=true; Exit=t'.Exit .>>. exit}
                    ) last
                |> Set.unionMany
                |> Set.union others

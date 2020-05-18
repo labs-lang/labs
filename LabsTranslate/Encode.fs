@@ -1,7 +1,7 @@
 ﻿module LabsTranslate.Encode
 
 open Frontend
-open Frontend.LTS
+open Frontend.STS
 open LabsCore.BExpr
 open LabsCore.Grammar
 open LabsCore.Tokens
@@ -16,12 +16,12 @@ type EncodeTo = | C | Lnt
 
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, (int*int)> =
-        table.variables
+        table.Variables
         |> Map.filter (fun _ -> isLstigVar)
         |> Map.values
         |> Seq.groupBy groupBy
         |> Seq.map (fun (n, vars) ->
-            let extrema = Seq.map (table.m.RangeOf) vars
+            let extrema = Seq.map (table.M.RangeOf) vars
             n, ((fst << Seq.minBy fst) extrema, (snd << Seq.maxBy snd) extrema))
         |> Map.ofSeq
         
@@ -48,13 +48,13 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
         else sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth num)
     
     let maxpc =
-        Map.mapValues (fun (x:AgentTable) -> Map.keys x.initCond) table.agents
+        Map.mapValues (fun (x:AgentTable) -> Map.keys x.InitCond) table.Agents
         |> Map.values |> Seq.concat |> Seq.max
     
-    let maxcomponents = table.spawn |> Map.values |> Seq.map snd |> Seq.max
-    let maxkeyE = max table.m.nextE 1
-    let maxkeyI = max table.m.nextI 1
-    let maxkeyL = max table.m.nextL 1
+    let maxcomponents = table.Spawn |> Map.values |> Seq.map snd |> Seq.max
+    let maxkeyE = max table.M.NextE 1
+    let maxkeyI = max table.M.NextI 1
+    let maxkeyL = max table.M.NextL 1
       
     let typedefs =
         [
@@ -69,7 +69,7 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     
     let links =
         let fromTo = stigmergyVarsFromTo (fun v -> match v.Location with L (n, _) -> n | _ -> "")
-        table.stigmergies
+        table.Stigmergies
         |> Map.map (fun name link ->
             Dict [
                 "start", fst fromTo.[name] |> Int
@@ -100,41 +100,41 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     ]
     |> List.append values
     |> List.append baseDict
-    |> render (Liquid.parse (trKit.TemplateInfo.Get "header"))
+    |> render (parse (trKit.TemplateInfo.Get "header"))
 
 let private encodeInit trKit (table:SymbolTable) =
     let env =
-        table.variables
+        table.Variables
         |> Map.filter (fun _ -> isEnvVar)
         |> Map.values
-        |> Seq.sortBy table.m.IndexOf
+        |> Seq.sortBy table.M.IndexOf
         |> Seq.collect (fun v ->
-                let info = table.m.[v.Name]
-                trKit.InitTr (v, snd table.m.[v.Name]) -1
+                let info = table.M.[v.Name]
+                trKit.InitTr (v, snd table.M.[v.Name]) -1
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
 
     let agents =
-        table.spawn
+        table.Spawn
         |> Map.map (fun name (_start, _end) ->
-            table.agents.[name].variables
-            |> List.append (table.agents.[name].lstigVariables table |> List.ofSeq)
+            table.Agents.[name].Variables
+            |> List.append (table.Agents.[name].LstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
                 let loc = match v.Location with I -> "I" | L _ -> "L" | E -> "E"
-                trKit.InitTr (v, snd table.m.[v.Name]) tid
-                |> List.map (fun x -> Dict ["loc", Str loc; "index", Int (snd table.m.[v.Name]); "bexpr", Str x])
+                trKit.InitTr (v, snd table.M.[v.Name]) tid
+                |> List.map (fun x -> Dict ["loc", Str loc; "index", Int (snd table.M.[v.Name]); "bexpr", Str x])
                 )
             |> List.collect (fun f -> List.map f [_start.._end-1])
             |> List.concat |> List.distinct
-            |> fun l -> Dict ["start", Int _start; "end", Int _end; "initvars", Lst l; "pcs", liquidPcs table.agents.[name].initCond]
+            |> fun l -> Dict ["start", Int _start; "end", Int _end; "initvars", Lst l; "pcs", liquidPcs table.Agents.[name].InitCond]
             )
         |> Map.values
         
     let tstamps =
-        table.spawn
+        table.Spawn
         |> Map.map (fun name (_start, _end) ->
-                table.agents.[name].lstigVariables table
-                |> Seq.map (fun v tid -> Dict ["tid", Int tid; "index", Int (snd table.m.[v.Name])])
+                table.Agents.[name].LstigVariables table
+                |> Seq.map (fun v tid -> Dict ["tid", Int tid; "index", Int (snd table.M.[v.Name])])
                 |> Seq.collect (fun f -> List.map f [_start.._end-1]))
         |> Map.values
         |> Seq.concat
@@ -143,23 +143,23 @@ let private encodeInit trKit (table:SymbolTable) =
         "initenv", Lst env
         "agents", Lst agents
         "tstamps", Lst tstamps
-        "hasStigmergy", Bool (table.m.nextL > 0)
-        "hasEnvironment", Bool (table.m.nextE > 0)
+        "hasStigmergy", Bool (table.M.NextL > 0)
+        "hasEnvironment", Bool (table.M.NextE > 0)
     ]
-    |> render (Liquid.parse (trKit.TemplateInfo.Get "init"))
+    |> render (parse (trKit.TemplateInfo.Get "init"))
 
 let private funcName t =
-    Map.map (sprintf "_%i_%i") t.entry |> Map.values
+    Map.map (sprintf "_%i_%i") t.Entry |> Map.values
     |> String.concat ""
-    |> (+) (if t.last then "_last" else "")
+    |> (+) (if t.Last then "_last" else "")
 
 let private guards table t =
-    table.guards.TryFind t.action |> Option.defaultValue Set.empty
+    table.Guards.TryFind t.Action |> Option.defaultValue Set.empty
 
 let private encodeAgent trKit goto sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
         let guards = guards table t
-        let assignments = t.action.Def |> (function Act a -> Some a | _ -> None)
+        let assignments = t.Action.Def |> (function Act a -> Some a | _ -> None)
         
         /// Set of keys that the agent will have to confirm
         /// TODO maybe move to Frontend?
@@ -187,17 +187,17 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             ]
         
         [
-            "hasStigmergy", Bool (table.m.nextL > 0)
-            "hasEnvironment", Bool (table.m.nextE > 0)
+            "hasStigmergy", Bool (table.M.NextL > 0)
+            "hasEnvironment", Bool (table.M.NextE > 0)
             "label", funcName t |> Str
-            "last", t.last |> Bool
-            "siblings", t.siblings |> Seq.map Int |> Lst
-            "entrycond", liquidPcs (t.entry |> Map.mapValues Set.singleton)
-            "exitcond", liquidPcs (t.exit)
+            "last", t.Last |> Bool
+            "siblings", t.Siblings |> Seq.map Int |> Lst
+            "entrycond", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
+            "exitcond", liquidPcs (t.Exit)
             "guards", guards |> Seq.map (Str << (trKit.AgentGuardTr)) |> Lst
             "labs",
                 // TODO do sth smart here
-                string t.action.Def
+                string t.Action.Def
                 |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
                 |> Str
             "loc",
@@ -216,46 +216,46 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
         ]
         |> render goto
     
-    Set.map (encodeTransition) a.lts
+    Set.map (encodeTransition) a.Sts
     |> Seq.reduce (<??>)
 
 let private encodeMain trKit baseDict fair (table:SymbolTable) =
     let scheduleTransition t =
         Dict [
             "name", funcName t |> Str
-            "siblings", seq t.siblings |> Seq.map Int |> Lst
-            "entry", liquidPcs (t.entry |> Map.mapValues Set.singleton)
+            "siblings", seq t.Siblings |> Seq.map Int |> Lst
+            "entry", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
             "guards", guards table t |> Seq.map (Str << trKit.MainGuardTr) |> Lst
         ]
     let alwaysP, finallyP =
         let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
-        let m1, m2 = Map.partition (fun _ n -> n.Def.Modality = Always) table.properties
+        let m1, m2 = Map.partition (fun _ n -> n.Def.Modality = Always) table.Properties
         toLiquid <| Map.values m1, toLiquid <| Map.values m2
     
     [
-        "firstagent", if table.spawn.Count = 1 then Int 0 else Int -1
+        "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair
         "schedule",
-            table.agents
-            |> Map.mapValues (fun a -> Seq.map scheduleTransition a.lts)
+            table.Agents
+            |> Map.mapValues (fun a -> Seq.map scheduleTransition a.Sts)
             |> Map.values
             |> Seq.concat
             |> Lst
         "alwaysasserts", alwaysP
         "finallyasserts", finallyP
-        "agentscount", table.spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
+        "agentscount", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
     ]
     |> List.append baseDict
-    |> render (Liquid.parse (trKit.TemplateInfo.Get "main"))
+    |> render (parse (trKit.TemplateInfo.Get "main"))
 
 let encode encodeTo bound (fair, nobitvector, sim, sync) table =
     let trKit = makeTranslationKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper
-    let goto = Liquid.parse (trKit.TemplateInfo.Get "goto")
+    let goto = parse (trKit.TemplateInfo.Get "goto")
     
     let baseDict = [
         "bound", Int bound
-        "hasStigmergy", Bool (table.m.nextL > 0)
-        "hasEnvironment", Bool (table.m.nextE > 0)
+        "hasStigmergy", Bool (table.M.NextL > 0)
+        "hasEnvironment", Bool (table.M.NextE > 0)
         "simulation", Bool sim
     ]
     
@@ -263,7 +263,7 @@ let encode encodeTo bound (fair, nobitvector, sim, sync) table =
     <?> (encodeHeader trKit baseDict nobitvector bound)
     <?> (encodeInit trKit)
     <?> (fun x -> 
-            (Map.values x.agents)
+            (Map.values x.Agents)
             |> Seq.map (encodeAgent trKit goto sync x)
             |> Seq.reduce (<??>))
     <?> (encodeMain trKit baseDict fair)
