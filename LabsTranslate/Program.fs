@@ -4,9 +4,8 @@ open FParsec
 open Frontend
 open Frontend.Outcome
 open Frontend.Message
-open LabsToC
-open LabsToC.LabsToC
-open ArgParse
+open LabsTranslate.Encode
+open LabsTranslate.ArgParse
 open Argu
 
 let wrapParserResult p text =
@@ -35,7 +34,7 @@ let main argv =
         else
             let bound = cli.GetResult (Bound, defaultValue=1)
             let enc = cli.GetResult (Enc, defaultValue=C)
-            LabsToC.encode enc (bound) (flags cli) x)
+            encode enc (bound) (flags cli) x)
     |> function
        | Result.Ok (_, warns) ->
             warns |> List.map(pprintWarn >> eprintfn "%s") |> ignore

@@ -1,4 +1,4 @@
-﻿module LabsToC.LabsToC
+﻿module LabsTranslate.Encode
 
 open Frontend
 open Frontend.LTS
@@ -7,9 +7,8 @@ open LabsCore.Grammar
 open LabsCore.Tokens
 open FSharpPlus
 
-open LabsToC
 open Outcome
-open Common
+open TranslationKit
 open Liquid
 
 /// Supported target languages.
@@ -163,6 +162,7 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
         let assignments = t.action.Def |> (function Act a -> Some a | _ -> None)
         
         /// Set of keys that the agent will have to confirm
+        /// TODO maybe move to Frontend?
         let qrykeys =
             let getLstigVarsBExpr =
                 let compareFn _ e1 e2 = Set.union (getLstigVars e1) (getLstigVars e2)
@@ -249,7 +249,7 @@ let private encodeMain trKit baseDict fair (table:SymbolTable) =
     |> render (Liquid.parse (trKit.TemplateInfo.Get "main"))
 
 let encode encodeTo bound (fair, nobitvector, sim, sync) table =
-    let trKit = translateKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper
+    let trKit = makeTranslationKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper
     let goto = Liquid.parse (trKit.TemplateInfo.Get "goto")
     
     let baseDict = [
