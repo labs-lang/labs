@@ -43,7 +43,7 @@ let render template values = internalRender (printfn "%s") template values
 let strRender template values = internalRender id template values
 
 let parse path =
-    Environment.CurrentDirectory <- System.AppDomain.CurrentDomain.BaseDirectory
+    Environment.CurrentDirectory <- AppDomain.CurrentDomain.BaseDirectory
     Template.FileSystem <- fs
     File.ReadAllText path
     |> Template.Parse

@@ -3,7 +3,7 @@ open LabsCore
 open LabsCore.Grammar
 open Common
 
-let translateLocation loc n e =
+let private translateLocation loc n e =
     let name =
         match n with
         | "agent.id"

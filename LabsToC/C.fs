@@ -3,12 +3,12 @@ open LabsCore
 open LabsCore.Grammar
 open Common
 
-let translateLocation = function
+let private translateLocation = function
     | I -> sprintf "I[%s][%O]"
     | L _ -> sprintf "Lvalue[%s][%O]"
     | E -> (fun _ -> sprintf "E[%O]")
 
-let translate trRef trId =
+let private translate trRef trId =
     let leafFn = function
         | Id i -> trId i
         | Const i -> string i
