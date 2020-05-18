@@ -23,7 +23,7 @@
     </ItemGroup>
     
     <ItemGroup>
-      <PackageReference Include="Argu" Version="5.3.0" />
+      <PackageReference Include="Argu" Version="6.0.0" />
     </ItemGroup>
 
 </Project>

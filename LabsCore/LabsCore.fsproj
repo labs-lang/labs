@@ -20,7 +20,7 @@
     <Compile Include="Process.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
     <PackageReference Include="FSharpPlus" Version="1.0.0" />
   </ItemGroup>
 </Project>

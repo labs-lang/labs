@@ -17,7 +17,7 @@
     <Compile Include="Expressions.fs" />
     <Compile Include="Init.fs" />
     <Compile Include="Processes.fs" />
-    <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
     <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
     <Compile Include="Component.fs" />
     <Compile Include="Properties.fs" />
