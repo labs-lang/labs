@@ -27,7 +27,6 @@ build/%/sliver.py : $(sliver_sources) build/%/click build/%/pyparsing.py
 	@mkdir -p build/$(platform)
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
-	@cp -r cadp/ build/$(platform)/cadp ;
 
 build/%/pyparsing.py :
 	@mkdir -p build/$(platform)

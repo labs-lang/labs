@@ -1,4 +1,0 @@
-library standard.mcl end_library
-
-
-NEVER(true* . "MONITOR !FALSE")
