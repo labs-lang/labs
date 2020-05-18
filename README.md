@@ -17,6 +17,7 @@ LabsTranslate, and a set of example files.
 * [FParsec](https://www.quanttec.com/fparsec/) (parser combinators) for `LabsParser`;
 * [Argu](http://fsprojects.github.io/Argu/) (argument parser) for the `LabsTranslate` CLI;
 * [DotLiquid](http://dotliquidmarkup.org/) for code generation.
+* [FSharpPlus](https://github.com/fsprojects/FSharpPlus) for generic programming, lenses, etc.
 
 SLiVER also uses:
 
