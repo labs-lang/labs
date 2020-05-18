@@ -3,28 +3,6 @@ module Types
 open LabsCore.Grammar
 open FSharpPlus.Lens
 
-type VarType<'a> = 
-    | Scalar
-    | Array of size:'a
-
-type Var<'a> = {
-        Name: string
-        Vartype: VarType<'a>
-        Location: Location
-        Init: Init
-    }
-    with 
-        override this.ToString() = this.Name
-            
-let inline _vartype x =
-    let getter v = v.Vartype
-    let setter v t' = {Vartype=t'; Name=v.Name; Location=v.Location; Init=v.Init}
-    lens getter setter x
-
-let inline isEnvVar v = match v.Location with E -> true | _ -> false
-let inline isLstigVar v = match v.Location with L _ -> true | _ -> false
-
-
 type Sys = {
     Environment: Node<Var<Expr<unit, unit>>> list
     Externals: string list

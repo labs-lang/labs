@@ -165,3 +165,24 @@ type Process<'a> =
     | BaseProcess of Node<Stmt<'a>>
     | Guard of Node<BExpr<'a, unit> * Process<'a>>
     | Comp of Composition * Process<'a> list
+
+type VarType<'a> = 
+    | Scalar
+    | Array of size:'a
+
+type Var<'a> = {
+        Name: string
+        Vartype: VarType<'a>
+        Location: Location
+        Init: Init
+    }
+    with 
+        override this.ToString() = this.Name
+        
+let inline isEnvVar v = match v.Location with E -> true | _ -> false
+let inline isLstigVar v = match v.Location with L _ -> true | _ -> false        
+            
+let inline _vartype x =
+    let getter v = v.Vartype
+    let setter v t' = {Vartype=t'; Name=v.Name; Location=v.Location; Init=v.Init}
+    lens getter setter x
