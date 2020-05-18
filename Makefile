@@ -18,10 +18,10 @@ build/%/labs/templates/main.c : $(templates)
 	@echo Copying templates...
 	@cp -r LabsTranslate/templates build/$(platform)/labs;
 
-build/%/labs/LabsTranslate.dll : $(sources)
+build/%/labs/LabsTranslate : $(sources)
 	@mkdir -p build/$(platform)
 	@echo Building LabsTranslate...
-	dotnet publish -r $(platform) -c Release --self-contained -o build/$(platform)/labs
+	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o build/$(platform)/labs -p:PublishSingleFile=true -p:PublishTrimmed=true
 
 build/%/sliver.py : $(sliver_sources) build/%/click build/%/pyparsing.py
 	@mkdir -p build/$(platform)
@@ -57,7 +57,7 @@ build/%/cbmc-simulator :
 	@cp linux/cbmc/* build/$(platform)/ ;
 
 osx : rmsentinels \
-	  build/osx.10.12-x64/labs/LabsTranslate.dll \
+	  build/osx.10.12-x64/labs/LabsTranslate \
 	  build/osx.10.12-x64/labs/templates/main.c \
 	  build/osx.10.12-x64/pyparsing.py \
 	  build/osx.10.12-x64/sliver.py \
@@ -65,7 +65,7 @@ osx : rmsentinels \
 	  build/osx.10.12-x64/examples
 
 linux : rmsentinels \
-	build/linux-x64/labs/LabsTranslate.dll \
+	build/linux-x64/labs/LabsTranslate \
 	build/linux-x64/labs/templates/main.c \
 	build/linux-x64/pyparsing.py \
 	build/linux-x64/sliver.py \

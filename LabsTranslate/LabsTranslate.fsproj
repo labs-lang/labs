@@ -2,8 +2,11 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp2.2</TargetFramework>
+        <TargetFramework>netcoreapp3</TargetFramework>
         <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+        
+        <UseAppHost>true</UseAppHost> <!--See https://github.com/dotnet/runtime/issues/3704 -->
+
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,6 +22,7 @@
       <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
       <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
     </ItemGroup>
+    
 
     <ItemGroup>
         <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />

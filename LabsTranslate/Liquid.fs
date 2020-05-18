@@ -43,7 +43,9 @@ let render template values = internalRender (printfn "%s") template values
 let strRender template values = internalRender id template values
 
 let parse path =
-    Environment.CurrentDirectory <- AppDomain.CurrentDomain.BaseDirectory
+    Environment.CurrentDirectory <-
+        Diagnostics.Process.GetCurrentProcess().MainModule.FileName 
+        |> IO.Path.GetDirectoryName
     Template.FileSystem <- fs
     File.ReadAllText path
     |> Template.Parse
