@@ -1,6 +1,6 @@
 ﻿module Components
 open FParsec
-open Types
+open LabsCore.Grammar
 open Processes
 open Init
 
@@ -14,10 +14,11 @@ let pcomp =
             (opt (pstringEq "stigmergies" (ws IDENTIFIER |> sepbysemis)))
             processes <!> "PROCESSES") |> betweenBraces)
         (fun pos n (i, l, procs) -> {
-            pos=pos; name=n;
-            def = {
-                name = n
-                iface = Option.defaultValue [] i
-                lstig = Option.defaultValue [] l 
-                processes = procs
+            Pos=pos;
+            Name=n;
+            Def = {
+                Name = n
+                Iface = Option.defaultValue [] i
+                Lstig = Option.defaultValue [] l 
+                Processes = procs
         }})

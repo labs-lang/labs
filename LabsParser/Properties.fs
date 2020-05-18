@@ -1,6 +1,6 @@
 ﻿module internal Properties
 open FParsec
-open Types
+open LabsCore.Grammar
 open Expressions
 
 let propertyRef p =
@@ -11,7 +11,7 @@ let propertyRef p =
             followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
             preturn None
         ])
-        (fun k offset y -> {var=(k, y); offset=offset})
+        (fun k offset y -> {Var=(k, y); Offset=offset})
 
 let pquantifier =
         pipe3
@@ -41,15 +41,15 @@ let pproperty =
         pmodality
         ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
         pbaseprop
-        (fun pos n m qs pred -> {pos=pos; name=n; def= {
-            name=n
-            modality=m
-            quantifiers=qs
-            predicate=pred
+        (fun pos n m qs pred -> {Pos=pos; Name=n; Def= {
+            Name=n
+            Modality=m
+            Quantifiers=qs
+            Predicate=pred
         }})
 
 let pproperties =
-    ws_
+    wsUnit
     >>. pproperty |> many
     |> ws
     |> betweenBraces

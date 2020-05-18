@@ -1,8 +1,8 @@
 ﻿module internal Init
 
 open FParsec
-open Tokens
-open Types
+open LabsCore.Grammar
+open LabsCore.Tokens
 open Common
 open Expressions
 
@@ -33,10 +33,10 @@ let pconstexpr:Parser<Expr<unit,unit>> =
 let pvar loc = 
     pipe3 (followedBy KEYNAME >>. getPosition) KEYNAME (opt (betweenBrackets pconstexpr))
         (fun pos name -> 
-            let v = {vartype=Scalar; name=name; location=loc; init=Undef}
+            let v = {Vartype=Scalar; Name=name; Location=loc; Init=Undef}
             function
-            | Some e -> {pos=pos; name=name; def={v with vartype=Array(e)}}
-            | None -> {pos=pos; name=name; def=v})
+            | Some e -> {Pos=pos; Name=name; Def={v with Vartype=Array(e)}}
+            | None -> {Pos=pos; Name=name; Def=v})
 
 let pinit = 
     let pChoose = 
@@ -52,7 +52,7 @@ let pinit =
 /// Parses a single init definition.
 let pinitdef loc =
     (pvar loc) .>>. ((ws COLON) >>. pinit)
-    |>> fun (var, init) -> {var with def={var.def with init=init}}
+    |>> fun (var, init) -> {var with Def={var.Def with Init=init}}
 
 let pkeys loc = 
     ws (sepbysemis (ws (pinitdef loc)))

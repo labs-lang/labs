@@ -1,10 +1,11 @@
 ﻿module internal Stigmergies
 
 open FParsec
-open Types
+open LabsCore.Grammar
+open LabsCore.Tokens
 open Init
 open Expressions
-open Tokens
+
 
 let plink =
     let pc1orc2 = 
@@ -12,10 +13,10 @@ let plink =
     let linkref p =
         pipe3
             (ws KEYNAME) (opt (betweenBrackets p)) pc1orc2
-            (fun a b c -> {var=a,c; offset=b})
+            (fun a b c -> {Var=a,c; Offset=b})
     let linkId = (ws (skipString tID)) >>. pc1orc2
     getPosition .>>. makeBExprParser (makeExprParser linkref linkId)
-    |>> (fun (pos, link) -> {name="link"; pos=pos; def=link})
+    |>> (fun (pos, link) -> {Name="link"; Pos=pos; Def=link})
 
 let plstig : Parser<_> =
     let ptuple name =
@@ -25,17 +26,17 @@ let plstig : Parser<_> =
                 (sepbycommas (pvar loc))
                 ((ws COLON) >>. sepbycommas pinit)
                 List.zip
-                |>> List.map (fun (v, i) -> {v with def = {v.def with init=i}})
+                |>> List.map (fun (v, i) -> {v with Def = {v.Def with Init=i}})
             >>= toSet byName byName
         with | :? System.ArgumentException ->
             fail "Tuples must contain the same numbers of variables and initializers."
     let plstigkeys name =
         (sepbysemis (ptuple name) |> ws)
-        |>> List.mapi (fun i -> Set.map (fun v ->{v with def={v.def with location = L(name, i)}}))
+        |>> List.mapi (fun i -> Set.map (fun v ->{v with Def={v.Def with Location = L(name, i)}}))
 
     (ws (skipString "stigmergy"))
     >>. (followedBy IDENTIFIER >>. getPosition) .>>. (ws IDENTIFIER)
     >>= (fun (pos, n) ->
             ((ws (pstringEq "link" plink) .>>. (plstigkeys n <!> "KEYS"))
             |> betweenBraces)
-            |>> fun (l, v) -> {pos=pos; name=n; def={name=n; link=l; vars=v}}) <!> "STIGMERGY"
+            |>> fun (l, v) -> {Pos=pos; Name=n; Def={Name=n; Link=l; Vars=v}}) <!> "STIGMERGY"

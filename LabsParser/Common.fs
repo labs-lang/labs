@@ -1,12 +1,12 @@
 ﻿[<AutoOpen>]
 module internal Common
-
-open Tokens
 open FParsec
+
+open LabsCore.Tokens
 
 type Parser<'t> = Parser<'t, unit>
 
-// Tokens
+// Token parsers
 //-----------------------------------------
 let COMMENT : Parser<_> =       (skipString tCOMMENT)
 let COLON : Parser<_> =         (skipChar ':')
@@ -24,15 +24,16 @@ let PAR : Parser<_> =           (skipString tPAR)
 
 let lineComment : Parser<_> = COMMENT >>. skipRestOfLine false
 
-/// Parse p and skip whitespace/comments after.
+/// Parses p and skips whitespace/comments after.
 let ws p = p .>> spaces .>> skipMany (spaces1 <|> lineComment)
-let ws_ = ws (preturn ())
+/// Parses whitespace immediately
+let wsUnit = ws (preturn ())
 
 let isAlphanum x = isAsciiLetter x || isDigit x
 let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum)
 
 // Parses reserved keyword so they are not parsed as identifiers or names
-let reserved : Parser<_> = 
+let private reserved : Parser<_> = 
     [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX]
     |> List.map pstring 
     |> choice
@@ -57,9 +58,11 @@ let IDENTIFIER : Parser<_> =
         isAsciiIdContinue=isAlphanum)
     |> safeIdentifier
 
-let withcommas x = x |> Seq.map (sprintf "%O") |> String.concat ", "
+/// Helper function, returns string with elements of x separated by commas
+let private toCommaSepString x = x |> Seq.map (sprintf "%O") |> String.concat ", "
 
-let enclose startc endc = between (ws (skipChar startc)) (skipChar endc)
+/// Helper parser: a "between" with optional whitespace after startc
+let private enclose startc endc = between (ws (skipChar startc)) (skipChar endc)
 
 let betweenBrackets p = enclose '[' ']' p
 let betweenBraces p = enclose '{' '}' p
@@ -81,33 +84,36 @@ let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
     p
     #endif
     
-let toMapF formatonFail lst =
-    let dup = lst |> List.map fst |> List.duplicates
-    if dup.Length > 0 then
-        dup
-        |> List.map formatonFail
-        |> withcommas 
-        |> sprintf "Multiple definitions of %s"
-        |> fun msg _ -> Reply(Error, unexpected msg)
-    else
-        preturn (lst |> Map.ofList)
+/// Turns a list of key-value pairs into a map.
+/// Fails if there are duplicate keys.
+let toMap lst =
+    let toMapF formatonFail =
+        let dup = lst |> List.map fst |> List.duplicates
+        if dup.Length > 0 then
+            dup
+            |> List.map formatonFail
+            |> toCommaSepString 
+            |> sprintf "Multiple definitions of %s"
+            |> fun msg _ -> Reply(Error, unexpected msg)
+        else
+            preturn (lst |> Map.ofList)
+    toMapF id
 
-let toMap lst = toMapF id lst
-
+/// Turns a list of values into a set.
 let toSet dupFn formatOnFail lst = 
     let dup = List.duplicatesBy dupFn lst
     if dup.Length > 0 then 
         dup
         |> List.map formatOnFail
-        |> withcommas 
+        |> toCommaSepString 
         |> sprintf "Multiple definitions of %s"
         |> fun msg _ -> Reply(Error, unexpected msg)
     else
         preturn (Set.ofList lst)
-        
-let inline byName v = (^T : (member name : string) v)
 
+/// Parses "<str> = <p>" and returns <p>
 let pstringEq str p = 
     (ws (skipString str) >>. (ws EQ) >>. p)
     
+/// Parses an external parameter name
 let pextern : Parser<_> = ((skipChar '_') >>. (KEYNAME))

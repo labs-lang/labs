@@ -1,13 +1,13 @@
 ﻿module internal Expressions
 
-open Types
-open Tokens
+open LabsCore.Grammar
+open LabsCore.Tokens
+open LabsCore.BExpr
 open FParsec
-open LabsCore
 
 let simpleRef p = 
     KEYNAME .>>. (opt (betweenBrackets p))
-    |>> fun (str, offset) -> {var=str; offset=offset}
+    |>> fun (str, offset) -> {Var=str; Offset=offset}
 
 type ParseBExpr<'a, 'b> = 
     | E of Expr<'a, 'b>
@@ -16,7 +16,7 @@ type ParseBExpr<'a, 'b> =
 module ParseBExpr =
     let getB p =
         match p with
-        | B b -> preturn (BExpr.simplify b)
+        | B b -> preturn (simplify b)
         | E e -> fail (sprintf "%O is not a boolean expression" e)
     let getE p =
         match p with
@@ -67,13 +67,13 @@ let makeBExprParser pexpr =
     opp.AddOperator(InfixOperator(tDISJ, ws notInIdentifier, 1, Associativity.Left, ParseBExpr.compose Disj))
     
     opp.AddOperator(InfixOperator("<", notInArrow, 2, Associativity.Left, ParseBExpr.compare Less))
-    opp.AddOperator(InfixOperator(">", ws_, 2, Associativity.Left, ParseBExpr.compare Greater))
-    opp.AddOperator(InfixOperator("=", ws_, 2, Associativity.Left, ParseBExpr.compare Equal))
-    opp.AddOperator(InfixOperator("!=", ws_, 2, Associativity.Left, ParseBExpr.compare Neq))
-    opp.AddOperator(InfixOperator("<=", ws_, 2, Associativity.Left, ParseBExpr.compare Leq))
-    opp.AddOperator(InfixOperator(">=", ws_, 2, Associativity.Left, ParseBExpr.compare Geq))
+    opp.AddOperator(InfixOperator(">", wsUnit, 2, Associativity.Left, ParseBExpr.compare Greater))
+    opp.AddOperator(InfixOperator("=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Equal))
+    opp.AddOperator(InfixOperator("!=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Neq))
+    opp.AddOperator(InfixOperator("<=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Leq))
+    opp.AddOperator(InfixOperator(">=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Geq))
 
-    opp.AddOperator(PrefixOperator("!", ws_, 3, false, ParseBExpr.mapB Neg))
+    opp.AddOperator(PrefixOperator("!", wsUnit, 3, false, ParseBExpr.mapB Neg))
 
     expr >>= ParseBExpr.getB
 
@@ -111,9 +111,9 @@ let makeExprParser pref pid : Parser<_> =
     opp.AddOperator(InfixOperator(tPLUS, notFollowedBy (skipChar '+') |> ws, 1, Associativity.Left, arithm Plus))
     opp.AddOperator(InfixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 1, Associativity.Left, arithm Minus))
 
-    opp.AddOperator(InfixOperator(tMUL, ws_, 2, Associativity.Left, arithm Times))   
-    opp.AddOperator(InfixOperator(tDIV, ws_, 2, Associativity.Left, arithm Div))   
-    opp.AddOperator(InfixOperator(tMOD, ws_, 2, Associativity.Left, arithm Mod))   
+    opp.AddOperator(InfixOperator(tMUL, wsUnit, 2, Associativity.Left, arithm Times))   
+    opp.AddOperator(InfixOperator(tDIV, wsUnit, 2, Associativity.Left, arithm Div))   
+    opp.AddOperator(InfixOperator(tMOD, wsUnit, 2, Associativity.Left, arithm Mod))   
     
     opp.AddOperator(PrefixOperator(tABS, followedBy (skipChar '('), 3, false, fun x -> Unary(Abs, x)))
     opp.AddOperator(PrefixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 3, false, fun x -> Unary(UnaryMinus, x)))

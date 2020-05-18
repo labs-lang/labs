@@ -1,9 +1,9 @@
 ﻿module internal System
 open FParsec
 
-open Tokens
+open LabsCore.Grammar
+open LabsCore.Tokens
 open Init
-open Types
 open Processes
 open Expressions
 
@@ -17,7 +17,7 @@ let pspawn =
         (followedBy IDENTIFIER >>. getPosition)
         (ws IDENTIFIER .>> (ws (skipChar ':')))
         (ws pspawnexpr)
-        (fun pos name expr -> {pos=pos; name=name; def=expr})
+        (fun pos name expr -> {Pos=pos; Name=name; Def=expr})
     )
     |> sepbycommas
 
@@ -34,11 +34,11 @@ let psys =
             (pstringEq "spawn" pspawn <!> "SPAWN")
             processes
             (fun ext env spawn procs -> {
-                processes = procs
-                externals = Option.defaultValue [] ext
-                environment = Option.defaultValue [] env
-                spawn = spawn
+                Processes = procs
+                Externals = Option.defaultValue [] ext
+                Environment = Option.defaultValue [] env
+                Spawn = spawn
             })
         |> betweenBraces)
         |> ws
-    |>> (fun (pos, sys) -> {name="system"; pos=pos; def=sys})
+    |>> (fun (pos, sys) -> {Name="system"; Pos=pos; Def=sys})

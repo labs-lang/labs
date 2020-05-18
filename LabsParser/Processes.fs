@@ -1,9 +1,8 @@
 module internal Processes
 
 open FParsec
-open Types
-open Tokens
-open LabsCore
+open LabsCore.Grammar
+open LabsCore.Tokens
 open Expressions    
 
 let pexpr = makeExprParser simpleRef (skipString tID .>> notInIdentifier)
@@ -21,7 +20,7 @@ let paction =
         (ws parseArrow) 
         (ws pexpr |> sepbycommas)
     >>= (fun (refs, action, exprs) -> 
-        try {actionType=action; updates=List.zip refs exprs} |> preturn with
+        try {ActionType=action; Updates=List.zip refs exprs} |> preturn with
         | :? System.ArgumentException -> 
             fail "A multiple assignment should contain the same number of variables and expressions.")
 
@@ -31,7 +30,7 @@ let paction =
 let pproc, pprocRef = createParserForwardedToRef()
 
 do pprocRef :=
-    let doBase (pos, stmt) = {def=stmt; pos=pos; name=string stmt} |> BaseProcess
+    let doBase (pos, stmt) = {Def=stmt; Pos=pos; Name=string stmt} |> BaseProcess
     let compose a b = Comp(a, b)
 
     let pGuarded = 
@@ -39,7 +38,7 @@ do pprocRef :=
         followedBy ((ws pguard) >>. (ws GUARD))
         >>. pipe3
             getPosition (ws pguard) ((ws GUARD) >>. pproc)
-            (fun pos g p -> Guard({pos=pos; name=""; def=(g,p)}))
+            (fun pos g p -> Guard({Pos=pos; Name=""; Def=(g,p)}))
         <!> "Guard"
     let pBase =
         let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase
@@ -68,5 +67,5 @@ let processes =
             ((followedBy IDENTIFIER) >>. getPosition) 
             (ws IDENTIFIER)
             ((ws EQ) >>. (ws pproc) <!> "PPROC")
-            (fun pos name proc -> {name=name; pos=pos; def=proc})
+            (fun pos name proc -> {Name=name; Pos=pos; Def=proc})
     ws (many pdef)
