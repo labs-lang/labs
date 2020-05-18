@@ -1,9 +1,8 @@
-﻿module Frontend.Liquid
-open Frontend
+module LabsToC.Liquid
 
 open System
-open Outcome
-open Message
+open Frontend.Outcome
+open Frontend.Message
 open DotLiquid
 open System.IO
 
@@ -34,7 +33,7 @@ let private internalRender strfun (template:Template) values =
         zero (strfun render)
     else 
         template.Errors
-        |> Seq.map (fun x -> {what=Codegen x.Message; where=[]})
+        |> Seq.map (fun x -> {What=Codegen x.Message; Where=[]})
         |> (Seq.toList >> wrap (strfun "") [])
 
 /// Renders a given template to standard output

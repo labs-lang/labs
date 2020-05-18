@@ -12,7 +12,6 @@
         <Compile Include="Externs.fs" />
         <Compile Include="LTS.fs" />
         <Compile Include="SymbolTable.fs" />
-        <Compile Include="Liquid.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 
