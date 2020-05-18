@@ -26,7 +26,7 @@
     
     <ItemGroup>
       <PackageReference Include="Argu" Version="6.0.0" />
-      <PackageReference Include="DotLiquid" Version="2.0.298" />
+      <PackageReference Include="DotLiquid" Version="2.0.333" />
     </ItemGroup>
 
 </Project>
