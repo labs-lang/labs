@@ -1,5 +1,5 @@
 module Frontend.Message
-open Types
+open LabsCore.Grammar
 
 type Position = FParsec.Position
 
@@ -23,8 +23,8 @@ type Warn =
 
 type Message<'a> =
     {
-        what: 'a
-        where: Position list
+        What: 'a
+        Where: Position list
     }
 
 let private _pprintWithPos header msg where =
@@ -32,7 +32,7 @@ let private _pprintWithPos header msg where =
     sprintf "[%s] %s at %s" header msg pos
     
 let pprintErr (m:Message<Err>) =
-    match m.what with
+    match m.What with
         | Parser s -> sprintf "Parser failed: %s" s
         | Duplicate s -> sprintf "Duplicate definitions for '%s'" s
         | UndefProcess s -> sprintf "Process '%s' was not defined" s
@@ -45,17 +45,17 @@ let pprintErr (m:Message<Err>) =
         | Codegen s -> sprintf "Code generation failed: %s" s
         | CLI s -> sprintf "Parsing of the command line failed: %s" s
         | Generic s -> s
-    |> fun msg -> _pprintWithPos "ERROR" msg m.where
+    |> fun msg -> _pprintWithPos "ERROR" msg m.Where
 
 let pprintWarn (m:Message<Warn>) =
-    match m.what with
+    match m.What with
         | SpawnZero s -> sprintf "Agent '%s' has spawn size 0 and will not be spawned." s
         | Unused s -> sprintf "Unused: '%s'" s
-    |> fun msg -> _pprintWithPos "WARNING" msg m.where
+    |> fun msg -> _pprintWithPos "WARNING" msg m.Where
 
 exception LabsException of Message<Err>
 
 let map f (d:Node<_>) =
-    try {pos=d.pos; name=d.name; def=f d.def}
-    with :? LabsException as e -> raise (LabsException {e.Data0 with where=[d.pos]})
+    try {Pos=d.Pos; Name=d.Name; Def=f d.Def}
+    with :? LabsException as e -> raise (LabsException {e.Data0 with Where=[d.Pos]})
     

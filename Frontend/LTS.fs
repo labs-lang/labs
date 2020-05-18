@@ -1,6 +1,6 @@
 module Frontend.LTS
 open LabsCore
-open Types
+open Grammar
 open FSharpPlus.Lens
 
 type ExecPoint = Map<int, int>
@@ -32,11 +32,11 @@ module internal ExitCond =
             |> Option.defaultValue table
         Map.fold (fun ex pc v -> _remove pc v ex) exit entry
     
-/// Returns the disjunction of two exit points.
+/// Returns the disjunction of two exit conditions.
 let (.>>.) e1 e2 =
     Map.unionWith (fun _ s1 s2 -> Set.union s1 s2) e1 e2
 
-/// Returns the disjunction of two exit points.
+/// Returns the disjunction of two exit conditions.
 /// If v[k] terminates in e1 but not in e2, the termination is removed  
 let (>>.) e1 e2 =
     Map.unionWith (fun _ (s1:Set<_>) (s2:Set<_>) -> Set.union (s1.Remove 0) s2) e1 e2
@@ -77,8 +77,8 @@ let removeNames (procs:Map<string,Process<_>>) lts =
     
     let removeName (l:TransitionSystem) tr =
         let exit =
-            match tr.action.def with
-            | Name s -> newexit s tr.action.pos
+            match tr.action.Def with
+            | Name s -> newexit s tr.action.Pos
             | _ -> failwith "Something wrong happened"
         
         let affected, others =
@@ -91,7 +91,7 @@ let removeNames (procs:Map<string,Process<_>>) lts =
         |> Set.union others
 
     lts
-    |> Set.filter (fun t -> match t.action.def with Name _ -> true | _ -> false)
+    |> Set.filter (fun t -> match t.action.Def with Name _ -> true | _ -> false)
     |> Seq.fold removeName lts
     
 // This is the implementation of the [[ P ]] function in our latest paper.
@@ -120,7 +120,7 @@ let makeTransitions state proc =
             let acc'' = setl _4 exit' acc'
             match l with
             | [] (* This should never happen, we put it for completeness *)
-            | _::[] -> (Set.union lts lts', acc'')
+            | [_] -> (Set.union lts lts', acc'')
             (* recurse on l without its last element*)
             | _ -> comp_ Seq recurse (Set.union lts lts', acc'') ((List.rev << List.tail << List.rev) l)
         | Choice ->
