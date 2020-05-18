@@ -1,4 +1,4 @@
-﻿module Tokens
+﻿module LabsCore.Tokens
 
 let tPLUS = "+"
 let tMINUS = "-"

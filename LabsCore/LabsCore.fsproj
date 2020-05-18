@@ -15,7 +15,7 @@
     <Compile Include="List.fs" />
     <Compile Include="Map.fs" />
     <Compile Include="Tokens.fs" />
-    <Compile Include="Types.fs" />
+    <Compile Include="Grammar.fs" />
     <Compile Include="Expression.fs" />
     <Compile Include="Process.fs" />
   </ItemGroup>

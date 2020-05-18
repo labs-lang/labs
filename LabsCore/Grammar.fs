@@ -1,25 +1,28 @@
-module Types
+
+module LabsCore.Grammar
 open Tokens
 open FParsec
 open FSharpPlus.Lens
 
 type Node<'a> = {
-    name: string
-    pos: Position
-    def: 'a
+    Name: string
+    Pos: Position
+    Def: 'a
 }
 let inline _name x =
-    let getter {name=n} = n
-    let setter {pos=p; def=d} n' = {name=n'; pos=p; def=d}
+    let getter {Name=n} = n
+    let setter {Pos=p; Def=d} n' = {Name=n'; Pos=p; Def=d}
     lens getter setter x
 let inline _def x =
-    let getter {def=d} = d
-    let setter {name=n; pos=p} d' = {name=n; pos=p; def=d'}
+    let getter {Def=d} = d
+    let setter {Name=n; Pos=p} d' = {Name=n; Pos=p; Def=d'}
     lens getter setter x
 let inline _pos x =
-    let getter {pos=p} = p
-    let setter {name=n; def=d} p' = {name=n; pos=p'; def=d}
+    let getter {Pos=p} = p
+    let setter {Name=n; Def=d} p' = {Name=n; Pos=p'; Def=d}
     lens getter setter x
+
+let inline byName v = (^T : (member Name : string) v)
 
 type Location =
     | I 
@@ -73,11 +76,11 @@ type Expr<'a, 'b> =
             | _ -> sprintf "%O %O %O" e1 op e2
 
 and Ref<'a, 'b> = 
-    {var:'a; offset: Expr<'a, 'b> option}
+    {Var:'a; Offset: Expr<'a, 'b> option}
     override this.ToString() = 
-        match this.offset with
-        | Some e -> sprintf "%O[%O]" this.var e
-        | None -> this.var.ToString()
+        match this.Offset with
+        | Some e -> sprintf "%O[%O]" this.Var e
+        | None -> this.Var.ToString()
 
 type CmpOp = 
     | Equal
@@ -115,22 +118,18 @@ type BExpr<'a, 'b> =
         | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat (sprintf " %O " op)
 
 type Action<'a> = {
-    actionType: Location
-    updates: (Ref<'a, unit> * Expr<'a, unit>) list
+    ActionType: Location
+    Updates: (Ref<'a, unit> * Expr<'a, unit>) list
     }
     with 
         override this.ToString() = 
-            (match this.actionType with
+            (match this.ActionType with
             | I -> sprintf "%s <- %s"
             | L _ -> sprintf "%O <~ %O"
             | E -> sprintf "%O <-- %O")
-                (this.updates |> List.map (string << fst) |> String.concat ",")
-                (this.updates  |> List.map (string << snd) |> String.concat ",")
+                (this.Updates |> List.map (string << fst) |> String.concat ",")
+                (this.Updates  |> List.map (string << snd) |> String.concat ",")
 
-module Action =
-    let updates_ =
-        (fun a -> a.updates),
-        (fun u a -> {actionType=a.actionType; updates=u})
 
 /// Initialization values
 type Init =
@@ -142,7 +141,27 @@ type Init =
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> sprintf "%O..%O" min max
         | Undef -> "undef"
-        
 
-/// Supported target encodings
-type EncodeTo = | C | Lnt
+
+type Stmt<'a> = 
+    | Nil 
+    | Skip
+    | Act of 'a Action
+    | Name of string
+with
+    override this.ToString() =
+        match this with
+        | Nil -> "0"
+        | Skip -> "√"
+        | Act a -> string a
+        | Name s -> s
+
+type Composition =
+        | Seq
+        | Choice
+        | Par
+        
+type Process<'a> =
+    | BaseProcess of Node<Stmt<'a>>
+    | Guard of Node<BExpr<'a, unit> * Process<'a>>
+    | Comp of Composition * Process<'a> list

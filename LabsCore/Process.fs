@@ -1,65 +1,58 @@
 ﻿namespace LabsCore
 open Tokens
-open Types
+open Grammar
 open FSharpPlus.Lens
 open FParsec
 
-type Stmt<'a> = 
-    | Nil 
-    | Skip
-    | Act of 'a Action
-    | Name of string
-with
-    override this.ToString() =
-        match this with
-        | Nil -> "0"
-        | Skip -> "√"
-        | Act a -> string a
-        | Name s -> s
 
-type Composition =
-        | Seq
-        | Choice
-        | Par
-type Process<'a> =
-    | BaseProcess of Node<Stmt<'a>> //Base<'a, 'b>
-    | Guard of Node<BExpr<'a, unit> * Process<'a>>
-    | Comp of Composition * Process<'a> list
-
+/// Functions to manipulate Process objects.
 module Process =
+    /// General-purpose fold function.
     let rec fold fbase fguard fcomp acc proc =
         let recurse = fold fbase fguard fcomp
         match proc with
         | BaseProcess b ->
             fbase acc b
         | Guard n  ->
-            recurse (fguard acc (fst n.def)) (snd n.def)
+            recurse (fguard acc (fst n.Def)) (snd n.Def)
         | Comp(typ, l) -> 
             fcomp typ recurse acc l
     
+    /// <summary>Catamorphism function for processes.</summary>
+    /// <remark>"A catamorphism is a function that "collapses" a recursive type into
+    /// a new value based on its structure. In fact, you can think of a catamorphism
+    /// as a sort of "visitor pattern". (S. Wlaschin, "F# for fun and profit")</remark>
+    /// <param name="fbase">Function to apply to <c>BaseProcess</c> objects.</param>
+    /// <param name="fguard">Function to apply to <c>Guard</c> objects.</param>
+    /// <param name="fcomp">Function to apply to <c>Comp</c> objects.</param>
+    /// <param name="proc">The input process.</param>
     let rec cata fbase fguard fcomp proc = 
         let recurse = cata fbase fguard fcomp
         match proc with
         | BaseProcess b -> fbase b
-        | Guard(n) ->
-            fguard n (recurse (snd n.def))
-        | Comp(typ, l) -> fcomp typ (l |> List.map recurse)
+        | Guard n ->
+            fguard n (recurse (snd n.Def))
+        | Comp (typ, l) -> fcomp typ (l |> List.map recurse)
 
+    /// <summary>
+    /// Recursively applies <c>fbase</c> and <c>fguard</c> to <c>proc</c>.
+    /// </summary>
     let rec map fbase fguard proc =
         let recurse = map fbase fguard
         match proc with
         | BaseProcess b -> fbase b
         | Guard(n) ->
-            let g, p = n.def
+            let g, p = n.Def
             let p' = recurse p
             Guard(setl _def (fguard g, p') n)
         | Comp(typ, l) -> Comp(typ, List.map recurse l)
 
+    /// Pretty-prints <c>proc</c> to a string.
     let rec print proc =
-        let print_ b = string b.def
-        let printGuard_ g =
+        let printNode b = string b.Def
+        let printGuard g =
             sprintf "%O %s %s" g tGUARD
-        let rec printComp_ typ l = 
+        let rec printComp typ l = 
             let sep = 
                 match typ with 
                 | Seq -> sprintf  "%s " tSEQ
@@ -67,49 +60,33 @@ module Process =
                 | Par -> sprintf " %s " tPAR
             String.concat sep l
             |> if (Seq.length l) > 1 then (sprintf "(%s)") else id
-        cata print_ printGuard_ printComp_ proc
+        cata printNode printGuard printComp proc
     
-    /// Simplifies the process by removing Comp
+    /// Simplifies the process by removing <c>Comp</c>
     /// elements with only one child.
     let simplify proc =
-        let comp_ typ l =
+        let comp typ l =
             if List.length l = 1 then l.Head
             else Comp(typ, l)
-        let guard_ n p =
+        let guard n p =
             Guard(setl (_def << _2) p n)
-        cata (BaseProcess) guard_ comp_ proc
+        cata (BaseProcess) guard comp proc
     
     /// Transforms g -> Par(...) into g -> (Skip; Par(...)).
     let fixGuardedPar proc =
-        let guard_ n p = 
+        let guard n p = 
             let p' =
                 match p with
-                | Comp (Par, _) -> Comp(Seq, [BaseProcess({name=""; pos=n.pos; def=Skip}); p])
+                | Comp (Par, _) -> Comp(Seq, [BaseProcess({Name=""; Pos=n.Pos; Def=Skip}); p])
                 | _ -> p
             Guard(setl (_def << _2) p' n)
-        cata (BaseProcess) guard_ (fun typ l -> Comp(typ, l)) proc
-    
-    let usedNames proc = 
-        let used_ acc b = 
-            match b.def with
-            | Name n -> Set.add (n, b.pos) acc
-            | _ -> acc
-        fold used_ (fun x _ -> x) (fun _ -> Seq.fold) Set.empty proc
-
-    let recUsedNames (procs: Map<_, _>) name =
-        let id2 x _ = x
-        let rec base_ acc b = 
-            match b.def with 
-            | Name n when not <| Set.contains b acc -> 
-                fold base_ id2 (fun _ -> Seq.fold) (Set.add b acc) procs.[n]
-            | _ -> acc
-        fold base_ id2 (fun _ -> Seq.fold) Set.empty procs.[name]
+        cata (BaseProcess) guard (fun typ l -> Comp(typ, l)) proc
 
     let private entryOrExit fn =
-        let entrycomp_ = function
+        let entrycomp = function
         | Seq -> fn
         | Choice | Par -> Set.unionMany
-        cata Set.singleton (fun _ -> id) entrycomp_
+        cata Set.singleton (fun _ -> id) entrycomp
 
     /// Returns the entry base processes of proc.
     let initial proc = entryOrExit List.head proc
@@ -117,23 +94,29 @@ module Process =
     /// Returns the final base processes of proc.
     let final proc = entryOrExit List.last proc
 
-    let tag lbl def =
-        let p=def.pos in let p' = Position(lbl, p.Index, p.Line, p.Column)
-        setl _pos p' def
+    /// Adds lbl to the position of a node.
+    let tag lbl node =
+        let p=node.Pos in let p' = Position(lbl, p.Index, p.Line, p.Column)
+        setl _pos p' node
     
-    /// Replace (non-recursive) Name processes with their definitions.
-    // Inserts information about the Name process into its expansion's elements.
-    let expand (procs: Map<_, _>) name =
-        let rec expand_ visited name = 
-            let base_ b = 
-                match b.def with
+    
+    /// <summary>
+    /// Replaces (non-recursive) <c>Name</c> processes with their definitions.
+    /// </summary>
+    /// <remark>Inserts information about the <c>Name</c> process into its expansion's elements.</remark>
+    /// <param name="procDefs">Process definitions (a <c>Map</c> from <c>string</c> to <c>Process</c>.</param>
+    /// <param name="name">The name of the process being expanded.</param>
+    let expand (procDefs: Map<_, _>) name =
+        let rec expandFn visited name = 
+            let baseFn b = 
+                match b.Def with
                 | Name n when n=name || n="Behavior" -> BaseProcess b
                 | Name n when (not (Set.contains b visited)) ->
-                    match procs.TryFind n with
+                    match procDefs.TryFind n with
                     | Some _ -> 
-                        expand_ (visited.Add b) n 
-                        |> map ((tag (sprintf "%s@%O" n b.pos)) >> BaseProcess) id
+                        expandFn (visited.Add b) n 
+                        |> map ((tag (sprintf "%s@%O" n b.Pos)) >> BaseProcess) id
                     | None -> failwith n
                 | _ -> BaseProcess b
-            map base_ id procs.[name]
-        expand_ Set.empty name
+            map baseFn id procDefs.[name]
+        expandFn Set.empty name
