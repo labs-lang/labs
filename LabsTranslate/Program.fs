@@ -5,9 +5,9 @@ open Frontend
 open Frontend.Outcome
 open Frontend.Message
 open LabsToC
+open LabsToC.LabsToC
 open ArgParse
 open Argu
-open Types
 
 let wrapParserResult p text =
     try
@@ -15,9 +15,9 @@ let wrapParserResult p text =
         match x with
         | Success(a, _, _) -> zero a
         | Failure(errorMsg, _, _) ->
-            Outcome.Error([], [{what=Parser errorMsg; where=[]}])
+            Outcome.Error([], [{What=Parser errorMsg; Where=[]}])
     with
-        ex -> Outcome.Error([], [{what=Generic ex.Message; where=[]}])
+        ex -> Outcome.Error([], [{What=Generic ex.Message; Where=[]}])
 
 
 [<EntryPoint>]
@@ -38,9 +38,9 @@ let main argv =
             LabsToC.encode enc (bound) (flags cli) x)
     |> function
        | Result.Ok (_, warns) ->
-            warns |> List.map(Message.pprintWarn >> eprintfn "%s") |> ignore
+            warns |> List.map(pprintWarn >> eprintfn "%s") |> ignore
             0
        | Result.Error (warns, errs) ->
-           warns |> List.map(Message.pprintWarn >> eprintfn "%s") |> ignore
-           errs |> List.map(Message.pprintErr >> eprintfn "%s") |> ignore
+           warns |> List.map(pprintWarn >> eprintfn "%s") |> ignore
+           errs |> List.map(pprintErr >> eprintfn "%s") |> ignore
            1 // TODO more expressive error codes 

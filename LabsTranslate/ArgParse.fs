@@ -1,7 +1,8 @@
 ﻿module internal ArgParse
 open Argu
 open Frontend.Message
-open Types
+open LabsToC.LabsToC
+// open Types
 
 type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string
@@ -32,7 +33,7 @@ let parseCLI argv =
     try
         argParser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
     with e ->
-        raise (LabsException {what = CLI e.Message; where=[]})
+        raise (LabsException {What = CLI e.Message; Where=[]})
 
 let getExterns (args:ParseResults<_>) = 
     let parseValues (vals:string list) =
