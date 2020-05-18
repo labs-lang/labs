@@ -5,6 +5,7 @@ open Grammar
 open Externs
 open Message
 open Outcome
+open Checks
 open LTS
 
 type Mapping = {
