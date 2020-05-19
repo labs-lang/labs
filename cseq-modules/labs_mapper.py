@@ -45,7 +45,7 @@ from utils import findpropositionalvar, findpropositionalvarsize, get_bin
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 backendFilename = {}
-backendFilename['cbmc-assumptions'] = './cbmc-simulator'
+backendFilename['cbmc-assumptions'] = '../cbmc-simulator'
 
 cmdLineOptions = {}
 cmdLineOptions['cbmc-assumptions'] = ' ';
@@ -59,7 +59,7 @@ class labs_mapper(core.module.BasicModule):
 		self.addInputParam('steps', 'number of system evolutions', 's', '1', optional=False)
 		self.addInputParam('cores', 'number of cores (power of two) for parallel analysis (0 = auto)', 'c', '1', optional=False)
 		self.addInputParam('simulate', '0 for verification mode; otherwise # of traces to generate', 't', '0', optional=True)  # TODO
-		self.addInputParam('info', 'LAbS system info', 'i', '', optional=True)  # TODO
+		self.addInputParam('info', 'LAbS system info', 'i', '', optional=True)
 
 		self.addOutputParam('extrargs')
 		self.addOutputParam('info')
@@ -87,7 +87,9 @@ class labs_mapper(core.module.BasicModule):
 			cmdline = backendFilename[backend] + " " + seqfile + " --dimacs | grep \"^c \""    #--outfile " + seqfile+".dimacs"
 
 		command = core.utils.Command(cmdline)
-		out, err, code = command.run(timeout=int(7200))   # store stdout, stderr, process' return value
+		out, err, code = command.run(timeout=int(7200))[0:3]   # store stdout, stderr, process' return value
+		if code != 0:
+			raise IOError(err)
 
 		lines = out.splitlines()
 		processed_info = Info.parse(self.getInputParamValue('info'))
@@ -102,7 +104,9 @@ class labs_mapper(core.module.BasicModule):
 
 			varset = []
 
-			splitonfull = 'c main::1::%s!0@1#1 ' % spliton
+			# TODO change fn_name according to 'spliton'
+			fn_name = 'init' 
+			splitonfull = 'c %s::1::%s!0@1#1 ' % (fn_name, spliton)
 
 			if contexts == 1:
 				cores = 1

@@ -40,7 +40,7 @@ from utils import findpropositionalvar, findpropositionalvarsize, get_bin
 # Name of the executable file to run, by backend.
 backendFilename = {}
 backendFilename['esbmc'] = 'esbmc'
-backendFilename['cbmc-assumptions'] = './cbmc-simulator'
+backendFilename['cbmc-assumptions'] = '../cbmc-simulator'
 backendFilename['llbmc'] = 'llbmc'
 backendFilename['blitz'] = 'blitz'
 backendFilename['satabs'] = 'satabs'
