@@ -5,7 +5,8 @@
 
 	written by Omar Inverso.
 """
-VERSION = 'labs_mapper-2018.10.22'  # forked from mapper-2018.05.24 for sequentialised programs
+VERSION = 'labs_mapper-2020.05.19'
+#VERSION = 'labs_mapper-2018.10.22'  # forked from mapper-2018.05.24 for sequentialised programs
 #VERSION = 'mapper-2018.05.24'
 #VERSION = 'mapper-2018.04.21'
 #VERSION = 'feeder-2015.07.16'     # CSeq 1.0 Release - ASE2015
@@ -24,6 +25,7 @@ TODO:
 	- when the backend is not available, there should be an exception.
 
 Changelog:
+	2020.05.19	adjusted for SLiVER-1.9 (Luca Di Stefano)
 	2018.05.31  forked from mapper for sequentialised programs
 	2018.04.21  forked from latest stable feeder module
 """
@@ -105,7 +107,7 @@ class labs_mapper(core.module.BasicModule):
 			varset = []
 
 			# TODO change fn_name according to 'spliton'
-			fn_name = 'init' 
+			fn_name = 'init'
 			splitonfull = 'c %s::1::%s!0@1#1 ' % (fn_name, spliton)
 
 			if contexts == 1:
