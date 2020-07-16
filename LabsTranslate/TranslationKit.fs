@@ -213,7 +213,7 @@ module internal C =
             member __.TrBExpr filter trExpr b = trBExprC filter trExpr b
             member __.TrExpr trRef trId e = translate trRef trId e
             member __.TrLoc loc x y = translateLocation loc x y
-            member __.TrInitLoc loc x y = (sprintf "_%s") (translateLocation loc x y)
+            member __.TrInitLoc loc x y = translateLocation loc x y
         }
 
 /// Provides the translation kit configuration for LNT.

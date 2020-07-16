@@ -1,4 +1,4 @@
-{%- if siblings.size > 0 %}    LABSassume({%- if last -%}
+{%- if siblings.size > 0 %}    __CPROVER_assume({%- if last -%}
 {%- for item in siblings -%}(pc[tid][{{ item }}] == 0){% unless forloop.last %} && {% endunless %}{%- endfor -%}
 {%- else -%}
 {%- for item in siblings -%}(pc[tid][{{ item }}] != 0){%- unless forloop.last -%} || {% endunless %}{%- endfor -%}
@@ -7,9 +7,9 @@
 
 {%- if loc == "" -%}
     #if DISABLELSTIG == 0
-    LABSassume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
+    __CPROVER_assume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
     #endif
 {%- endif -%}
 {%- for guard in guards %}
-    LABSassume({{ guard }});
+    __CPROVER_assume({{ guard }});
 {%- endfor -%}

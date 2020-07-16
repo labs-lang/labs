@@ -66,7 +66,7 @@ void setHin(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     Hin[id][tupleStart[key]] = 1;
     //     HinCnt[id] = HinCnt[id] + 1;
     // }
-    if (!Hin[id][tupleStart[key]]) ++HinCnt[id];
+    if (!Hin[id][tupleStart[key]]) HinCnt[id] = HinCnt[id] + 1;  
     Hin[id][tupleStart[key]] = 1;
 }
 
@@ -85,7 +85,7 @@ void setHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     //     Hout[id][tupleStart[key]] = 1;
     //     HoutCnt[id] = HoutCnt[id] + 1;
     // }
-    if (!Hout[id][tupleStart[key]]) ++HoutCnt[id];
+    if (!Hout[id][tupleStart[key]]) HoutCnt[id] = HoutCnt[id] + 1;
     Hout[id][tupleStart[key]] = 1;
 }
 
