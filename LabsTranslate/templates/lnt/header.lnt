@@ -10,6 +10,12 @@ module HEADER is
     channel IdChannel is (ID) end channel
     channel Boolch is (Bool) end channel
 
+    {%- unless simulation -%}
+    process ASSUME [mon: any] (expr: Bool) is
+        if not (expr) then mon("spurious"); stop end if
+    end process
+    {%- endunless-%}
+
     {%- if hasStigmergy -%}
 
     (* Stigmergy *)
