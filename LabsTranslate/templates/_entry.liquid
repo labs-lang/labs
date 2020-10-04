@@ -5,10 +5,8 @@
 {%- endif -%});
 {%- endif -%}
 
-{%- if loc == "" -%}
-    #if DISABLELSTIG == 0
+{%- if loc == "" and hasStigmergy -%}
     __CPROVER_assume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
-    #endif
 {%- endif -%}
 {%- for guard in guards %}
     __CPROVER_assume({{ guard }});

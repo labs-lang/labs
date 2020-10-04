@@ -22,10 +22,10 @@ void {{label}}(int tid) {
     setHin(tid, {{k}});
     {%- endfor -%}
     {%- else -%}
-    #if DISABLELSTIG == 0
+    {%- if hasStigmergy -%}
     __CPROVER_assume(HoutCnt[tid] == 0);
     __CPROVER_assume(HinCnt[tid] == 0);
-    #endif
+    {%- endif -%}
     {%- endif -%}
 
     {%- if sync -%}
