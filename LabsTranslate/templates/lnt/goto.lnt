@@ -12,7 +12,7 @@ process action{{label}} [action: any] (in out agent: Agent{%- if hasStigmergy-%}
         {%- for item in qrykeys -%}
         Zqry := insert(TUPLESTART(IndexL({{ item }})), Zqry);
         {%- endfor -%}
-        agent := agent.{Zqry => Zqry}
+        agent := agent.{Zqry -> Zqry}
     end var;
     {%- endif -%}
 
@@ -28,6 +28,6 @@ process action{{label}} [action: any] (in out agent: Agent{%- if hasStigmergy-%}
             p[{{ item.name }}] := x
         end var;
         {%- endif -%}{%- endfor -%}
-        agent := agent.{pc => p}
+        agent := agent.{pc -> p}
     end var
 end process

@@ -28,7 +28,7 @@ process INITAGENT (in out a:Agent{%-if hasStigmergy-%}, in out t:Nat{%-endif-%})
         
         end if;
 
-        a := a.{I => I{%-if hasStigmergy-%}, L => L{%- endif -%}, pc => p}
+        a := a.{I -> I{%-if hasStigmergy-%}, L -> L{%- endif -%}, pc -> p}
     end var 
 end process
 

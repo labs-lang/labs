@@ -36,7 +36,7 @@ process step [mon, action: any] (in out sys: Sys, tid: ID) is
         {%- endif -%}
     
         agents[Nat(tid)] := a;
-        sys := sys.{ agents => agents{%-if hasStigmergy-%}, time => incr(t){%-endif-%}{%- if hasEnvironment -%}, env => e{%-endif-%}}
+        sys := sys.{ agents -> agents{%-if hasStigmergy-%}, time -> incr(t){%-endif-%}{%- if hasEnvironment -%}, env -> e{%-endif-%}}
 
     end var
 end process
@@ -107,7 +107,7 @@ process MAIN [monitor, action: any] is
         
         var i: Nat, a: Agent in
             for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
-                a := agents[i].{id => ID(i)};
+                a := agents[i].{id -> ID(i)};
                 INITAGENT(!?a{%-if hasStigmergy-%}, !?t{%- endif -%});
                 agents[i] := a;
                 action(a)

@@ -112,7 +112,7 @@ module HEADER is
         var Inew: Iface in 
             Inew := a.I;
             Inew[key] := val;
-            a := a.{I => Inew}
+            a := a.{I -> Inew}
         end var;
         action("I", a.id, key, val)
     end process
@@ -136,7 +136,7 @@ module HEADER is
         var Lnew: Lstig in 
             Lnew := a.L;
             Lnew[key] := LstigEntry(val, tstamp);
-            a := a.{L => Lnew, Zput => insert(TUPLESTART(IndexL(key)), a.Zput)};
+            a := a.{L -> Lnew, Zput -> insert(TUPLESTART(IndexL(key)), a.Zput)};
             action("L", a.id, key, Lnew[key])
         end var
     end process
@@ -161,14 +161,14 @@ module HEADER is
                             action("L", j, k, L[k])
                         end loop;
                         agents[j] := a.{
-                            L => L, 
-                            Zput => insert(key, a.Zput),
-                            Zqry => remove(key, a.Zqry)
+                            L -> L, 
+                            Zput -> insert(key, a.Zput),
+                            Zqry -> remove(key, a.Zqry)
                         }
                     end if
                 end loop;
-                agents[Nat(senderId)] := sender.{Zput => remove(key, sender.Zput)};
-                sys := sys.{agents => agents, time => t};
+                agents[Nat(senderId)] := sender.{Zput -> remove(key, sender.Zput)};
+                sys := sys.{agents -> agents, time -> t};
                 action("end propagate", Nat(senderId), Nat(key))
             end var
         end var
@@ -189,19 +189,19 @@ module HEADER is
                     
                     if (a.id != sender.id) and link(sender, a, Nat(key)) and
                     (a.L[Nat(key)].tstamp != sender.L[Nat(key)].tstamp) then 
-                        a := a.{Zput => insert(key, a.Zput)};
+                        a := a.{Zput -> insert(key, a.Zput)};
                         if (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
                             L := a.L;
                             for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
                                 L[k] := sender.L[k];
                                 action("L", j, k, L[k])
                             end loop;
-                            agents[j] := a.{L => L, Zqry => remove(key, a.Zqry)}
+                            agents[j] := a.{L -> L, Zqry -> remove(key, a.Zqry)}
                         end if
                     end if
                 end loop;
-                agents[Nat(senderId)] := sender.{Zqry => remove(key, sender.Zqry)};
-                sys := sys.{agents => agents, time => t};
+                agents[Nat(senderId)] := sender.{Zqry -> remove(key, sender.Zqry)};
+                sys := sys.{agents -> agents, time -> t};
                 action("end confirm", Nat(senderId), Nat(key))
             end var
         end var
