@@ -26,27 +26,30 @@ module Expr =
         let recurse = fold fleaf fref
         match expr with
         | Leaf l -> fleaf acc l
+        | Nondet(e1, e2)
         | Arithm(e1, _, e2) ->
             Seq.fold recurse acc [e1; e2]
-        | Unary(_, e) -> recurse acc e
+        | Unary(_, e) -> recurse acc e    
         | Ref r ->
             let newacc = fref acc r
             r.Offset 
             |> Option.map (recurse newacc)
             |> Option.defaultValue newacc
 
-    let rec cata fleaf farithm funary fref expr = 
-        let recurse = cata fleaf farithm funary fref
+    let rec cata fleaf farithm funary fnondet fref expr = 
+        let recurse = cata fleaf farithm funary fnondet fref
         match expr with
         | Leaf l -> fleaf l
         | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
         | Unary(op, e) -> funary op (recurse e)
+        | Nondet(e1, e2) -> fnondet (recurse e1) (recurse e2)
         | Ref r -> fref r.Var (Option.map recurse r.Offset)
     
     let rec map fleaf fref expr =
         let recurse = map fleaf fref
         match expr with
         | Leaf l -> Leaf(fleaf l)
+        | Nondet(e1, e2) -> Nondet(recurse e1, recurse e2)
         | Arithm(e1, op, e2) -> Arithm(recurse e1, op, recurse e2)
         | Ref r -> 
             let newOffset = r.Offset |> Option.map recurse
@@ -79,7 +82,8 @@ module Expr =
         let unaryFn = function
             | UnaryMinus -> (~-)
             | Abs -> abs
-        cata leafFn arithmFn unaryFn (fun _ _ -> failwith "Not a constexpr") expr
+        let failure = (fun _ _ -> failwith "Not a constexpr")
+        cata leafFn arithmFn unaryFn failure failure expr
     
     /// <summary>
     /// Evaluates a constant expression. Fails if the expression contains an 

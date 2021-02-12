@@ -57,16 +57,18 @@ type LeafExpr<'b> =
     override this.ToString() = 
         match this with
         | Id _ -> tID
-        | Const v -> string v
+        | Const v -> string v 
         | Extern s -> "_" + s
 type Expr<'a, 'b> =
     | Leaf of LeafExpr<'b>
+    | Nondet of Expr<'a, 'b> * Expr<'a, 'b>
     | Ref of Ref<'a, 'b>
     | Unary of UnaryOp * Expr<'a, 'b>
     | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
     override this.ToString() = 
         match this with
         | Leaf l -> string l
+        | Nondet (start, bound) -> sprintf "[%O..%O]" start bound
         | Ref r -> string r
         | Unary(op, e) -> 
             let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in sprintf "%s(%O)" s e
@@ -104,7 +106,7 @@ type Bop =
     override this.ToString() = 
         match this with Conj -> tCONJ | Disj -> tDISJ
 
-///<summmary>Boolean expressions.</summary>
+///<summary>Boolean expressions.</summary>
 type BExpr<'a, 'b> =
     | BLeaf of bool
     | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
