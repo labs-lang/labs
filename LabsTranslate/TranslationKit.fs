@@ -241,17 +241,17 @@ module internal Lnt =
             | Const i -> sprintf "(%i of Int)" i
             | Extern s -> s (*THIS SHOULD NEVER MATCH *)
         let arithmFn = function
-            | Plus -> sprintf "(%s) + (%s)"
-            | Minus -> sprintf "(%s) - (%s)"
-            | Times -> sprintf "(%s) * (%s)"
-            | Div -> sprintf "(%s) div (%s)"
-            | Mod -> sprintf "(%s) mod (%s)"
+            | Plus -> sprintf "(%s + %s)"
+            | Minus -> sprintf "(%s - %s)"
+            | Times -> sprintf "(%s * %s)"
+            | Div -> sprintf "(%s div %s)"
+            | Mod -> sprintf "(%s mod %s)"
             | Max -> sprintf "max(%s, %s)"
             | Min -> sprintf "min(%s, %s)"
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "abs(%s)"
-        let nondetFn = fun _ _ -> failwithf "nondet expressions are currently not supported in LNT"
+        let nondetFn = fun _ _ -> failwith "nondet expressions are currently not supported in LNT"
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef
 
     let rec private trBExprLnt filter trExpr bexpr =
