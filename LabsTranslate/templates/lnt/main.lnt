@@ -1,3 +1,20 @@
+process monitor [mon: any] (agents: Agents) is
+    {%- if alwaysasserts.size == 0 and finallyasserts.size == 0 %} null
+    {%- else -%}
+    --{%- assign cnt = agentscount | minus: 1 -%}
+    --if {%- for i in (0..cnt) -%}(agents[{{i}}].init) {% unless forloop.last %}and {% endunless %} {%- endfor -%}then 
+    {%- for p in alwaysasserts -%}
+    -- {{ p.name }}
+    if not({{ p.value }}) then mon(false){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}{%if finallyasserts.size > 0 %};{% endif %}
+    {%- endfor -%}
+    {%- for p in finallyasserts -%}
+    -- {{ p.name }}
+    if {{ p.value }} then mon(true){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}
+    {%- endfor -%}
+    --end if
+    {%- endif -%}
+end process
+
 function canProceed(a:Agent): Bool is
     var tid: ID in
     tid := a.id;
@@ -66,7 +83,7 @@ process step [attrGate, l: any, spurious:None] (in out sys: Sys, tid: ID) is
     end var
 end process
 
-process MAIN [attr, l: any, spurious:None] is
+process MAIN [monitor, attr, l: any, spurious:None] is
     var sys: Sys, tid: ID in
         var agents: Agents{%- if hasEnvironment -%}, e:Env{%- endif %}{%-if hasStigmergy-%}, m:Matrix{%- endif %} in
             agents := Agents(emptyAgent);
@@ -94,7 +111,7 @@ process MAIN [attr, l: any, spurious:None] is
         tid := {% if firstagent == 0 %} 0{% else %}any ID{%-endif-%};
 
         loop
-            --monitor[monitor](sys.agents);
+            monitor[monitor](sys.agents);
             {% if hasStigmergy %}
             select
                     --- scheduler ---
