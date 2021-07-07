@@ -244,7 +244,7 @@ module HEADER is
                             L := a.L;
                             for k := key while k <= TUPLEEND(key) by k := k + 1 loop
                                 L[k] := sender.L[k];
-                                l(j, k, L[k], "from", senderId)
+                                l(j, k, L[k], senderId)
                             end loop;
                             agents[j] := a.{
                                 L -> L, 
@@ -285,7 +285,7 @@ module HEADER is
                                 L := a.L;
                                 for k := key while k <= TUPLEEND(key) by k := k + 1 loop
                                     L[k] := sender.L[k];
-                                    l(j, k, L[k], "from", senderId)
+                                    l(j, k, L[k], senderId)
                                 end loop;
                                 agents[j] := a.{L -> L, Zqry -> remove(key, a.Zqry)}
                             end var;
