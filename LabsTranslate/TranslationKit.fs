@@ -251,7 +251,7 @@ module internal Lnt =
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "abs(%s)"
-        let nondetFn = sprintf "nondetInRange(%s, %s)"
+        let nondetFn = failwithf "nondet expressions are currently not supported in LNT"
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef
 
     let rec private trBExprLnt filter trExpr bexpr =
