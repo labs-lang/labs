@@ -1,16 +1,16 @@
-process action{{label}} [action: any] (in out agent: Agent{%- if hasStigmergy-%}, t: Nat{%-endif-%}{%-if hasEnvironment-%}, in out E: Env{%- endif -%}) is
+process action{{label}} [attrGate, l: any] (in out agent: Agent{%- if hasStigmergy-%}, in out m: Matrix{%-endif-%}{%-if hasEnvironment-%}, in out E: Env{%- endif -%}) is
     --{{ labs }}
 
     {%- for item in assignments -%}{%- if item.size != 0 -%}
-    {{loc}}[action](!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});{%- else -%}
-    {{loc}}[action](!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, t{%- endif -%});
+    {{loc}}{% if loc == "attr" %}[attrGate]{% elsif loc == "lstig" %}[l]{% endif %}(!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, !?m{%- endif -%});{%- else -%}
+    {{loc}}{% if loc == "attr" %}[attrGate]{% elsif loc == "lstig" %}[l]{% endif %}(!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, !?m{%- endif -%});
     {%- endif -%}{%- endfor -%}
 
     {%- if hasStigmergy and qrykeys.size > 0 -%}
     var Zqry: Pending in
         Zqry := agent.Zqry;
         {%- for item in qrykeys -%}
-        Zqry := insert(TUPLESTART(IndexL({{ item }})), Zqry);
+        Zqry := insert(TUPLESTART({{ item }}), Zqry);
         {%- endfor -%}
         agent := agent.{Zqry -> Zqry}
     end var;
@@ -24,7 +24,7 @@ process action{{label}} [action: any] (in out agent: Agent{%- if hasStigmergy-%}
         p[{{ item.name }}] := {{ item.value.first }};
         {%- else -%}
         var x: Nat in
-            x := any Nat where {%- for val in item.value -%}(x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
+            x := any Nat where ({%- for val in item.value -%}(x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%});
             p[{{ item.name }}] := x
         end var;
         {%- endif -%}{%- endfor -%}

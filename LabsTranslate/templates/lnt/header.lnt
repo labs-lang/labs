@@ -3,40 +3,29 @@ module HEADER is
     function MAXCOMPONENTS:Nat is return {{MAXCOMPONENTS}} end function
     function undef_value:Int is return -128 end function
 
-    type ID is X:Nat where X < MAXCOMPONENTS with "==", "!=" end type
+    type ID is X:Nat where X < MAXCOMPONENTS with ==, != end type
     type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
-    type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with "get", "set" end type
-
-    channel IdChannel is (ID) end channel
-    channel Boolch is (Bool) end channel
-
-    {%- unless simulation -%}
-    process ASSUME [mon: any] (expr: Bool) is
-        if not (expr) then mon("spurious"); stop end if
-    end process
-    {%- endunless-%}
+    type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with get, set end type
 
     {%- if hasStigmergy -%}
 
     (* Stigmergy *)
-    type IndexL is X:Nat where X < {{MAXKEYL}} with "==", "!=" end type
-    type LstigEntry is LstigEntry (value: Int, tstamp: Nat) with "get", "set" end type
-    type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of LstigEntry with "get", "set" end type
-    type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with "get", "set" end type
+    type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Int with get, set end type
+    type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with get, set end type
 
-    function TUPLESTART(n:IndexL): IndexL is
+    function TUPLESTART(n:Nat): Nat is
         case n in
         {%- for i in tupleStart -%}
-            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
+            {% unless forloop.first %}|{% endunless %} {{ forloop.index0 }} -> return {{i}}
         {%- endfor -%}
             | any -> raise unexpected (* should never match *)
         end case
     end function
 
-    function TUPLEEND(n:IndexL): IndexL is
+    function TUPLEEND(n:Nat): Nat is
         case n in
         {%- for i in tupleEnd -%}
-            {% unless forloop.first %}|{% endunless %} IndexL({{ forloop.index0 }}) -> return IndexL({{i}})
+            {% unless forloop.first %}|{% endunless %} ({{ forloop.index0 }}) -> return {{i}}
         {%- endfor -%}
             | any -> raise unexpected (* should never match *)
         end case
@@ -56,65 +45,157 @@ module HEADER is
         return (length(p) == 0)
     end function
 
-    function insert(k: IndexL, p:Pending): Pending is
+    function insert(k: Nat, p:Pending): Pending is
         var p1 : Pending in
             p1 := p;
-            p1[Nat(k)] := true;
+            p1[k] := true;
             return p1
         end var
     end function
 
-    function remove(k: IndexL, p:Pending): Pending is
+    function remove(k: Nat, p:Pending): Pending is
         var p1 : Pending in
             p1 := p;
-            p1[Nat(k)] := false;
+            p1[k] := false;
             return p1
         end var
     end function
 
-    function member(k: IndexL, p:Pending): Bool is
-        return p[Nat(k)]
+    function member(k: Nat, p:Pending): Bool is
+        return p[k]
+    end function
+
+
+    type SetOfAgents is array [ 0 .. {{ MAXCOMPONENTS | minus: 1 }} ] of Bool with get, set end type
+
+    function tri(n:Nat): Nat is
+        (* returns the n-th triangular number *)
+        return (n * (n + 1)) div 2
+    end function
+
+    type Comparison is LESS, SAME, GREATER with ==, != end type
+
+    function inv(c:Comparison): Comparison is
+        case c in
+        LESS -> return GREATER
+        | GREATER -> return LESS
+        | SAME -> return SAME
+        end case 
+    end function
+
+    -- n*(n+1) / 2
+    type MatrixVar is array [0 .. {{ MAXCOMPONENTS | minus: 1 |  times: MAXCOMPONENTS | divided_by: 2 | minus: 1 }}] of Comparison with get, set end type
+    -- one Matrix2D for each variable
+    type Matrix is array [0 .. {{MAXKEYL | minus: 1}}] of MatrixVar with get, set end type
+
+    function index(i,j:Nat): Nat is
+        require j < MAXCOMPONENTS;
+        require i < j;
+        -- I don't know why, but writing the formula in one line, i.e.,
+        -- return (MAXCOMPONENTS * i) + j - tri(i+1)
+        -- leads to "out of range" errors from the LOTOS compiler
+        var x:Nat in
+            x := tri(i+1);
+            x := (MAXCOMPONENTS * i) + j - x;
+            return x
+        end var
+    end function
+
+    --getComparison(m,i,j) = GREATER iff i's value is fresher than j's
+    function getComparison(m:Matrix, key,i,j:Nat): Comparison is
+        if (i==j) then return SAME
+        elsif (i<j) then return m[key][index(i,j)]
+        else return inv(m[key][index(j,i)])
+        end if
+    end function
+
+    --Enforces that a future call to getComparison(..., i,j) will return "cmp"
+    function setComparison(in out mkey:MatrixVar, i,j:Nat, cmp:Comparison) is
+        if (i<j) then mkey[index(i,j)] := cmp
+        elsif (i>j) then mkey[index(j,i)] := inv(cmp)
+        -- ignore the case i=j
+        end if
+    end function
+
+    function refresh(in out m: Matrix, key, id: Nat) is
+        var i:Nat, mkey:MatrixVar in 
+            mkey := m[TUPLESTART(key)];
+            for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
+                setComparison(!?mkey, id, i, GREATER)
+                --if (id<i) then mkey[index(id, i)] := GREATER
+                --elsif (id>i) then mkey[index(i, id)] := LESS
+                
+                --end if
+            end loop;
+            m[TUPLESTART(key)] := mkey
+        end var
+    end function
+
+    function sync(in out m: Matrix, key, from: Nat, to: SetOfAgents) is
+        var i, j:Nat, mkey: MatrixVar in 
+            mkey := m[TUPLESTART(key)];
+            for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
+                if to[i] then 
+                    (* Sync receiver with sender *)
+                    setComparison(!?mkey, from, i, SAME);
+                    for j := 0 while j < i by j := j + 1 loop
+                        (* Sync receivers with each other *)
+                        if to[j] then setComparison(!?mkey, i, j, SAME) end if
+                    end loop
+                elsif i <> from then
+                    -- Update non-receivers
+                    for j := 0 while j < i by j := j + 1 loop
+                        if to[j]
+                        (*i's comparison to receiver "j" is the same as with "from" *)
+                        then setComparison(!?mkey, i, j, getComparison(m, key, i, from))
+                        end if
+                    end loop
+                end if
+                -- ignore case i = from
+            end loop;
+            m[TUPLESTART(key)]:= mkey
+        end var
     end function
     {%- endif -%}
 
     {%- if hasEnvironment -%}
-    type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with "get", "set" end type
+    type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with get, set end type
 
-    process env [action: any] (in out E:Env, id:ID, key:Int, val:Int) is 
-        E[IntToNat(key)] := val;
-        action("E", id, key, val)
+    process env (in out E:Env, id:ID, key:Int, val:Int) is 
+        E[IntToNat(key)] := val
+        --action("E", id, key, val)
     end process
     {%- endif -%}
 
     {%- if hasStigmergy -%}
-    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, pc:PC) with "get", "set" end type
+    type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, pc:PC) with get, set end type
     {%- else -%}
-    type Agent is agent(id: ID, I: Iface, pc:PC) with "get", "set" end type
+    type Agent is agent(id: ID, I: Iface, pc:PC) with get, set end type
     {%- endif -%}
-    type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with "get", "set" end type
+    type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with get, set end type
 
     {%- if hasEnvironment -%}
-    type Sys is sys(agents: Agents, {%- if hasStigmergy -%}time: Nat,{%- endif-%} env: Env) with "get", "set" end type
+    type Sys is sys(agents: Agents, {%- if hasStigmergy -%}m: Matrix,{%- endif-%} env: Env) with get, set end type
     {%- else -%}
-    type Sys is sys(agents: Agents{%- if hasStigmergy -%}, time: Nat{%- endif-%}) with "get", "set" end type
+    type Sys is sys(agents: Agents{%- if hasStigmergy -%}, m: Matrix{%- endif-%}) with get, set end type
     {%- endif -%}
 
 
     function emptyAgent: Agent is
         {%- if hasStigmergy -%}
-        return Agent(ID(0), Iface(0), Lstig(LstigEntry(0, 0)), Pending(false), Pending(false), PC(0))
+        return Agent(ID(0), Iface(0), Lstig(0), Pending(false), Pending(false), PC(0))
         {%- else -%}
         return Agent(ID(0), Iface(0), PC(0))
         {%- endif -%}
     end function
 
-    process attr [action: any] (in out a:Agent, key:Nat, val:Int) is 
+    process attr [attrGate: any] (in out a:Agent, key:Nat, val:Int) is 
         var Inew: Iface in 
             Inew := a.I;
             Inew[key] := val;
             a := a.{I -> Inew}
         end var;
-        action("I", a.id, key, val)
+        attrGate(a.id, key, val)
     end process
 
     {%- if hasStigmergy -%}
@@ -132,77 +213,90 @@ module HEADER is
         {% else %}return false {% endif %}
     end function
 
-    process lstig [action: any] (in out a:Agent, key:Nat, val:Int, tstamp: Nat) is 
+    process lstig [l: any] (in out a:Agent, key:Nat, val:Int, in out m:Matrix) is 
         var Lnew: Lstig in 
             Lnew := a.L;
-            Lnew[key] := LstigEntry(val, tstamp);
-            a := a.{L -> Lnew, Zput -> insert(TUPLESTART(IndexL(key)), a.Zput)};
-            action("L", a.id, key, Lnew[key])
+            Lnew[key] := val;
+            eval refresh(!?m, key, Nat(a.Id));
+            a := a.{L -> Lnew, Zput -> insert(TUPLESTART(key), a.Zput)};
+            l(a.id, key, val)
         end var
     end process
 
-    process propagate [action: any] (in out sys: Sys) is
-        var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
-            senderId := any ID where length(sys.agents[Nat(senderId)].Zput) > 0;
+    process propagate [l: any] (in out sys: Sys) is
+        var senderId, key: Nat, sender:Agent, agents:Agents in
+            senderId := any Nat where (senderId < MAXCOMPONENTS) and (length(sys.agents[senderId].Zput) > 0);
             agents := sys.agents;
-            sender := agents[Nat(senderId)];
-            key := any IndexL where member(key, sender.Zput);
-            action("propagate", Nat(senderId), Nat(key));
-            var j, k, t: Nat, L: Lstig, a:Agent in
-                t := sys.time;
+            sender := agents[senderId];
+            key := any Nat where key < {{MAXKEYL}} and member(key, sender.Zput);
+            --action("propagate", senderId, Nat(key));
+            var j: Nat, a:Agent, mat:Matrix, recipients:SetOfAgents in
+                --t := sys.time;
+                mat := sys.m;
+                recipients:= SetOfAgents(false);
                 for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
                     a := agents[j];
 
-                    if (a.id != sender.id) and link(sender, a, Nat(key)) and 
-                    (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
-                        L := a.L;
-                        for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
-                            L[k] := sender.L[k];
-                            action("L", j, k, L[k])
-                        end loop;
-                        agents[j] := a.{
-                            L -> L, 
-                            Zput -> insert(key, a.Zput),
-                            Zqry -> remove(key, a.Zqry)
-                        }
+                    if (a.id != sender.id) and link(sender, a, key) and 
+                    (getComparison(mat, key, senderId, j) == GREATER) --sender's value is fresher
+                    then
+                        var L:Lstig, k:Nat in
+                            L := a.L;
+                            for k := key while k <= TUPLEEND(key) by k := k + 1 loop
+                                L[k] := sender.L[k];
+                                l(j, k, L[k], "from", senderId)
+                            end loop;
+                            agents[j] := a.{
+                                L -> L, 
+                                Zput -> insert(key, a.Zput),
+                                Zqry -> remove(key, a.Zqry)
+                            }
+                        end var;
+                        recipients[j] := true
                     end if
                 end loop;
-                agents[Nat(senderId)] := sender.{Zput -> remove(key, sender.Zput)};
-                sys := sys.{agents -> agents, time -> t};
-                action("end propagate", Nat(senderId), Nat(key))
+                eval sync(!?mat, key, senderId, recipients);
+                agents[senderId] := sender.{Zput -> remove(key, sender.Zput)};
+                sys := sys.{agents -> agents, m -> mat}
             end var
         end var
     end process
 
-    process confirm [action: any] (in out sys:Sys) is
-        var senderId:ID, key: IndexL, sender:Agent, agents:Agents in
-            senderId := any ID where length(sys.agents[Nat(senderId)].Zqry) > 0;
+    process confirm [l: any] (in out sys:Sys) is
+        var senderId, key: Nat, sender:Agent, agents:Agents in
+            senderId := any Nat where (senderId < MAXCOMPONENTS) and (length(sys.agents[senderId].Zqry) > 0);
             agents := sys.agents;
-            sender := agents[Nat(senderId)];
-            key := any IndexL where member(key, sender.Zqry);
-            action("confirm", Nat(senderId), Nat(key));
-            var j, k, t: Nat, L: Lstig, a:agent in
-                t:=sys.time;
+            sender := agents[senderId];
+            key := any Nat where key < {{MAXKEYL}} and member(key, sender.Zqry);
+            --action("confirm", senderId, Nat(key));
+            var j: Nat, a:Agent, mat:Matrix, recipients:SetOfAgents in
+                mat := sys.m;
+                recipients:= SetOfAgents(false);
                 for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
-                    
                     a := agents[j];
-                    
-                    if (a.id != sender.id) and link(sender, a, Nat(key)) and
-                    (a.L[Nat(key)].tstamp != sender.L[Nat(key)].tstamp) then 
+                    if (a.id != sender.id) and link(sender, a, key) and
+                    (getComparison(mat, key, senderId, j) != SAME)
+                    then 
                         a := a.{Zput -> insert(key, a.Zput)};
-                        if (a.L[Nat(key)].tstamp < sender.L[Nat(key)].tstamp) then
-                            L := a.L;
-                            for k := Nat(key) while k <= Nat(TUPLEEND(key)) by k := k + 1 loop
-                                L[k] := sender.L[k];
-                                action("L", j, k, L[k])
-                            end loop;
-                            agents[j] := a.{L -> L, Zqry -> remove(key, a.Zqry)}
+                        if 
+                        (getComparison(mat, key, senderId, j) == GREATER) --sender's value is fresher
+                        then
+                            var L:Lstig, k:Nat in
+                                L := a.L;
+                                for k := key while k <= TUPLEEND(key) by k := k + 1 loop
+                                    L[k] := sender.L[k];
+                                    l(j, k, L[k], "from", senderId)
+                                end loop;
+                                agents[j] := a.{L -> L, Zqry -> remove(key, a.Zqry)}
+                            end var;
+                            recipients[j] := true
                         end if
                     end if
                 end loop;
-                agents[Nat(senderId)] := sender.{Zqry -> remove(key, sender.Zqry)};
-                sys := sys.{agents -> agents, time -> t};
-                action("end confirm", Nat(senderId), Nat(key))
+                eval sync(!?mat, key, senderId, recipients);
+                --l(recipients, mat); --DEBUG
+                agents[senderId] := sender.{Zqry -> remove(key, sender.Zqry)};
+                sys := sys.{agents -> agents, m -> mat}
             end var
         end var
     end process
