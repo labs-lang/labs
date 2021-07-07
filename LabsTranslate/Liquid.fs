@@ -50,8 +50,7 @@ let parse path =
     File.ReadAllText path
     |> Template.Parse
 
-///<summmary>Opens a template file and renders it using the specified
-///local variables.</summary>
+///<summary>Opens a template file and renders it using the specified local variables.</summary>
 let renderFile path (vals:LiquidDict) =
     (strRender (parse path) vals)
 
