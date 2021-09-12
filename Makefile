@@ -30,6 +30,7 @@ build/%/sliver.py : $(sliver_sources)  build/%/pyparsing.py
 	@mkdir -p build/$(platform)
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
+	@rm build/${platform}/HISTORY-dev ;
 
 build/%/pyparsing.py :
 	@mkdir -p build/$(platform)
@@ -60,12 +61,12 @@ build/%/cbmc-simulator :
 	@cp linux/cbmc/* build/$(platform)/ ;
 
 osx : rmsentinels \
-	  build/osx.10.12-x64/labs/LabsTranslate \
-	  build/osx.10.12-x64/labs/templates/main.c \
-	  build/osx.10.12-x64/pyparsing.py \
-	  build/osx.10.12-x64/click \
-	  build/osx.10.12-x64/sliver.py \
-	  build/osx.10.12-x64/examples
+	build/osx.10.12-x64/labs/LabsTranslate \
+	build/osx.10.12-x64/labs/templates/main.c \
+	build/osx.10.12-x64/pyparsing.py \
+	build/osx.10.12-x64/click \
+	build/osx.10.12-x64/sliver.py \
+	build/osx.10.12-x64/examples
 
 linux : rmsentinels \
 	build/linux-x64/labs/LabsTranslate \
