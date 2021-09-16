@@ -15,7 +15,8 @@ let pcomp =
             processes <!> "PROCESSES") |> betweenBraces)
         (fun pos n (i, l, procs) -> {
             Pos=pos;
-            Name=n;
+            Name=n
+            Source="";
             Def = {
                 Name = n
                 Iface = Option.defaultValue [] i

@@ -16,7 +16,7 @@ let plink =
             (fun a b c -> {Var=a,c; Offset=b})
     let linkId = (ws (skipString tID)) >>. pc1orc2
     getPosition .>>. makeBExprParser (makeExprParser linkref linkId)
-    |>> (fun (pos, link) -> {Name="link"; Pos=pos; Def=link})
+    |>> (fun (pos, link) -> {Name="link"; Pos=pos; Def=link; Source=""})
 
 let plstig : Parser<_> =
     let ptuple name =
@@ -39,4 +39,4 @@ let plstig : Parser<_> =
     >>= (fun (pos, n) ->
             ((ws (pstringEq "link" plink) .>>. (plstigkeys n <!> "KEYS"))
             |> betweenBraces)
-            |>> fun (l, v) -> {Pos=pos; Name=n; Def={Name=n; Link=l; Vars=v}}) <!> "STIGMERGY"
+            |>> fun (l, v) -> {Pos=pos; Name=n; Def={Name=n; Link=l; Vars=v}; Source=""}) <!> "STIGMERGY"

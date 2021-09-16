@@ -17,7 +17,7 @@ let pspawn =
         (followedBy IDENTIFIER >>. getPosition)
         (ws IDENTIFIER .>> (ws (skipChar ':')))
         (ws pspawnexpr)
-        (fun pos name expr -> {Pos=pos; Name=name; Def=expr})
+        (fun pos name expr -> {Pos=pos; Name=name; Def=expr; Source=""})
     )
     |> sepbycommas
 
@@ -41,4 +41,4 @@ let psys =
             })
         |> betweenBraces)
         |> ws
-    |>> (fun (pos, sys) -> {Name="system"; Pos=pos; Def=sys})
+    |>> (fun (pos, sys) -> {Name="system"; Pos=pos; Def=sys; Source=""})

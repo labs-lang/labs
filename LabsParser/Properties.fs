@@ -41,7 +41,7 @@ let pproperty =
         pmodality
         ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
         pbaseprop
-        (fun pos n m qs pred -> {Pos=pos; Name=n; Def= {
+        (fun pos n m qs pred -> {Pos=pos; Name=n; Source=""; Def= {
             Name=n
             Modality=m
             Quantifiers=qs

@@ -126,7 +126,7 @@ module internal SymbolTable =
             | Nil -> Nil
             | Skip -> Skip
             | Name s -> Name s
-            |> fun def' -> {Def=def'; Pos=b.Pos; Name=b.Name}
+            |> fun def' -> {Def=def'; Pos=b.Pos; Name=b.Name; Source=b.Source}
         Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
     
     let private handleProcessNode externs table p =

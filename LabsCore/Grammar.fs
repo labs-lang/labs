@@ -7,19 +7,20 @@ open FSharpPlus.Lens
 type Node<'a> = {
     Name: string
     Pos: Position
+    Source: string
     Def: 'a
 }
 let inline _name x =
     let getter {Name=n} = n
-    let setter {Pos=p; Def=d} n' = {Name=n'; Pos=p; Def=d}
+    let setter {Pos=p; Def=d; Source=s} n' = {Name=n'; Pos=p; Def=d; Source=s}
     lens getter setter x
 let inline _def x =
     let getter {Def=d} = d
-    let setter {Name=n; Pos=p} d' = {Name=n; Pos=p; Def=d'}
+    let setter {Name=n; Pos=p; Source=s } d' = {Name=n; Pos=p; Def=d'; Source=s}
     lens getter setter x
 let inline _pos x =
     let getter {Pos=p} = p
-    let setter {Name=n; Def=d} p' = {Name=n; Pos=p'; Def=d}
+    let setter {Name=n; Def=d; Source=s} p' = {Name=n; Pos=p'; Def=d; Source=s}
     lens getter setter x
 
 let inline byName v = (^T : (member Name : string) v)

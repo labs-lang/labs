@@ -35,8 +35,8 @@ let pvar loc =
         (fun pos name -> 
             let v = {Vartype=Scalar; Name=name; Location=loc; Init=Undef}
             function
-            | Some e -> {Pos=pos; Name=name; Def={v with Vartype=Array(e)}}
-            | None -> {Pos=pos; Name=name; Def=v})
+            | Some e -> {Pos=pos; Name=name; Source=""; Def={v with Vartype=Array(e)}}
+            | None -> {Pos=pos; Name=name; Source=""; Def=v})
 
 let pinit = 
     let pChoose = 

@@ -56,6 +56,6 @@ let pprintWarn (m:Message<Warn>) =
 exception LabsException of Message<Err>
 
 let map f (d:Node<_>) =
-    try {Pos=d.Pos; Name=d.Name; Def=f d.Def}
+    try {Pos=d.Pos; Name=d.Name; Def=f d.Def; Source=d.Source}
     with :? LabsException as e -> raise (LabsException {e.Data0 with Where=[d.Pos]})
     

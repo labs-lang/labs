@@ -77,7 +77,7 @@ module Process =
         let guard n p = 
             let p' =
                 match p with
-                | Comp (Par, _) -> Comp(Seq, [BaseProcess({Name=""; Pos=n.Pos; Def=Skip}); p])
+                | Comp (Par, _) -> Comp(Seq, [BaseProcess({Name=""; Pos=n.Pos; Source=""; Def=Skip}); p])
                 | _ -> p
             Guard(setl (_def << _2) p' n)
         cata (BaseProcess) guard (fun typ l -> Comp(typ, l)) proc
