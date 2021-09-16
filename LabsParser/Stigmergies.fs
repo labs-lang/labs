@@ -9,7 +9,7 @@ open Expressions
 
 let plink =
     let pc1orc2 = 
-        (ws (ws OF) >>. skipChar 'c' >>. choice [charReturn '1' C1; charReturn '2' C2])
+        (ws (ws OF) >>. opt (skipChar 'c') >>. choice [charReturn '1' C1; charReturn '2' C2])
     let linkref p =
         pipe3
             (ws KEYNAME) (opt (betweenBrackets p)) pc1orc2

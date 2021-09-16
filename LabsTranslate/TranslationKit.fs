@@ -155,7 +155,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
         |> fun f -> List.map f bexprs
 
     let mainGuardTr =
-        conf.TrBExpr None (conf.TrExpr (trref conf.TrLoc "firstAgent") (fun () -> "firstAgent"))
+        conf.TrBExpr None (conf.TrExpr (trref conf.TrLoc "firstAgent") (fun () -> "NatToInt(Nat(tid))"))
     
     let propTr =
         translateProp conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc
@@ -177,11 +177,11 @@ module internal C =
         | L _ -> sprintf "Lvalue[%s][%O]"
         | E -> (fun _ -> sprintf "E[%O]")
 
-    let private translate trRef trId =
+    let private translate trRef trId expr =
         let leafFn = function
             | Id i -> trId i
             | Const i -> string i
-            | Extern s -> s
+            | Extern s -> s 
         let arithmFn = function
             | Plus -> sprintf "(%s) + (%s)"
             | Minus -> sprintf "(%s) - (%s)"
@@ -193,7 +193,8 @@ module internal C =
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "__abs(%s)"
-        Expr.cata leafFn arithmFn unaryFn trRef
+        let nondetFn = sprintf "nondetInRange(%s, %s)"
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef expr
 
     let rec private trBExprC filter trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
@@ -228,7 +229,7 @@ module internal Lnt =
             | _ -> sprintf "agents[%s]" n 
         match loc with
         | I -> sprintf "%s.I[IntToNat(%O)]" 
-        | L _ -> sprintf "%s.L[IntToNat(%O)].value"
+        | L _ -> sprintf "%s.L[IntToNat(%O)]"
         | E -> fun _ -> sprintf "E[IntToNat(%O)]"
         |> fun f -> f name e
 
@@ -240,17 +241,18 @@ module internal Lnt =
             | Const i -> sprintf "(%i of Int)" i
             | Extern s -> s (*THIS SHOULD NEVER MATCH *)
         let arithmFn = function
-            | Plus -> sprintf "(%s) + (%s)"
-            | Minus -> sprintf "(%s) - (%s)"
-            | Times -> sprintf "(%s) * (%s)"
-            | Div -> sprintf "(%s) div (%s)"
-            | Mod -> sprintf "(%s) mod (%s)"
+            | Plus -> sprintf "(%s + %s)"
+            | Minus -> sprintf "(%s - %s)"
+            | Times -> sprintf "(%s * %s)"
+            | Div -> sprintf "(%s div %s)"
+            | Mod -> sprintf "(%s mod %s)"
             | Max -> sprintf "max(%s, %s)"
             | Min -> sprintf "min(%s, %s)"
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "abs(%s)"
-        Expr.cata leafFn arithmFn unaryFn trRef
+        let nondetFn = fun _ _ -> failwith "nondet expressions are currently not supported in LNT"
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef
 
     let rec private trBExprLnt filter trExpr bexpr =
         let bleafFn b = if b then "true" else "false"
