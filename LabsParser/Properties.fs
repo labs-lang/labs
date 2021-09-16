@@ -47,6 +47,7 @@ let pproperty =
             Quantifiers=qs
             Predicate=pred
         }})
+    |> withSkippedString (fun s x -> {x with Source=s}) 
 
 let pproperties =
     wsUnit
