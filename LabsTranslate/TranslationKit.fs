@@ -207,7 +207,7 @@ module internal C =
 
     let wrapper = { 
         new ITranslateConfig with
-            member __.TemplateInfo = {BaseDir = "templates"; Extension = "c"}
+            member __.TemplateInfo = {BaseDir = "templates/c"; Extension = "c"}
             member __.AgentName = "tid"
             member __.InitId n = Const n
             member __.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
