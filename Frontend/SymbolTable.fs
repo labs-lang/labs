@@ -1,4 +1,5 @@
 namespace Frontend
+open System.Text.RegularExpressions
 open FSharpPlus.Lens
 open LabsCore
 open Grammar
@@ -222,7 +223,12 @@ module internal SymbolTable =
         printfn "%s" (table.Variables |> Map.filter (fun _ v -> isEnvVar v) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
         Map.map (dumpSpawn) table.Spawn |> ignore
         table.Properties
-        |> Map.mapValues (fun p -> match p.Def.Modality with Always -> "always" | Finally -> "finally")
+        |> Map.mapValues (fun p ->
+            p.Source |> fun s -> s.Replace('\n', ' ')
+            |> fun s -> let i = s.IndexOf('=') in s.Substring(i+1).Trim() // Remove property name 
+            |> fun s -> Regex.Replace(s, "\s+", " ") // Remove duplicate spaces
+        )
+        
         |> Map.values
         |> String.concat ";"
         |> printfn "%s"
