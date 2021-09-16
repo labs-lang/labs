@@ -1,5 +1,6 @@
 ﻿[<AutoOpen>]
 module Types
+open System
 open LabsCore.Grammar
 open FSharpPlus.Lens
 
@@ -32,10 +33,12 @@ type Stigmergy<'a> =
 type Modality =
     | Always
     | Finally
+    override this.ToString() = match this with Always -> "always" | Finally -> "finally"
 
 type Quantifier =
     | All
     | Exists
+    override this.ToString() = match this with All -> "forall" | Exists -> "exists"
 
 type Property<'a> =
     {
@@ -44,6 +47,17 @@ type Property<'a> =
         Modality:Modality
         Quantifiers: Map<string, string * Quantifier>
     }
+    override this.ToString() =
+       let quants =
+           this.Quantifiers
+           |> Map.map (fun varName (agentType, quant) -> $"{quant} {agentType} {varName}") 
+           |> Map.values
+           |> String.concat ", "
+       let trailingComma = if this.Quantifiers.IsEmpty then "" else ","
+       $"{this.Modality} {quants}{trailingComma} {this.Predicate}" 
+       
+        
+        
 let inline _predicate x =
     let getter p = p.Predicate
     let setter p pred' = {Predicate=pred'; Name=p.Name; Quantifiers=p.Quantifiers; Modality=p.Modality}
