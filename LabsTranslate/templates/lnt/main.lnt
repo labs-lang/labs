@@ -1,21 +1,5 @@
-process monitor [mon: any] (agents: Agents) is
-    {%- if alwaysasserts.size == 0 and finallyasserts.size == 0 %} null
-    {%- else -%}
-    --{%- assign cnt = agentscount | minus: 1 -%}
-    --if {%- for i in (0..cnt) -%}(agents[{{i}}].init) {% unless forloop.last %}and {% endunless %} {%- endfor -%}then 
-    {%- for p in alwaysasserts -%}
-    -- {{ p.name }}
-    if not({{ p.value }}) then mon(false){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}{%if finallyasserts.size > 0 %};{% endif %}
-    {%- endfor -%}
-    {%- for p in finallyasserts -%}
-    -- {{ p.name }}
-    if {{ p.value }} then mon(true){%- unless simulation %}; stop{% endunless %} end if{% unless forloop.last %};{% endunless %}
-    {%- endfor -%}
-    --end if
-    {%- endif -%}
-end process
-
-function canProceed(a:Agent{%if hasEnvironment%}, e: Env{%endif%}): Bool is
+{%-if simulation-%}
+function canProceed(a:Agent{%- if hasEnvironment -%}, e:Env{%-endif-%}): Bool is
     var tid: ID in
     tid := a.id;
     return {% if hasStigmergy -%}(empty(a.Zput) and empty(a.Zqry)) and {% endif-%} 
@@ -30,22 +14,25 @@ function canProceed(a:Agent{%if hasEnvironment%}, e: Env{%endif%}): Bool is
     end var
 end function
 
-function existsEnabled(agents:Agents{%if hasEnvironment%}, e: Env{%endif%}): Bool is
+function existsEnabled(agents:Agents{%- if hasEnvironment -%}, e:Env{%-endif-%}): Bool is
     var i:Nat in
         for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
-            if canProceed(agents[i]{%if hasEnvironment%}, e{%endif%}) then return true end if
+            if canProceed(agents[i]{%- if hasEnvironment -%}, e{%-endif-%}) then return true end if
         end loop
     end var;
     return false
 end function
+{%-endif-%}
 
-process step [attrGate, l, monitor: any] (in out sys: Sys, tid: ID) is
-    var a:Agent, agents:Agents{%-if hasStigmergy-%}, mat: Matrix{%-endif-%}{%- if hasEnvironment -%}, e: Env{%- endif %} in
+process step [attrGate, l: any, spurious:None] (in out sys: Sys, tid: ID) is
+    var a:Agent, agents:Agents{%-if hasStigmergy-%}, mat: Matrix{%-endif-%}, firstAgent: Int{%- if hasEnvironment -%}, E: Env{%- endif %} in
         agents := sys.agents;
         {% if hasStigmergy-%}mat := sys.m;{%- endif -%}
 
+        --last(?tid);
         a := agents[Nat(tid)];
-        {%if hasEnvironment -%}e := sys.env;{%- endif %}
+        firstAgent := NatToInt(Nat(tid));
+        {%if hasEnvironment -%}E := sys.env;{%- endif %}
 
         {%- if simulation -%}
         if canProceed(a{%- if hasEnvironment -%}, sys.env{%-endif-%}) then
@@ -55,22 +42,24 @@ process step [attrGate, l, monitor: any] (in out sys: Sys, tid: ID) is
             {%- for pc in item.siblings -%}
             (a.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
             {%- endfor -%}
-            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}[attrGate, l](!?a{%-if hasStigmergy-%}, !?mat{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%}) end if
+            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}[attrGate, l](!?a{%-if hasStigmergy-%}, sys.time{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%}) end if
             {% unless forloop.last %}[]{%- endunless %}
             {%- endfor -%}
             end select
         end if;
         {%- else -%}
+        --select
         {%- for item in schedule -%}
-        {%if forloop.first%}if{%else%}elsif{%endif%} {% if hasStigmergy -%}(empty(a.Zput) and empty(a.Zqry)) and {% endif-%} 
+        {%unless forloop.first%}els{%endunless%}if {% if hasStigmergy -%}(empty(a.Zput) and empty(a.Zqry)) and {% endif-%} 
         ({% for pc in item.entry -%}(a.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
         {%-for pc in item.siblings -%}
         (a.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
         {%- endfor -%}
         {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %}) then action{{ item.name }}[attrGate, l](!?a{%-if hasStigmergy-%}, !?mat{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%})
         {%- endfor -%}
-        else monitor("spurious"); stop
+        else spurious; stop
         end if;
+        --end select;
         {%- endif -%}
     
         agents[Nat(tid)] := a;
@@ -79,7 +68,7 @@ process step [attrGate, l, monitor: any] (in out sys: Sys, tid: ID) is
     end var
 end process
 
-process MAIN [monitor, attr, l: any, endInit:None] is
+process MAIN [attr, l: any, spurious:None] is
     var sys: Sys, tid: ID in
         var agents: Agents{%- if hasEnvironment -%}, e:Env{%- endif %}{%-if hasStigmergy-%}, m:Matrix{%- endif %} in
             agents := Agents(emptyAgent);
@@ -89,7 +78,8 @@ process MAIN [monitor, attr, l: any, endInit:None] is
                 for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
                     a := agents[i].{id -> ID(i)};
                     INITAGENT[attr, l](!?a{%-if hasStigmergy-%}, !?m{%- endif -%});
-                    agents[i] := a
+                    agents[i] := a--;
+                    --action(a)
                 end loop;
                 {%- if hasEnvironment -%}
                 e := Env(0);
@@ -100,30 +90,29 @@ process MAIN [monitor, attr, l: any, endInit:None] is
                 {%- endif -%}
             end var
         end var;
-        endInit;
 
         -- select 1st agent
         tid := {% if firstagent == 0 %} 0{% else %}any ID{%-endif-%};
 
         loop
-            monitor[monitor](sys.agents);
+            --monitor[monitor](sys.agents);
             {% if hasStigmergy %}
             select
-                --- scheduler ---
+                    --- scheduler ---
                 tid := {% if fair %}ID((Nat(tid) + 1) mod MAXCOMPONENTS){% else %}any ID{% endif %};
                 --- end scheduler ---
-                step[attr, l, monitor](!?sys, tid)
+                step[attr, l, spurious](!?sys, tid)
             []
                 propagate [l] (!?sys)
             []
                 confirm [l] (!?sys)
             end select
-            {%- else -%}
-            step[attr, l, monitor](!?sys, tid);
+            {%-else-%}
+            step[attr, l, spurious](!?sys, tid);
             --- scheduler ---
             tid := {% if fair %}ID((Nat(tid) + 1) mod MAXCOMPONENTS){% else %}any ID{% endif %}
             --- end scheduler ---
-            {%- endif -%}
+            {%-endif-%}
         end loop
     end var
 end process
