@@ -40,7 +40,7 @@ build/%/pyparsing.py :
 build/%/click :
 	@mkdir -p build/$(platform)
 	@echo Copying click...
-	@cp -r click/click build/$(platform)/click ;
+	@cp -r click/src/click build/$(platform)/click ;
 
 build/%/cseq/cseq.py :
 	@mkdir -p build/$(platform)
