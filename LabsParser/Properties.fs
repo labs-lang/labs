@@ -1,13 +1,16 @@
 ﻿module internal Properties
 open FParsec
+open LabsCore
 open LabsCore.Grammar
 open Expressions
+open Processes
 
+//p:Parser<Expr<(string * string option),'a>,unit> -> Parser<Ref<(string * string option),'a>,unit>
 let propertyRef p =
     pipe3
         (ws KEYNAME)
         (opt (betweenBrackets p))
-        (choice [
+        (spaces >>. choice [
             followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
             preturn None
         ])
