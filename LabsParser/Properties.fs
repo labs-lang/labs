@@ -7,8 +7,8 @@ open Expressions
 let propertyRef p =
     pipe3
         (ws KEYNAME)
-        (opt (betweenBrackets p))
-        (spaces >>. choice [
+        (opt (betweenBrackets p |> ws))
+        (choice [
             followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
             preturn None
         ])
