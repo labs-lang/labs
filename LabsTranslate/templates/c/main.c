@@ -40,7 +40,7 @@ int main(void) {
         if ((_Bool) __CPROVER_nondet()) {
         {%- endif -%}{%- endif -%}
             {%- unless fair -%}
-            TYPEOFAGENTID nextAgent;
+            TYPEOFAGENTID nextAgent = __CPROVER_nondet();
             __CPROVER_assume(nextAgent < MAXCOMPONENTS);
             firstAgent = nextAgent;
             {%- endunless -%}
@@ -68,7 +68,7 @@ int main(void) {
         {%- if hasStigmergy -%}
         }
         else {
-            _Bool propagate_or_confirm; 
+            _Bool propagate_or_confirm = __CPROVER_nondet(); 
             if (propagate_or_confirm) propagate();
             else confirm();
         }

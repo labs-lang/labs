@@ -68,7 +68,7 @@ process step [attrGate, l: any, spurious:None] (in out sys: Sys, tid: ID) is
     end var
 end process
 
-process MAIN [attr, l: any, spurious:None] is
+process MAIN [attr, l: any, spurious,endInit:None] is
     var sys: Sys, tid: ID in
         var agents: Agents{%- if hasEnvironment -%}, e:Env{%- endif %}{%-if hasStigmergy-%}, m:Matrix{%- endif %} in
             agents := Agents(emptyAgent);
@@ -90,6 +90,7 @@ process MAIN [attr, l: any, spurious:None] is
                 {%- endif -%}
             end var
         end var;
+        endInit;
 
         -- select 1st agent
         tid := {% if firstagent == 0 %} 0{% else %}any ID{%-endif-%};
