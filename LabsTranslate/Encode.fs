@@ -12,7 +12,7 @@ open TranslationKit
 open Liquid
 
 /// Supported target languages.
-type EncodeTo = | C | Lnt | Lnt_Legacy
+type EncodeTo = | C | Lnt | Lnt_Monitor
 
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, int*int> =
@@ -248,8 +248,8 @@ let private encodeMain trKit baseDict fair (table:SymbolTable) =
     |> List.append baseDict
     |> render (parse (trKit.TemplateInfo.Get "main"))
 
-let encode encodeTo bound (fair, nobitvector, sim, sync) table =
-    let trKit = makeTranslationKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper | Lnt_Legacy -> Lnt.wrapperLegacy
+let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
+    let trKit = makeTranslationKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper | Lnt_Monitor -> Lnt.wrapperMonitor
     let goto = parse (trKit.TemplateInfo.Get "goto")
     
     let baseDict = [

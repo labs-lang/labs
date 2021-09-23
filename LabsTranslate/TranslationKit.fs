@@ -278,9 +278,9 @@ module internal Lnt =
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y
     }
-    let wrapperLegacy = {
+    let wrapperMonitor = {
         new ITranslateConfig with
-            member _.TemplateInfo = {BaseDir = "templates/lnt-legacy"; Extension = "lnt"}
+            member _.TemplateInfo = {BaseDir = "templates/lnt-monitor"; Extension = "lnt"}
             member _.AgentName = "NatToInt(Nat(agent.id))"
             member _.InitId _ = Extern "NatToInt(Nat(a.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
