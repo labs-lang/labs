@@ -19,6 +19,7 @@ let NEG : Parser<_> =           (skipString tNEG)
 let SEQ : Parser<_> =           (skipString tSEQ)
 let CHOICE : Parser<_> =        (skipString tCHOICE)
 let PAR : Parser<_> =           (skipString tPAR)
+let RAWPREFIX : Parser<_> =     (skipString tRAW)
 //-----------------------------------------
 
 

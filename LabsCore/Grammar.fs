@@ -66,6 +66,7 @@ type Expr<'a, 'b> =
     | Ref of Ref<'a, 'b>
     | Unary of UnaryOp * Expr<'a, 'b>
     | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
+    | RawCall of Name:string * Args:Expr<'a, 'b> list
     override this.ToString() = 
         match this with
         | Leaf l -> string l
@@ -73,6 +74,7 @@ type Expr<'a, 'b> =
         | Ref r -> string r
         | Unary(op, e) -> 
             let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in sprintf "%s(%O)" s e
+        | RawCall (name, args) -> $"""@{name}({args |> List.map string |> String.concat ", "})"""
         | Arithm(e1, op, e2) ->
             match op with
             | Min | Max -> sprintf "%O(%O, %O)" op e1 e2 

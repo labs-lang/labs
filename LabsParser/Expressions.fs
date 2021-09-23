@@ -82,11 +82,18 @@ let makeExprParser pref pid : Parser<_> =
     let expr = opp.ExpressionParser
     let arithm op x y = Arithm(x, op, y)
     
+    let prawcall =
+        let opts = IdentifierOptions()
+        (RAWPREFIX >>. identifier opts) .>>.
+        (betweenParen (sepBy expr (ws COMMA)))
+        
+    
     let term =
         choice [
             pextern |>> Extern |>> Leaf <!> "extern"
             followedBy pint32 >>. pint32 |>> Const |>> Leaf <!> "const"
             followedBy pid >>. pid |>> Id |>> Leaf <!> "id"
+            followedBy RAWPREFIX >>. prawcall |>> RawCall <!> "rawCall"  
             attempt (ws (pref expr)) |>> Ref <!> "ref"
         ]
     

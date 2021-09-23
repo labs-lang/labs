@@ -194,7 +194,9 @@ module internal C =
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "__abs(%s)"
         let nondetFn = sprintf "nondetInRange(%s, %s)"
-        Expr.cata leafFn arithmFn unaryFn nondetFn trRef expr
+        let rawFn name args = $"""{name}({String.concat ", " args})"""
+            
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn expr
 
     let rec private trBExprC filter trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
@@ -252,7 +254,8 @@ module internal Lnt =
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "abs(%s)"
         let nondetFn = fun _ _ -> failwith "nondet expressions are currently not supported in LNT"
-        Expr.cata leafFn arithmFn unaryFn nondetFn trRef
+        let rawFn name args = $"""{name}({String.concat ", " args})"""
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn
 
     let rec private trBExprLnt filter trExpr bexpr =
         let bleafFn b = if b then "true" else "false"

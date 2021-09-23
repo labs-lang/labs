@@ -12,6 +12,7 @@ let tMIN = "min"
 let tMAX = "max"
 let tCOMMENT = "#"
 
+let tRAW = "$"
 
 let tTRUE = "true"
 let tFALSE = "false"

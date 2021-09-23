@@ -20,6 +20,10 @@ module Expr =
             | Some o1, Some o2 -> equal o1 o2
             | None, None -> true
             | _ -> false
+        | RawCall(n1, a1), RawCall(n2, a2) ->
+            n1 = n2 &&
+            a1.Length = a2.Length &&
+            List.zip a1 a2 |> List.forall (fun (x1, x2) -> equal x1 x2)
         | _ -> false    
             
     let rec fold fleaf fref acc expr = 
@@ -29,21 +33,23 @@ module Expr =
         | Nondet(e1, e2)
         | Arithm(e1, _, e2) ->
             Seq.fold recurse acc [e1; e2]
-        | Unary(_, e) -> recurse acc e    
+        | Unary(_, e) -> recurse acc e
+        | RawCall(_, args) -> Seq.fold recurse acc args
         | Ref r ->
             let newacc = fref acc r
             r.Offset 
             |> Option.map (recurse newacc)
             |> Option.defaultValue newacc
 
-    let rec cata fleaf farithm funary fnondet fref expr = 
-        let recurse = cata fleaf farithm funary fnondet fref
+    let rec cata fleaf farithm funary fnondet fref fraw expr = 
+        let recurse = cata fleaf farithm funary fnondet fref fraw
         match expr with
         | Leaf l -> fleaf l
         | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
         | Unary(op, e) -> funary op (recurse e)
         | Nondet(e1, e2) -> fnondet (recurse e1) (recurse e2)
         | Ref r -> fref r.Var (Option.map recurse r.Offset)
+        | RawCall(n, args) -> fraw n (List.map recurse args)
     
     let rec map fleaf fref expr =
         let recurse = map fleaf fref
@@ -54,6 +60,7 @@ module Expr =
         | Ref r -> 
             let newOffset = r.Offset |> Option.map recurse
             Ref(fref r newOffset)
+        | RawCall (n, args) -> RawCall(n, List.map recurse args)
         | Unary(u, e) -> Unary(u, recurse e)
 
     let getRefs expr = fold (fun a _ -> a) (fun a r -> Set.add r a) Set.empty expr
@@ -83,7 +90,7 @@ module Expr =
             | UnaryMinus -> (~-)
             | Abs -> abs
         let failure = (fun _ _ -> failwith "Not a constexpr")
-        cata leafFn arithmFn unaryFn failure failure expr
+        cata leafFn arithmFn unaryFn failure failure failure expr
     
     /// <summary>
     /// Evaluates a constant expression. Fails if the expression contains an 
