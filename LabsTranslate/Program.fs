@@ -34,7 +34,7 @@ let main argv =
         else
             let bound = cli.GetResult (Bound, defaultValue=1)
             let enc = cli.GetResult (Enc, defaultValue=C)
-            encode enc (bound) (flags cli) x)
+            encode enc bound (flags cli) x)
     |> function
        | Result.Ok (_, warns) ->
             warns |> List.map(pprintWarn >> eprintfn "%s") |> ignore

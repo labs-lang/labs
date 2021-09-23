@@ -77,9 +77,9 @@ let sepbysemis p = sepBy1 p (ws (skipChar ';'))
 let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
     #if DEBUG
     fun stream ->
-        eprintfn "%A: Entering %s (char: %O)" stream.Position label (stream.Peek())
+        eprintfn $"%A{stream.Position}: Entering %s{label} (char: {stream.Peek()})"
         let reply = p stream
-        eprintfn "%A: Leaving %s (%A, %O)" stream.Position label reply.Status reply.Result
+        eprintfn $"%A{stream.Position}: Leaving %s{label} (%A{reply.Status}, {reply.Result})"
         reply
     #else
     p
@@ -117,4 +117,4 @@ let pstringEq str p =
     (ws (skipString str) >>. (ws EQ) >>. p)
     
 /// Parses an external parameter name
-let pextern : Parser<_> = ((skipChar '_') >>. (KEYNAME))
+let pextern : Parser<_> = ((skipChar '_') >>. KEYNAME)

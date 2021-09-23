@@ -29,28 +29,28 @@ type Message<'a> =
 
 let private _pprintWithPos header msg where =
     let pos = where |> List.map string |> String.concat "; "
-    sprintf "[%s] %s at %s" header msg pos
+    $"[%s{header}] %s{msg} at %s{pos}"
     
 let pprintErr (m:Message<Err>) =
     match m.What with
-        | Parser s -> sprintf "Parser failed: %s" s
-        | Duplicate s -> sprintf "Duplicate definitions for '%s'" s
-        | UndefProcess s -> sprintf "Process '%s' was not defined" s
-        | UndefAgent s -> sprintf "Agent '%s' was not defined" s
-        | UndefBehavior s -> sprintf "Behavior of agent '%s' was not defined" s
-        | UndefRef s -> sprintf "Identifier '%s' was not defined" s
-        | NegativeSpawn s -> sprintf "Cannot spawn a negative number of agents '%s'" s
-        | NoValueForExtern s -> sprintf "No value was given for extern parameter '%s'" s
-        | NonPositiveArraySize s -> sprintf "Array '%s' must have positive size" s
-        | Codegen s -> sprintf "Code generation failed: %s" s
-        | CLI s -> sprintf "Parsing of the command line failed: %s" s
+        | Parser s -> $"Parser failed: {s}"
+        | Duplicate s -> $"Duplicate definitions for '{s}'"
+        | UndefProcess s -> $"Process '{s}' was not defined"
+        | UndefAgent s -> $"Agent '{s}' was not defined"
+        | UndefBehavior s -> $"Behavior of agent '{s}' was not defined"
+        | UndefRef s -> $"Identifier '{s}' was not defined"
+        | NegativeSpawn s -> $"Cannot spawn a negative number of agents '{s}'"
+        | NoValueForExtern s -> $"No value was given for extern parameter '{s}'"
+        | NonPositiveArraySize s -> $"Array '{s}' must have positive size"
+        | Codegen s -> $"Code generation failed: {s}"
+        | CLI s -> $"Parsing of the command line failed: {s}"
         | Generic s -> s
     |> fun msg -> _pprintWithPos "ERROR" msg m.Where
 
 let pprintWarn (m:Message<Warn>) =
     match m.What with
-        | SpawnZero s -> sprintf "Agent '%s' has spawn size 0 and will not be spawned." s
-        | Unused s -> sprintf "Unused: '%s'" s
+        | SpawnZero s -> $"Agent '{s}' has spawn size 0 and will not be spawned."
+        | Unused s -> $"Unused: '{s}'"
     |> fun msg -> _pprintWithPos "WARNING" msg m.Where
 
 exception LabsException of Message<Err>

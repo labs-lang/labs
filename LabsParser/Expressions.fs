@@ -17,10 +17,10 @@ module ParseBExpr =
     let getB p =
         match p with
         | B b -> preturn (simplify b)
-        | E e -> fail (sprintf "%O is not a boolean expression" e)
+        | E e -> fail $"{e} is not a boolean expression"
     let getE p =
         match p with
-        | B b -> fail (sprintf "%O is not an expression" b)
+        | B b -> fail $"{b} is not an expression"
         | E e -> preturn e
     let compare op p1 p2 = 
         match p1, p2 with 
@@ -100,7 +100,7 @@ let makeExprParser pref pid : Parser<_> =
     let pprefixbinary tok op =
         followedBy (skipString tok)
         >>.(ws (skipString tok))
-        >>. betweenParen ( pipe2 (expr) ((ws COMMA) >>. expr) (arithm op))
+        >>. betweenParen ( pipe2 expr ((ws COMMA) >>. expr) (arithm op))
     let pmax = pprefixbinary tMAX Max
     let pmin = pprefixbinary tMIN Min
     opp.TermParser <- [

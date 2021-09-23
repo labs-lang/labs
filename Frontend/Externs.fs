@@ -17,7 +17,7 @@ module Expr =
         
 module BExpr =
     /// Replaces external parameters with their values.
-    let replaceExterns externs = BExpr.map (BLeaf) (Expr.replaceExterns externs)
+    let replaceExterns externs = BExpr.map BLeaf (Expr.replaceExterns externs)
 
 module Var =
     /// Replaces external parameters with their values.

@@ -39,15 +39,15 @@ let run externs (sys, lstigs, agents', properties) =
         let spawned = List.map (fun (d: Node<_>) -> d.Name) sys.Def.Spawn |> Set.ofList
         List.filter (fun a -> Set.contains a.Def.Name spawned) agents'
     
-    zero (Frontend.SymbolTable.empty)
+    zero Frontend.SymbolTable.empty
     <??> check (sys, lstigs, agents', properties)
     (* map non-interface variables *)
     <~> fold (tryAddVar externs) vars
-    <~> fun x -> fold mapVar (Map.values x.Variables |> Seq.filter (isEnvVar)) x
+    <~> fun x -> fold mapVar (Map.values x.Variables |> Seq.filter isEnvVar) x
     <~> fun x ->
             (* Ensure that variables in the same tuple get contiguous indices *)
             Map.values x.Variables
-            |> Seq.filter (isLstigVar)
+            |> Seq.filter isLstigVar
             |> Seq.groupBy (fun v -> v.Location)
             |> Seq.map snd
             |> Seq.fold (fun x' s -> x' <~> fold mapVar s) (zero x)

@@ -55,9 +55,9 @@ module Process =
         let rec printComp typ l = 
             let sep = 
                 match typ with 
-                | Seq -> sprintf  "%s " tSEQ
-                | Choice -> sprintf " %s " tCHOICE
-                | Par -> sprintf " %s " tPAR
+                | Seq -> $"%s{tSEQ} "
+                | Choice -> $" %s{tCHOICE} "
+                | Par -> $" %s{tPAR} "
             String.concat sep l
             |> if (Seq.length l) > 1 then (sprintf "(%s)") else id
         cata printNode printGuard printComp proc
@@ -70,7 +70,7 @@ module Process =
             else Comp(typ, l)
         let guard n p =
             Guard(setl (_def << _2) p n)
-        cata (BaseProcess) guard comp proc
+        cata BaseProcess guard comp proc
     
     /// Transforms g -> Par(...) into g -> (Skip; Par(...)).
     let fixGuardedPar proc =
@@ -80,7 +80,7 @@ module Process =
                 | Comp (Par, _) -> Comp(Seq, [BaseProcess({Name=""; Pos=n.Pos; Source=""; Def=Skip}); p])
                 | _ -> p
             Guard(setl (_def << _2) p' n)
-        cata (BaseProcess) guard (fun typ l -> Comp(typ, l)) proc
+        cata BaseProcess guard (fun typ l -> Comp(typ, l)) proc
 
     let private entryOrExit fn =
         let entrycomp = function
@@ -115,7 +115,7 @@ module Process =
                     match procDefs.TryFind n with
                     | Some _ -> 
                         expandFn (visited.Add b) n 
-                        |> map ((tag (sprintf "%s@%O" n b.Pos)) >> BaseProcess) id
+                        |> map ((tag $"%s{n}@{b.Pos}") >> BaseProcess) id
                     | None -> failwith n
                 | _ -> BaseProcess b
             map baseFn id procDefs.[name]

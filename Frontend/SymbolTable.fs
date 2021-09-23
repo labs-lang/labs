@@ -99,21 +99,21 @@ module internal SymbolTable =
             
     let tryAddVar externs (vardef:Node<Var<Expr<unit, unit>>>) table =
         if table.Variables.ContainsKey vardef.Name then
-            raise (LabsException {What=Generic (sprintf "Unexpected operation on variable %s" vardef.Name); Where=[vardef.Pos]})
+            raise (LabsException {What=Generic $"Unexpected operation on variable {vardef.Name}"; Where=[vardef.Pos]})
         else zero {table with Variables = table.Variables.Add(vardef.Name, (processVar externs vardef).Def)}
     
     /// Basic function to retrieve the mapping of variable named k
     let findString table k =
         //TODO add correct position
         table.M.TryFind k
-        |> function Some x -> x | None -> raise (LabsException ({What=UndefRef k; Where=[]})) 
+        |> function Some x -> x | None -> raise (LabsException {What=UndefRef k; Where=[]}) 
     
     let toVarRef f r o =
         {Var=f r.Var; Offset=o}
     let toVarExpr f e = 
         Expr.map id (toVarRef f) e
     let toVarBExpr f b =
-        BExpr.map (BLeaf) (toVarExpr f) b
+        BExpr.map BLeaf (toVarExpr f) b
     
     let toVarProcess table proc =
         let toVarBase f b =    
@@ -147,7 +147,7 @@ module internal SymbolTable =
             match typ with
             | Seq ->
                 // Guards only affect the first process in a sequence
-                let (_, acc') = recurse (guards, acc) l.Head
+                let _, acc' = recurse (guards, acc) l.Head
                 recurse (Set.empty, acc') (Comp(Seq, l.Tail)) 
             | _ ->
                 Seq.map (recurse (guards, acc)) l
@@ -174,8 +174,8 @@ module internal SymbolTable =
         <~> fun p ->
             let allProcesses = Map.union p table.Processes
             let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") allProcesses)
-            let (lts, acc), initCond = STS.makeTransitions state p'.["Behavior"]
-            let lts' = STS.removeNames p' lts
+            let (lts, acc), initCond = makeTransitions state p'.["Behavior"]
+            let lts' = removeNames p' lts
             let guards = Map.union table.Guards (setGuards p'.["Behavior"])
             let agent = {table.Agents.[a.Name] with Processes=p'; Sts=lts'; InitCond=initCond; Lstig=a.Def.Lstig |> Set.ofList}
             zero ({table with Agents = table.Agents.Add(a.Name, agent); Guards=guards}, (Set.empty, acc))        
@@ -214,14 +214,14 @@ module internal SymbolTable =
     let dump (table:SymbolTable) =
         let dumpVar v =
             match v.Vartype with
-            | Scalar -> sprintf "%i=%s=%O" (table.M.IndexOf v) v.Name v.Init
-            | Array s -> sprintf "%i=%s[%i]=%O" (snd table.M.[v.Name]) v.Name s v.Init
+            | Scalar -> $"%i{table.M.IndexOf v}={v.Name}={v.Init}"
+            | Array s -> $"%i{snd table.M.[v.Name]}={v.Name}[%i{s}]={v.Init}"
         let dumpSpawn agentName (_start, _end) =
             let iface = table.Agents.[agentName].Variables |> List.map dumpVar |> String.concat ";"
             let lstig = table.Agents.[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"
-            printfn "%s %i,%i\n%s\n%s" agentName _start _end iface lstig
-        printfn "%s" (table.Variables |> Map.filter (fun _ v -> isEnvVar v) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
-        Map.map (dumpSpawn) table.Spawn |> ignore
+            printfn $"{agentName} %i{_start},%i{_end}\n{iface}\n{lstig}"
+        printfn "%s" (table.Variables |> Map.filter (fun _ -> isEnvVar) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
+        Map.map dumpSpawn table.Spawn |> ignore
         table.Properties
         |> Map.mapValues (fun p ->
             p.Source |> fun s -> s.Replace('\n', ' ')

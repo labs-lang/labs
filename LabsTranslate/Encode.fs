@@ -15,13 +15,13 @@ open Liquid
 type EncodeTo = | C | Lnt | Lnt_Legacy
 
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
-    let stigmergyVarsFromTo groupBy : Map<'a, (int*int)> =
+    let stigmergyVarsFromTo groupBy : Map<'a, int*int> =
         table.Variables
         |> Map.filter (fun _ -> isLstigVar)
         |> Map.values
         |> Seq.groupBy groupBy
         |> Seq.map (fun (n, vars) ->
-            let extrema = Seq.map (table.M.RangeOf) vars
+            let extrema = Seq.map table.M.RangeOf vars
             n, ((fst << Seq.minBy fst) extrema, (snd << Seq.maxBy snd) extrema))
         |> Map.ofSeq
         
@@ -45,7 +45,7 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
             System.Math.Log(float num, 2.) |> int |> (+) 1
         if nobv
         then getStandardTypes (0, num)
-        else sprintf "unsigned __CPROVER_bitvector[%i]" (bitwidth num)
+        else $"unsigned __CPROVER_bitvector[%i{bitwidth num}]"
     
     let maxpc =
         Map.mapValues (fun (x:AgentTable) -> Map.keys x.InitCond) table.Agents
@@ -85,7 +85,7 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
             "MAXPC", maxpc + 1
             "MAXTUPLE", maxTuple
         ]
-        |> fun x -> x, List.map (fun (name, value) -> sprintf "typeof%s" name, getTypedef value true |> Str) x
+        |> fun x -> x, List.map (fun (name, value) -> $"typeof%s{name}", getTypedef value true |> Str) x
         |> fun (x, y) -> List.append (List.map (fun (name, value) -> name, Int value) x) y
         
     [
@@ -173,7 +173,7 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             |> Option.orElse (Some Set.empty)
             |>> Set.union (guards |> Set.map getLstigVarsBExpr |> Set.unionMany)
             |>> Seq.map (Int << snd)
-            |> Option.defaultValue (Seq.empty)
+            |> Option.defaultValue Seq.empty
             |> Lst
         
         let liquidAssignment (k:Ref<Var<int>*int, unit>, expr) =
@@ -193,8 +193,8 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             "last", t.Last |> Bool
             "siblings", t.Siblings |> Seq.map Int |> Lst
             "entrycond", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
-            "exitcond", liquidPcs (t.Exit)
-            "guards", guards |> Seq.map (Str << (trKit.AgentGuardTr)) |> Lst
+            "exitcond", liquidPcs t.Exit
+            "guards", guards |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
             "labs",
                 // TODO do sth smart here
                 string t.Action.Def
@@ -216,7 +216,7 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
         ]
         |> render goto
     
-    Set.map (encodeTransition) a.Sts
+    Set.map encodeTransition a.Sts
     |> Seq.reduce (<??>)
 
 let private encodeMain trKit baseDict fair (table:SymbolTable) =

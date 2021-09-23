@@ -24,7 +24,7 @@ let private trref trLocation name (v:Var<int>, i:int) offset =
     let index =
         match offset with
         | None -> string i
-        | Some off -> sprintf "%i + %s" i off
+        | Some off -> $"%i{i} + {off}"
     trLocation v.Location name index
 
 /// Translates a boolean expression.
@@ -55,12 +55,12 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
         let propId name =
             match sub.TryFind name with
             | Some e -> e
-            | None -> failwithf "Undefined agent %s" name
+            | None -> failwithf $"Undefined agent {name}"
         
         let propRef1 ((v:Var<_>, i), c) offset =
             match c with
             | None -> 
-                if v.Location <> E then failwithf "%s is not an environment variable" v.Name
+                if v.Location <> E then failwithf $"{v.Name} is not an environment variable"
                 {Var=((v, i), c); Offset=offset}
             | Some c ->
                 {Var=((v, i), (Some <| (string << propId) c)); Offset=offset}
@@ -70,7 +70,7 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
             | Id name -> (string << propId) name |> Id
             | _ -> leaf
         
-        BExpr.map (BLeaf) (Expr.map trLeaf (fun r o -> propRef1 r.Var o))
+        BExpr.map BLeaf (Expr.map trLeaf (fun r -> propRef1 r.Var))
         
     if (ex && fa) then 
         p.Name
@@ -146,7 +146,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
     let agentGuardTr = conf.TrBExpr (Some <| fun r -> (fst r.Var).Init = Undef) agentExprTr
     
     let linkTr =
-        conf.TrExpr (fun (v, cmp) offset -> trref conf.TrLoc (conf.TrLinkId cmp) v offset) conf.TrLinkId
+        conf.TrExpr (fun (v, cmp) -> trref conf.TrLoc (conf.TrLinkId cmp) v) conf.TrLinkId
         |> conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)
     
     let initTr (v, i) tid =
@@ -201,7 +201,7 @@ module internal C =
     let rec private trBExprC filter trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
         let negFn = sprintf "!(%s)"
-        let compareFn op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2) //TODO
+        let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))" //TODO
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
@@ -209,14 +209,14 @@ module internal C =
 
     let wrapper = { 
         new ITranslateConfig with
-            member __.TemplateInfo = {BaseDir = "templates/c"; Extension = "c"}
-            member __.AgentName = "tid"
-            member __.InitId n = Const n
-            member __.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
-            member __.TrBExpr filter trExpr b = trBExprC filter trExpr b
-            member __.TrExpr trRef trId e = translate trRef trId e
-            member __.TrLoc loc x y = translateLocation loc x y
-            member __.TrInitLoc loc x y = translateLocation loc x y
+            member _.TemplateInfo = {BaseDir = "templates/c"; Extension = "c"}
+            member _.AgentName = "tid"
+            member _.InitId n = Const n
+            member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
+            member _.TrBExpr filter trExpr b = trBExprC filter trExpr b
+            member _.TrExpr trRef trId e = translate trRef trId e
+            member _.TrLoc loc x y = translateLocation loc x y
+            member _.TrInitLoc loc x y = translateLocation loc x y
         }
 
 /// Provides the translation kit configuration for LNT.
@@ -228,7 +228,7 @@ module internal Lnt =
             | "NatToInt(Nat(agent.id))" -> "agent"
             | "firstAgent" -> "a"
             | "a1" | "a2" -> n
-            | _ -> sprintf "agents[%s]" n 
+            | _ -> $"agents[%s{n}]" 
         match loc with
         | I -> sprintf "%s.I[IntToNat(%O)]" 
         | L _ -> sprintf "%s.L[IntToNat(%O)]"
@@ -239,8 +239,8 @@ module internal Lnt =
 
     let private translateExpr trRef trId =
         let leafFn = function
-            | Id i -> sprintf "(%s of Int)" (trId i)
-            | Const i -> sprintf "(%i of Int)" i
+            | Id i -> $"(%s{trId i} of Int)"
+            | Const i -> $"(%i{i} of Int)"
             | Extern s -> s (*THIS SHOULD NEVER MATCH *)
         let arithmFn = function
             | Plus -> sprintf "(%s + %s)"
@@ -260,7 +260,7 @@ module internal Lnt =
     let rec private trBExprLnt filter trExpr bexpr =
         let bleafFn b = if b then "true" else "false"
         let negFn = sprintf "(not(%s))"
-        let compareFn op e1 e2 = sprintf "((%s) %O (%s))" (trExpr e1) op (trExpr e2)
+        let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))"
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " and "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " or "
@@ -269,23 +269,23 @@ module internal Lnt =
         
     let wrapper = { 
         new ITranslateConfig with
-            member __.TemplateInfo = {BaseDir = "templates/lnt"; Extension = "lnt"}
-            member __.AgentName = "NatToInt(Nat(agent.id))"
-            member __.InitId _ = Extern "NatToInt(Nat(a.id))"
-            member __.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
-            member __.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
-            member __.TrExpr trRef trId e = translateExpr trRef trId e
-            member __.TrLoc loc x y = translateLocation loc x y
-            member __.TrInitLoc loc x y = translateInitLocation loc x y
+            member _.TemplateInfo = {BaseDir = "templates/lnt"; Extension = "lnt"}
+            member _.AgentName = "NatToInt(Nat(agent.id))"
+            member _.InitId _ = Extern "NatToInt(Nat(a.id))"
+            member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
+            member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
+            member _.TrExpr trRef trId e = translateExpr trRef trId e
+            member _.TrLoc loc x y = translateLocation loc x y
+            member _.TrInitLoc loc x y = translateInitLocation loc x y
     }
     let wrapperLegacy = {
         new ITranslateConfig with
-            member __.TemplateInfo = {BaseDir = "templates/lnt-legacy"; Extension = "lnt"}
-            member __.AgentName = "NatToInt(Nat(agent.id))"
-            member __.InitId _ = Extern "NatToInt(Nat(a.id))"
-            member __.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
-            member __.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
-            member __.TrExpr trRef trId e = translateExpr trRef trId e
-            member __.TrLoc loc x y = translateLocation loc x y
-            member __.TrInitLoc loc x y = translateInitLocation loc x y
+            member _.TemplateInfo = {BaseDir = "templates/lnt-legacy"; Extension = "lnt"}
+            member _.AgentName = "NatToInt(Nat(agent.id))"
+            member _.InitId _ = Extern "NatToInt(Nat(a.id))"
+            member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
+            member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
+            member _.TrExpr trRef trId e = translateExpr trRef trId e
+            member _.TrLoc loc x y = translateLocation loc x y
+            member _.TrInitLoc loc x y = translateInitLocation loc x y
     }

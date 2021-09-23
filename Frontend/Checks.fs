@@ -11,7 +11,7 @@ let duplicatesBy groupingFn defFn (lst: 'a list) =
     |> List.map (fun (_, dupes) ->
         let defs:Node<_> list = List.map defFn dupes
         let where = List.map (fun (x:Node<_>) -> x.Pos) defs
-        { What=Duplicate (defs.Head.Name); Where=where} )
+        { What=Duplicate defs.Head.Name; Where=where} )
     |> wrap () []
     
 let dupNames lst = duplicatesBy byName id lst

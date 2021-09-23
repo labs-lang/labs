@@ -32,7 +32,7 @@ type Location =
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
-            | L(n, _) -> sprintf "Stigmergy (%s)" n 
+            | L(n, _) -> $"Stigmergy ({n})" 
 
 type ArithmOp =
     | Plus | Minus
@@ -70,21 +70,21 @@ type Expr<'a, 'b> =
     override this.ToString() = 
         match this with
         | Leaf l -> string l
-        | Nondet (start, bound) -> sprintf "[%O..%O]" start bound
+        | Nondet (start, bound) -> $"[{start}..{bound}]"
         | Ref r -> string r
         | Unary(op, e) -> 
-            let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in sprintf "%s(%O)" s e
+            let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in $"%s{s}({e})"
         | RawCall (name, args) -> $"""@{name}({args |> List.map string |> String.concat ", "})"""
         | Arithm(e1, op, e2) ->
             match op with
-            | Min | Max -> sprintf "%O(%O, %O)" op e1 e2 
-            | _ -> sprintf "%O %O %O" e1 op e2
+            | Min | Max -> $"{op}({e1}, {e2})" 
+            | _ -> $"{e1} {op} {e2}"
 
 and Ref<'a, 'b> = 
     {Var:'a; Offset: Expr<'a, 'b> option}
     override this.ToString() = 
         match this.Offset with
-        | Some e -> sprintf "%O[%O]" this.Var e
+        | Some e -> $"{this.Var}[{e}]"
         | None -> this.Var.ToString()
 
 type CmpOp = 
@@ -118,9 +118,9 @@ type BExpr<'a, 'b> =
     override this.ToString() =
         match this with
         | BLeaf true -> tTRUE | BLeaf false -> tFALSE
-        | Neg b -> sprintf "%s(%O)" tNEG b
-        | Compare(e1, op, e2) -> sprintf "(%O) %O (%O)" e1 op e2
-        | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat (sprintf " %O " op)
+        | Neg b -> $"%s{tNEG}({b})"
+        | Compare(e1, op, e2) -> $"({e1}) {op} ({e2})"
+        | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat $" {op} "
 
 type Action<'a> = {
     ActionType: Location
@@ -144,7 +144,7 @@ type Init =
      override this.ToString() =
         match this with
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
-        | Range(min, max) -> sprintf "%O..%O" min max
+        | Range(min, max) -> $"{min}..{max}"
         | Undef -> "undef"
 
 

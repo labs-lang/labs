@@ -77,7 +77,7 @@ module Expr =
         let leafFn = function
             | Const i -> i
             | Id x -> idfun x
-            | Extern a -> failwithf "Not a constexpr: %s" a (* THIS SHOULD NEVER MATCH *)
+            | Extern a -> failwithf $"Not a constexpr: {a}" (* THIS SHOULD NEVER MATCH *)
         let arithmFn = function
             | Plus -> (+)
             | Minus -> (-)

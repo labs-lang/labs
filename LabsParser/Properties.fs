@@ -1,9 +1,7 @@
 ﻿module internal Properties
 open FParsec
-open LabsCore
 open LabsCore.Grammar
 open Expressions
-open Processes
 
 //p:Parser<Expr<(string * string option),'a>,unit> -> Parser<Ref<(string * string option),'a>,unit>
 let propertyRef p =

@@ -34,7 +34,7 @@ module internal ExitCond =
     
 /// Returns the disjunction of two exit conditions.
 let (.>>.) e1 e2 =
-    Map.unionWith (fun _ s1 s2 -> Set.union s1 s2) e1 e2
+    Map.unionWith (fun _ -> Set.union) e1 e2
 
 /// Returns the disjunction of two exit conditions.
 /// If v[k] terminates in e1 but not in e2, the termination is removed  
@@ -53,8 +53,8 @@ module ExecPoint =
     
     let freshpc k v =
         match Map.tryFind k v with
-        | Some x -> let x' = x+1 in (Map.add k (x') v), x'
-        | None -> (Map.add k (1) v), 1
+        | Some x -> let x' = x+1 in (Map.add k x' v), x'
+        | None -> Map.add k 1 v, 1
     
     let newpc n v =
         let maxpc = Map.keys v |> Seq.max
@@ -104,11 +104,11 @@ let makeTransitions (state: Accumulator) proc =
    let mutable (initCond:ExitCond) = Map.empty
    let initials = Process.initial proc
    let baseFn (lts, acc) b =
-       let (k, v, parent, exit) = acc
+       let k, v, parent, exit = acc
        let v', vk = ExecPoint.freshpc k v
        let entry = (Map.add k vk parent)
        (* If b is an initial action of procs, add its entry condition to initCond *)
-       initCond <- (initCond) .>>. (if initials.Contains b then ExitCond.ofEntryConds [entry] else Map.empty)
+       initCond <- initCond .>>. if initials.Contains b then ExitCond.ofEntryConds [entry] else Map.empty
        let lts' = (Set.add {Entry=entry; Exit=exit; Action=b; Siblings=Set.empty; Last=false}) lts
        lts', (setl _2 v' acc)
    let rec compFn typ recurse (lts, acc) l =
@@ -128,11 +128,11 @@ let makeTransitions (state: Accumulator) proc =
            | _ -> compFn Seq recurse (Set.union lts lts', acc'') ((List.rev << List.tail << List.rev) l)
        | Choice ->
            (* Recurse on l, accumulate the lts and the exec point but reset the exit *)
-           List.fold (fun s x -> recurse (setl (_2 << _4) (acc^._4) s) x) (lts, acc) l
+           List.fold (fun s -> recurse (setl (_2 << _4) (acc^._4) s)) (lts, acc) l
        | Par ->
-           let (k, v, _, exit) = acc
+           let k, v, _, exit = acc
            let v', fresh = ExecPoint.freshpc k v
-           let v'', newpcs = ExecPoint.newpc (l.Length) v'
+           let v'', newpcs = ExecPoint.newpc l.Length v'
            
            let childRecurse (l, a) pc child =
                let siblings = Set.filter ((<>) pc) newpcs
