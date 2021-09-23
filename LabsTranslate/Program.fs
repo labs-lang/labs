@@ -21,11 +21,17 @@ let wrapParserResult p text =
 
 [<EntryPoint>]
 let main argv =
-    let flags (cli:ParseResults<_>) = (cli.Contains Fair, cli.Contains No_Bitvector, cli.Contains Simulation, cli.Contains Sync)
+    let flags (cli:ParseResults<_>) = (
+        cli.Contains Fair,
+        cli.Contains No_Bitvector,
+        cli.Contains Simulation,
+        cli.Contains Sync,
+        cli.Contains No_Properties)
     
     zero argv
     <~> (parseCLI >> zero)
     <~> fun cli ->
+        let prop = cli.TryGetResult Property
         let input = File.ReadAllText (cli.GetResult File)
         let externs = getExterns cli |> Map.mapValues int
         (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
@@ -34,7 +40,7 @@ let main argv =
         else
             let bound = cli.GetResult (Bound, defaultValue=1)
             let enc = cli.GetResult (Enc, defaultValue=C)
-            encode enc bound (flags cli) x)
+            encode enc bound (flags cli) prop x)
     |> function
        | Result.Ok (_, warns) ->
             warns |> List.map(pprintWarn >> eprintfn "%s") |> ignore

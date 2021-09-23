@@ -219,7 +219,7 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
     Set.map encodeTransition a.Sts
     |> Seq.reduce (<??>)
 
-let private encodeMain trKit baseDict fair (table:SymbolTable) =
+let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
     let scheduleTransition t =
         Dict [
             "name", funcName t |> Str
@@ -229,8 +229,15 @@ let private encodeMain trKit baseDict fair (table:SymbolTable) =
         ]
     let alwaysP, finallyP =
         let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
-        let m1, m2 = Map.partition (fun _ n -> n.Def.Modality = Always) table.Properties
-        toLiquid <| Map.values m1, toLiquid <| Map.values m2
+        let maybeFilter m =
+            match prop with
+            | Some p -> Map.filter (fun k _ -> k = p) m
+            | None -> m
+        if noprops
+        then (toLiquid [], toLiquid [])
+        else
+            let m1, m2 = Map.partition (fun _ n -> n.Def.Modality = Always) table.Properties
+            maybeFilter m1 |> Map.values |> toLiquid, maybeFilter m2 |> Map.values |> toLiquid
     
     [
         "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
@@ -266,5 +273,5 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
             (Map.values x.Agents)
             |> Seq.map (encodeAgent trKit goto sync x)
             |> Seq.reduce (<??>))
-    <?> (encodeMain trKit baseDict fair)
+    <?> (encodeMain trKit baseDict fair noprops prop)
     <~~> zero () 

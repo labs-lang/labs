@@ -13,6 +13,8 @@ type Arguments =
     | Info
     | Simulation
     | [<Unique>] Values of string list
+    | Property of string
+    | No_Properties
     interface IArgParserTemplate with
         member s.Usage =
             match s with
@@ -25,6 +27,8 @@ type Arguments =
             | Simulation _ -> "encode in simulation mode (default: verification mode)."
             | Fair -> "enforce fair interleaving of components."
             | Enc _ -> "specify the target encoding."
+            | Property _ -> "specify the property to consider, others will be ignored."
+            | No_Properties -> "ignore all properties."
 
 let argParser = ArgumentParser.Create<Arguments>(programName = "LabsTranslate")
 
