@@ -211,7 +211,12 @@ module internal SymbolTable =
         |> Map.values
         |> Seq.sortBy table.M.IndexOf
     
-    let dump (table:SymbolTable) =
+    let dump (table:SymbolTable) prop =
+        let maybeFilterProp =
+            match prop with
+            | Some p -> Map.filter (fun k _ -> k = p)
+            | None -> id
+        
         let dumpVar v =
             match v.Vartype with
             | Scalar -> $"%i{table.M.IndexOf v}={v.Name}={v.Init}"
@@ -228,9 +233,9 @@ module internal SymbolTable =
             |> fun s -> let i = s.IndexOf('=') in s.Substring(i+1).Trim() // Remove property name 
             |> fun s -> Regex.Replace(s, "\s+", " ") // Remove duplicate spaces
         )
-        
+        |> maybeFilterProp
         |> Map.values
         |> String.concat ";"
         |> printfn "%s"
         
-type SymbolTable with member this.Dump() = SymbolTable.dump this
+type SymbolTable with member this.Dump(prop) = SymbolTable.dump this prop

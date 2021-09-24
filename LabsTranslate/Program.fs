@@ -36,7 +36,7 @@ let main argv =
         let externs = getExterns cli |> Map.mapValues int
         (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
     <?> (fun (cli, x) ->
-        if cli.Contains Info then zero (x.Dump())
+        if cli.Contains Info then zero (x.Dump(prop))
         else
             let bound = cli.GetResult (Bound, defaultValue=1)
             let enc = cli.GetResult (Enc, defaultValue=C)
