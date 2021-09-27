@@ -21,6 +21,9 @@ int main(void) {
     TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0;{% else %};
     __CPROVER_assume(firstAgent < MAXCOMPONENTS);
     {% endif %};
+    {%- if hasStigmergy -%}
+    _Bool propagate_or_confirm = 0;
+    {%- endif -%}
 
     {%- if hasStigmergy and bound > 0 -%}
     _Bool sys_or_not[BOUND];
@@ -32,7 +35,6 @@ int main(void) {
     {%- else -%}
     while(1) {        
     {%- endif -%}
-        // if (terminalState()) break;
         
         {%- if hasStigmergy -%}{%- if bound > 0 -%}
         if (sys_or_not[__LABS_step]) {
@@ -68,7 +70,7 @@ int main(void) {
         {%- if hasStigmergy -%}
         }
         else {
-            _Bool propagate_or_confirm = __CPROVER_nondet(); 
+            propagate_or_confirm = __CPROVER_nondet(); 
             if (propagate_or_confirm) propagate();
             else confirm();
         }
