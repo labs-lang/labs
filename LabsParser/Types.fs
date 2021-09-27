@@ -32,7 +32,14 @@ type Stigmergy<'a> =
 type Modality =
     | Always
     | Finally
-    override this.ToString() = match this with Always -> "always" | Finally -> "finally"
+    | Fairly
+    | FairlyInf
+    override this.ToString() =
+        match this with
+        | Always -> "always"
+        | Finally -> "finally"
+        | Fairly -> "fairly"
+        | FairlyInf -> "fairly_inf"
 
 type Quantifier =
     | All

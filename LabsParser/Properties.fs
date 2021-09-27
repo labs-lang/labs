@@ -33,8 +33,10 @@ let pproperty =
     let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink)
     let pmodality = 
         choice [
-            stringReturn "finally" Finally;
-            stringReturn "always" Always]
+            stringReturn "finally" Finally
+            stringReturn "always" Always
+            stringReturn "fairly_inf" FairlyInf
+            stringReturn "fairly" Fairly]
         |> ws
     pipe5
         (followedBy IDENTIFIER >>. getPosition)

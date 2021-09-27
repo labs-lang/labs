@@ -236,8 +236,13 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
         if noprops
         then (toLiquid [], toLiquid [])
         else
-            let m1, m2 = Map.partition (fun _ n -> n.Def.Modality = Always) table.Properties
-            maybeFilter m1 |> Map.values |> toLiquid, maybeFilter m2 |> Map.values |> toLiquid
+            // CAVEAT "fairly" and "fairly_inf" properties are
+            // not passed to templates at the moment.
+            let m1, m2 =
+                Map.partition (fun _ n -> n.Def.Modality = Always) table.Properties
+                |> fun (map1, map2) -> maybeFilter map1, maybeFilter map2
+            let _finally = Map.filter (fun _ n -> n.Def.Modality = Finally) m2
+            m1 |> Map.values |> toLiquid, _finally |> Map.values |> toLiquid
     
     [
         "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
