@@ -24,13 +24,17 @@ build/%/labs/templates/main.c : $(templates)
 build/%/labs/LabsTranslate : $(sources)
 	@mkdir -p build/$(platform)
 	@echo Building LabsTranslate...
-	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o build/$(platform)/labs -p:PublishSingleFile=true -p:PublishTrimmed=true
+	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o build/$(platform)/labs -p:PublishSingleFile=true -p:PublishTrimmed=true ;
+	@rm build/${platform}/labs/*.pdb ;
 
 build/%/sliver.py : $(sliver_sources)  build/%/pyparsing.py
 	@mkdir -p build/$(platform)
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
 	@rm build/${platform}/HISTORY-dev ;
+	@rm -rf build/${platform}/..?* ;
+	@rm -rf build/${platform}/.[!.]* ;
+	
 
 build/%/pyparsing.py :
 	@mkdir -p build/$(platform)
@@ -41,6 +45,8 @@ build/%/click :
 	@mkdir -p build/$(platform)
 	@echo Copying click...
 	@cp -r click/src/click build/$(platform)/click ;
+	@cp -r click/LICENSE.rst build/$(platform)/click/ ;
+	@cp -r click/README.rst build/$(platform)/click/ ;
 
 build/%/cseq/cseq.py :
 	@mkdir -p build/$(platform)
