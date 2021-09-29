@@ -231,7 +231,10 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
         let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
         let maybeFilter m =
             match prop with
-            | Some p -> Map.filter (fun k _ -> k = p) m
+            | Some p ->
+                let m' = Map.filter (fun k _ -> k = p) m
+                if m'.IsEmpty then failwith $"Property {p} not found." else ()
+                m'
             | None -> m
         if noprops
         then (toLiquid [], toLiquid [])
@@ -239,8 +242,9 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
             // CAVEAT "fairly" and "fairly_inf" properties are
             // not passed to templates at the moment.
             let m1, m2 =
-                Map.partition (fun _ n -> n.Def.Modality = Always) table.Properties
-                |> fun (map1, map2) -> maybeFilter map1, maybeFilter map2
+                table.Properties
+                |> maybeFilter
+                |> Map.partition (fun _ n -> n.Def.Modality = Always) 
             let _finally = Map.filter (fun _ n -> n.Def.Modality = Finally) m2
             m1 |> Map.values |> toLiquid, _finally |> Map.values |> toLiquid
     

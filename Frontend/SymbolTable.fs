@@ -211,11 +211,15 @@ module internal SymbolTable =
         |> Map.values
         |> Seq.sortBy table.M.IndexOf
     
+    let maybeFilterProp prop m =
+        match prop with
+        | Some p ->
+            let m' = Map.filter (fun k _ -> k = p) m
+            if m'.IsEmpty then failwith $"Property {p} not found." else ()
+            m'
+        | None -> m
+
     let dump (table:SymbolTable) prop =
-        let maybeFilterProp =
-            match prop with
-            | Some p -> Map.filter (fun k _ -> k = p)
-            | None -> id
         
         let dumpVar v =
             match v.Vartype with
@@ -228,12 +232,12 @@ module internal SymbolTable =
         printfn "%s" (table.Variables |> Map.filter (fun _ -> isEnvVar) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
         Map.map dumpSpawn table.Spawn |> ignore
         table.Properties
+        |> maybeFilterProp prop
         |> Map.mapValues (fun p ->
             p.Source |> fun s -> s.Replace('\n', ' ')
             |> fun s -> let i = s.IndexOf('=') in s.Substring(i+1).Trim() // Remove property name 
             |> fun s -> Regex.Replace(s, "\s+", " ") // Remove duplicate spaces
         )
-        |> maybeFilterProp
         |> Map.values
         |> String.concat ";"
         |> printfn "%s"
