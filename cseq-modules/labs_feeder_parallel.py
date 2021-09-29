@@ -290,7 +290,7 @@ class labs_feeder_parallel(core.module.BasicModule):
 			lastone = not any(pool[k]!=0 and k!=id for k in xrange(cores))
 
 			# last process to terminate, and no error traces found
-			if lastone:
+			if lastone and code[id] == 0:
 				self.setOutputParam('exitcode', code[id])
 				# dump backend's output to file
 				######core.utils.saveFile(logfile,out)
