@@ -1,5 +1,6 @@
 ﻿module LabsTranslate.TranslationKit
 open Frontend
+open Frontend.Message
 open LabsCore
 open LabsCore.Grammar
 open System.IO
@@ -121,6 +122,7 @@ type TranslationKit = {
     LinkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
     PropTr: SymbolTable -> Node<Property<Var<int> * int>> -> string
     TemplateInfo : TemplateInfo
+    CollectAuxVars : Expr<Var<int> * int, unit> -> Set<string * string * string>
 }
 
 type RefTranslator<'a> = 'a -> string option -> string
@@ -134,10 +136,7 @@ type ITranslateConfig =
     abstract member TrLinkId : LinkComponent -> string
     abstract member TrExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> Expr<'a, 'b> -> string
     abstract member TrBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
-        
-// let makeTranslator (wrapper: ITranslateConfig) trRef trId filter =
-//     let expr = wrapper.TrExpr trRef trId
-//     expr, wrapper.TrBExpr filter expr
+    abstract member CollectAuxVars : (Expr<'a, 'b> -> string) -> Expr<'a, 'b> -> Set<string * string * string>
 
 
 /// Creates a translation kit from the given configuration
@@ -168,6 +167,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
         MainGuardTr = mainGuardTr
         PropTr = propTr
         TemplateInfo = conf.TemplateInfo
+        CollectAuxVars = conf.CollectAuxVars agentExprTr
     }
  
 /// Provides the translation kit configuration for C.
@@ -193,7 +193,7 @@ module internal C =
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "__abs(%s)"
-        let nondetFn = sprintf "nondetInRange(%s, %s)"
+        let nondetFn e1 e2 _ = sprintf $"nondetInRange({e1}, {e2})"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
             
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn expr
@@ -217,6 +217,7 @@ module internal C =
             member _.TrExpr trRef trId e = translate trRef trId e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateLocation loc x y
+            member _.CollectAuxVars _ _ = Set.empty
         }
 
 /// Provides the translation kit configuration for LNT.
@@ -237,7 +238,7 @@ module internal Lnt =
 
     let translateInitLocation _ _ _ = "x"
 
-    let private translateExpr trRef trId =
+    let private translateExpr trRef trId expr =
         let leafFn = function
             | Id i -> $"(%s{trId i} of Int)"
             | Const i -> $"(%i{i} of Int)"
@@ -253,9 +254,10 @@ module internal Lnt =
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "abs(%s)"
-        let nondetFn = fun _ _ -> failwith "nondet expressions are currently not supported in LNT"
+        let nondetFn = fun _ _ (pos:Position) -> $"nondet_{pos.GetHashCode()}" 
+        //failwith "nondet expressions are currently not supported in LNT"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
-        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn expr
 
     let rec private trBExprLnt filter trExpr bexpr =
         let bleafFn b = if b then "true" else "false"
@@ -266,7 +268,18 @@ module internal Lnt =
             | Disj -> List.map (sprintf "(%s)") >> String.concat " or "
             
         translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
-        
+    
+    let rec collectAux trExpr expr =
+        let recurse = collectAux trExpr
+        match expr with
+        | Nondet(e1, e2, pos) ->
+            recurse e1 |> Set.union (recurse e2) |> Set.add ($"nondet_{pos.Line}_{pos.Column}", trExpr e1, trExpr e2)
+        | Arithm (e1, _, e2) -> recurse e1 |> Set.union (recurse e2)
+        | Unary(_, e) -> recurse e
+        | Ref r -> r.Offset |> Option.map recurse |> Option.defaultValue Set.empty
+        | Leaf _ -> Set.empty
+        | RawCall (_, args) -> Seq.map recurse args |> Set.unionMany
+    
     let wrapper = { 
         new ITranslateConfig with
             member _.TemplateInfo = {BaseDir = "templates/lnt"; Extension = "lnt"}
@@ -277,6 +290,7 @@ module internal Lnt =
             member _.TrExpr trRef trId e = translateExpr trRef trId e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y
+            member _.CollectAuxVars tr e = collectAux tr e
     }
     let wrapperMonitor = {
         new ITranslateConfig with
@@ -288,4 +302,5 @@ module internal Lnt =
             member _.TrExpr trRef trId e = translateExpr trRef trId e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y
+            member _.CollectAuxVars tr e = collectAux tr e
     }

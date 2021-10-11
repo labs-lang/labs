@@ -7,6 +7,10 @@ module HEADER is
     type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
     type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with get, set end type
 
+    process nondetRange(out var dest:Int, start, bound:Int) is
+      dest := any Int where ((dest >= start) and (dest < bound))
+    end process
+
     {%- if hasStigmergy -%}
 
     (* Stigmergy *)

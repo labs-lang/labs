@@ -126,7 +126,7 @@ let makeExprParser pref pid : Parser<_> =
     opp.AddOperator(PrefixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 3, false, fun x -> Unary(UnaryMinus, x)))
 
     choice [
-        betweenBrackets (expr .>> skipString ".." .>>. expr) |>> Nondet
+        betweenBrackets (pipe3 getPosition expr (skipString ".." >>. expr) (fun p e1 e2 -> Nondet(e1, e2, p)))
         expr
     ]
 

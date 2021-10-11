@@ -62,7 +62,7 @@ type LeafExpr<'b> =
         | Extern s -> "_" + s
 type Expr<'a, 'b> =
     | Leaf of LeafExpr<'b>
-    | Nondet of Expr<'a, 'b> * Expr<'a, 'b>
+    | Nondet of Expr<'a, 'b> * Expr<'a, 'b> * Position
     | Ref of Ref<'a, 'b>
     | Unary of UnaryOp * Expr<'a, 'b>
     | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
@@ -70,7 +70,7 @@ type Expr<'a, 'b> =
     override this.ToString() = 
         match this with
         | Leaf l -> string l
-        | Nondet (start, bound) -> $"[{start}..{bound}]"
+        | Nondet (start, bound, _) -> $"[{start}..{bound}]"
         | Ref r -> string r
         | Unary(op, e) -> 
             let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in $"%s{s}({e})"

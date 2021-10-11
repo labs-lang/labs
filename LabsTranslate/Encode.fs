@@ -186,7 +186,18 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
                 "expr", trKit.AgentExprTr expr |> Str
             ]
         
+        let auxs =
+            assignments
+            |>> fun a -> a.Updates
+            |>> Seq.map (snd >> trKit.CollectAuxVars)
+            |>> Set.unionMany
+            |> Option.defaultValue Set.empty
+            |> Seq.map (fun (a, b, c) -> Lst [ Str a; Str b; Str c ])
+            |> Lst
+            
+        
         [
+            "aux", auxs
             "hasStigmergy", Bool (table.M.NextL > 0)
             "hasEnvironment", Bool (table.M.NextE > 0)
             "label", funcName t |> Str

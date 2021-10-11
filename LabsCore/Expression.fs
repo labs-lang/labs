@@ -30,7 +30,7 @@ module Expr =
         let recurse = fold fleaf fref
         match expr with
         | Leaf l -> fleaf acc l
-        | Nondet(e1, e2)
+        | Nondet(e1, e2, _)
         | Arithm(e1, _, e2) ->
             Seq.fold recurse acc [e1; e2]
         | Unary(_, e) -> recurse acc e
@@ -47,7 +47,7 @@ module Expr =
         | Leaf l -> fleaf l
         | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
         | Unary(op, e) -> funary op (recurse e)
-        | Nondet(e1, e2) -> fnondet (recurse e1) (recurse e2)
+        | Nondet(e1, e2, pos) -> fnondet (recurse e1) (recurse e2) pos
         | Ref r -> fref r.Var (Option.map recurse r.Offset)
         | RawCall(n, args) -> fraw n (List.map recurse args)
     
@@ -55,7 +55,7 @@ module Expr =
         let recurse = map fleaf fref
         match expr with
         | Leaf l -> Leaf(fleaf l)
-        | Nondet(e1, e2) -> Nondet(recurse e1, recurse e2)
+        | Nondet(e1, e2, pos) -> Nondet(recurse e1, recurse e2, pos)
         | Arithm(e1, op, e2) -> Arithm(recurse e1, op, recurse e2)
         | Ref r -> 
             let newOffset = r.Offset |> Option.map recurse
