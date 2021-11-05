@@ -48,12 +48,12 @@ build/%/click :
 	@cp -r click/LICENSE.rst build/$(platform)/click/ ;
 	@cp -r click/README.rst build/$(platform)/click/ ;
 
-build/%/cseq/cseq.py :
-	@mkdir -p build/$(platform)
+build/%/backends/cseq/cseq.py :
+	@mkdir -p build/$(platform)/backends
 	@echo Copying CSeq...
-	@cp -r cseq/ build/$(platform)/cseq/ ;
-	@cp -r sliver/info.py build/$(platform)/cseq/info.py ;
-	@cp -r cseq-modules/* build/$(platform)/cseq/modules ;
+	@cp -r cseq/ build/$(platform)/backends/cseq/ ;
+	@cp -r sliver/info.py build/$(platform)/backends/cseq/info.py ;
+	@cp -r cseq-modules/* build/$(platform)/backends/cseq/modules ;
 
 build/%/examples :
 	@mkdir -p build/$(platform)
@@ -61,10 +61,10 @@ build/%/examples :
 	@mkdir -p build/$(platform)/examples ;
 	@cp labs-examples/*.labs build/$(platform)/examples/;
 
-build/%/cbmc-simulator :
-	@mkdir -p build/$(platform)
+build/%/backends/cbmc-simulator :
+	@mkdir -p build/$(platform)/backends
 	@echo Copying CBMC...
-	@cp linux/cbmc/* build/$(platform)/ ;
+	@cp linux/cbmc/* build/$(platform)/backends/ ;
 
 osx : rmsentinels \
 	build/osx.10.12-x64/labs/LabsTranslate \
@@ -81,10 +81,10 @@ linux : rmsentinels \
 	build/linux-x64/click \
 	build/linux-x64/sliver.py \
 	build/linux-x64/examples \
-	build/linux-x64/cbmc-simulator
+	build/linux-x64/backends/cbmc-simulator
 
 osx_cseq: rmsentinels osx \
-	build/osx.10.12-x64/cseq/cseq.py
+	build/osx.10.12-x64/backends/cseq/cseq.py
 
 linux_cseq: rmsentinels linux \
-	build/linux-x64/cseq/cseq.py
+	build/linux-x64/backends/cseq/cseq.py
