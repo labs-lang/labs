@@ -1,3 +1,8 @@
+{%-if simulation-%}
+char* format;
+#define __sim_assert(COND, LBL) if (!COND) format = ("(SIMULATION) Violation: " LBL)
+
+{%-endif-%}
 const char undef_value = -128;
 const {{typeofBOUND}} BOUND = {{ bound }};
 const {{ typeofMAXCOMPONENTS }} MAXCOMPONENTS = {{ MAXCOMPONENTS }};

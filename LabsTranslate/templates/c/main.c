@@ -1,16 +1,24 @@
 void monitor() {
     {%- for item in alwaysasserts -%}
+    {%-if simulation-%}
+    __sim_assert({{item.value}}, "{{item.name}}");
+    {%-else-%}
     __CPROVER_assert({{item.value}}, "{{item.name}}");
+    {%-endif-%}
     {%- endfor -%}
 }
 
 {%- if bound > 0 -%}
 void finally() {
     {%- for item in finallyasserts -%}
+    {%-if simulation-%}
+    __sim_assert({{item.value}}, "{{item.name}}");
+    {%-else-%}
     __CPROVER_assert({{item.value}}, "{{item.name}}");
+    {%-endif-%}
     {%- endfor -%}
     {%- if simulation -%}
-    __CPROVER_assert(0);
+    __CPROVER_assert(0, "__sliver_simulation__");
     {%- endif -%}
 }
 {%- endif -%}
@@ -83,7 +91,8 @@ int main(void) {
         }
         {%- endif -%}
     }
-    {%- if finallyasserts and finallyasserts.size > 0 and bound > 0 -%}
+    {%- if simulation or (finallyasserts and finallyasserts.size > 0 and bound > 0 -%}
     finally();
     {%- endif -%}
+
 }
