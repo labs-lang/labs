@@ -8,9 +8,10 @@ open Stigmergies
 open Properties
  
 let parse =
-    wsUnit >>. tuple4
+    wsUnit >>. tuple5
         (ws psys) 
         ((plstig |> ws |> many) <!> "STIGMERGIES")
         ((pcomp |> ws |> many) <!> "AGENTS")
+        (((opt passume) |> ws) <!> "ASSUME")
         (pproperties <!> "PROPERTIES")
     <!> "PARSER"

@@ -33,7 +33,7 @@ let check (sys, lstigs, agents', _) =
     (* Check for undefined agents in spawn section *)
     <??> undefSpawned
     
-let run externs (sys, lstigs, agents', properties) =
+let run externs (sys, lstigs, agents', assume, properties) =
     let vars = envAndLstigVars sys lstigs
     let (agents: Node<Agent> list) =
         let spawned = List.map (fun (d: Node<_>) -> d.Name) sys.Def.Spawn |> Set.ofList
@@ -62,6 +62,7 @@ let run externs (sys, lstigs, agents', properties) =
     <~> (makeSpawnRanges externs) sys.Def.Spawn
     (* properties can only be added after spawn *)
     <~> fold (tryAddProperty externs) properties
+    <~> fold (tryAddAssume externs) (assume |> Option.defaultValue [])
 
 /// Turns a variable initializer into a list of BExpr
 /// (multiple BExprs are returned when v is an array).

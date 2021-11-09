@@ -62,6 +62,7 @@ and SymbolTable = {
     M: Mapping
     Guards: Map<Node<Stmt<Var<int>*int>>, Set<BExpr<Var<int>*int, unit>>>
     Properties: Map<string, Node<Property<Var<int>*int>>>
+    Assumes: Map<string, Node<Property<Var<int>*int>>>
 }
 with
     static member empty =
@@ -74,6 +75,7 @@ with
             M = Mapping.empty
             Guards = Map.empty
             Properties = Map.empty
+            Assumes = Map.empty
         }
         
 module internal SymbolTable = 
@@ -204,7 +206,10 @@ module internal SymbolTable =
     let tryAddProperty externs (p:Node<Property<string>>) (table:SymbolTable) =
         let fn = (BExpr.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
         zero {table with Properties= Map.add p.Name (map (over _predicate fn) p) table.Properties}
-
+    let tryAddAssume externs (p:Node<Property<string>>) (table:SymbolTable) =
+        let fn = (BExpr.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
+        zero {table with Assumes= Map.add p.Name (map (over _predicate fn) p) table.Assumes}
+    
     let lstigVariablesOf table name =
         table.Variables
         |> Map.filter (fun _ v -> match v.Location with | L (s, _) when table.Agents.[name].Lstig.Contains s -> true | _ -> false)

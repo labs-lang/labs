@@ -51,4 +51,7 @@ void init() {
     now();
     {%- endif -%}
 
+    {%-for item in assumes-%}
+    __CPROVER_assume({{item.value}}); //{{item.name}}
+    {%-endfor-%}
 }

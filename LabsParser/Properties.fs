@@ -24,12 +24,11 @@ let pquantifier =
             (ws KEYNAME)
             (fun a b c -> c, (b, a))
 
-let pproperty = 
+let pproperty withModality =
     let propertyLink = 
         (ws (skipString "id"))
         >>. (ws OF)
         >>.(ws KEYNAME)
-
     let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink)
     let pmodality = 
         choice [
@@ -41,7 +40,7 @@ let pproperty =
     pipe5
         (followedBy IDENTIFIER >>. getPosition)
         (ws IDENTIFIER .>> (ws EQ))
-        pmodality
+        (if withModality then pmodality else preturn Always)
         ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
         pbaseprop
         (fun pos n m qs pred -> {Pos=pos; Name=n; Source=""; Def= {
@@ -54,7 +53,14 @@ let pproperty =
 
 let pproperties =
     wsUnit
-    >>. pproperty |> many
+    >>. pproperty true |> many
     |> ws
     |> betweenBraces
     |> (>>.) (ws (skipString "check"))
+    
+let passume =
+    wsUnit
+    >>. pproperty false |> many
+    |> ws
+    |> betweenBraces
+    |> (>>.) (ws (skipString "assume"))

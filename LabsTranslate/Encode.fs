@@ -139,7 +139,11 @@ let private encodeInit trKit (table:SymbolTable) =
         |> Map.values
         |> Seq.concat
     
+    let assumes =
+        makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) (Map.values table.Assumes))
+    
     [
+        "assumes", assumes
         "initenv", Lst env
         "agents", Lst agents
         "tstamps", Lst tstamps
