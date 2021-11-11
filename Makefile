@@ -32,6 +32,7 @@ build/%/sliver.py : $(sliver_sources)  build/%/pyparsing.py
 	@echo Copying SLiVER...
 	@cp -r sliver/ build/$(platform)/ ;
 	@rm build/${platform}/HISTORY-dev ;
+	@rm -rf build/${platform}/doc ;
 	@rm -rf build/${platform}/..?* ;
 	@rm -rf build/${platform}/.[!.]* ;
 	
@@ -63,8 +64,8 @@ build/%/examples :
 
 build/%/backends/cbmc-simulator :
 	@mkdir -p build/$(platform)/backends
-	@echo Copying CBMC...
-	@cp linux/cbmc/* build/$(platform)/backends/ ;
+	@echo Copying backends...
+	@cp -r linux/* build/$(platform)/backends/ ;
 
 osx : rmsentinels \
 	build/osx.10.12-x64/labs/LabsTranslate \
