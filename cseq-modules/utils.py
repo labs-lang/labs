@@ -48,8 +48,18 @@ def findpropositionalvarsize(key, lines):
     for line in lines:
         if line.startswith(key):
             line = line[len(key):]
-            firstvar = int(line[:line.find(' ')])   # least significant digit
-            lastvar = int(line[line.rfind(' '):])   # most significant digit
+            vars = line.split()
+            firstvar = int(vars[0])
+            lastvar = -1
+            for v in vars:
+                try:
+                    intv = int(v)
+                    if intv > lastvar:
+                        lastvar = intv
+                except ValueError:
+                    break
+            if lastvar == -1:
+                raise ValueError
 
     return Result(int(lastvar) - int(firstvar) + 1)
 
@@ -70,8 +80,18 @@ def findpropositionalvar(key, lines, offset=0):
         # print line
         if line.startswith(key):
             line = line[len(key):]
-            firstvar = int(line[:line.find(' ')])   # least significant digit
-            lastvar = int(line[line.rfind(' '):])   # most significant digit
+            vars = line.split()
+            firstvar = int(vars[0])
+            lastvar = -1
+            for v in vars:
+                try:
+                    intv = int(v)
+                    if intv > lastvar:
+                        lastvar = intv
+                except ValueError:
+                    break
+            if lastvar == -1:
+                raise ValueError
 
     if int(firstvar) + int(offset) <= int(lastvar):
         return Result(int(firstvar) + int(offset))

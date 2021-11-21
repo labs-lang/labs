@@ -47,7 +47,7 @@ from utils import findpropositionalvar, findpropositionalvarsize, get_bin
 
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 backendFilename = {}
-backendFilename['cbmc-assumptions'] = '../cbmc-simulator'
+backendFilename['cbmc-assumptions'] = '../cbmc/cbmc-simulator'
 
 cmdLineOptions = {}
 cmdLineOptions['cbmc-assumptions'] = ' ';
@@ -107,8 +107,9 @@ class labs_mapper(core.module.BasicModule):
 			varset = []
 
 			# TODO change fn_name according to 'spliton'
-			fn_name = 'init'
-			splitonfull = 'c %s::1::%s!0@1#1 ' % (fn_name, spliton)
+			# fn_name = 'init'
+			# splitonfull = 'c %s::1::%s!0@1#1 ' % (fn_name, spliton)
+			splitonfull = 'c %s#2 ' % (spliton)
 
 			if contexts == 1:
 				cores = 1
