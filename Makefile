@@ -1,4 +1,4 @@
-.PHONY: all linux osx dir rmsentinels linux_cseq osx_cseq
+.PHONY: all linux osx dir rmsentinels linux_cseq osx_cseq zip_linux
 
 all: linux osx
 
@@ -6,15 +6,19 @@ osx: platform = osx.10.12-x64
 osx_cseq: platform = osx.10.12-x64
 linux: platform = linux-x64
 linux_cseq: platform = linux-x64
+zip_linux: platform = linux-x64
 
 sources = $(wildcard **/*.fs)
 sliver_sources = $(wildcard sliver/**/*.py) 
 templates = $(wildcard LabsTranslate/templates/**/*)
 
+VERSION := $(strip $(shell grep version sliver/__about__.py | grep = | sed 's/"//g' | awk 'NF{print $$NF}'))
+RELEASENAME = sliver-v$(VERSION)_$(strip $(subst -,_, ${platform}))
+
 # Always force to re-make py files and templates
 rmsentinels :
 	@rm -f build/${platform}/sliver.py
-	@rm -f build/${platform}/cseq/cseq.py
+	@rm -f build/${platform}/backends/cseq/cseq.py
 	@rm -f build/${platform}/labs/templates/main.c
 
 build/%/labs/templates/main.c : $(templates)
@@ -89,3 +93,10 @@ osx_cseq: rmsentinels osx \
 
 linux_cseq: rmsentinels linux \
 	build/linux-x64/backends/cseq/cseq.py
+
+zip_linux : linux_cseq
+	@rm -rf build/$(RELEASENAME);
+	@rm -f build/$(RELEASENAME).zip;
+	cp -r build/$(platform) build/$(RELEASENAME)
+	cd build && zip -r $(RELEASENAME).zip $(RELEASENAME)
+	rm -rf build/$(RELEASENAME)
