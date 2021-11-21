@@ -1,4 +1,4 @@
-void monitor() {
+void monitor(void) {
     {%- for item in alwaysasserts -%}
     {%-if simulation-%}
     __sim_assert({{item.value}}, "{{item.name}}");
@@ -9,7 +9,7 @@ void monitor() {
 }
 
 {%- if bound > 0 -%}
-void finally() {
+void finally(void) {
     {%- for item in finallyasserts -%}
     {%-if simulation-%}
     __sim_assert({{item.value}}, "{{item.name}}");
@@ -38,7 +38,6 @@ int main(void) {
     {%- endif -%}
 
     {%- if bound > 0 -%}
-    unsigned __LABS_step;
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
     {%- else -%}
     while(1) {        
