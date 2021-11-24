@@ -103,7 +103,7 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     |> List.append baseDict
     |> render (parse (trKit.TemplateInfo.Get "header"))
 
-let private encodeInit trKit (table:SymbolTable) =
+let private encodeInit trKit baseDict (table:SymbolTable) =
     let env =
         table.Variables
         |> Map.filter (fun _ -> isEnvVar)
@@ -115,15 +115,15 @@ let private encodeInit trKit (table:SymbolTable) =
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
 
+    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E"
     let agents =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
             table.Agents.[name].Variables
             |> List.append (table.Agents.[name].LstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
-                let loc = match v.Location with I -> "I" | L _ -> "L" | E -> "E"
                 trKit.InitTr (v, snd table.M.[v.Name]) tid
-                |> List.map (fun x -> Dict ["loc", Str loc; "index", Int (snd table.M.[v.Name]); "bexpr", Str x])
+                |> List.map (fun x -> Dict ["loc", Str (loc v); "index", Int (snd table.M.[v.Name]); "bexpr", Str x])
                 )
             |> List.collect (fun f -> List.map f [_start.._end-1])
             |> List.concat |> List.distinct
@@ -147,10 +147,9 @@ let private encodeInit trKit (table:SymbolTable) =
         "assumes", assumes
         "initenv", Lst env
         "agents", Lst agents
-        "tstamps", Lst tstamps
-        "hasStigmergy", Bool (table.M.NextL > 0)
-        "hasEnvironment", Bool (table.M.NextE > 0)
+        "tstamps", Lst tstamps  
     ]
+    |> List.append baseDict
     |> render (parse (trKit.TemplateInfo.Get "init"))
 
 let private funcName t =
@@ -293,7 +292,7 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
     
     zero table
     <?> (encodeHeader trKit baseDict nobitvector bound)
-    <?> (encodeInit trKit)
+    <?> (encodeInit trKit baseDict)
     <?> (fun x -> 
             (Map.values x.Agents)
             |> Seq.map (encodeAgent trKit goto sync x)
