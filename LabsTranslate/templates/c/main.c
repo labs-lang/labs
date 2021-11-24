@@ -48,11 +48,8 @@ int main(void) {
         {%- else -%}
         if ((_Bool) __CPROVER_nondet()) {
         {%- endif -%}{%- endif -%}
-            {%- unless fair -%}
-            TYPEOFAGENTID nextAgent = __CPROVER_nondet();
-            __CPROVER_assume(nextAgent < MAXCOMPONENTS);
-            firstAgent = nextAgent;
-            {%- endunless -%}
+            // ___concrete-scheduler___
+            // ___end concrete-scheduler___
 
             switch (pc[firstAgent][0]) {
             {%- for item in schedule -%}
@@ -66,6 +63,7 @@ int main(void) {
                 {%- endif -%}
             }
             
+            // ___symbolic-scheduler___
             {%- if fair -%}
             if (firstAgent == MAXCOMPONENTS - 1) {
                 firstAgent = 0;
@@ -73,7 +71,12 @@ int main(void) {
             else {
                 firstAgent++;
             }
-            {%- endif -%}
+            {%-else-%}
+            TYPEOFAGENTID nextAgent = __CPROVER_nondet();
+            __CPROVER_assume(nextAgent < MAXCOMPONENTS);
+            firstAgent = nextAgent;
+            {%-endif-%}
+            // ___end symbolic-scheduler___
         {%- if hasStigmergy -%}
         }
         else {

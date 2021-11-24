@@ -1,6 +1,6 @@
 {%-if simulation-%}
 char* format;
-#define __sim_assert(COND, LBL) if (!COND) format = ("(SIMULATION) Violation: " LBL)
+#define __sim_assert(COND, LBL) if (!(COND)) format = ("(SIMULATION) Violation: " LBL)
 
 {%-endif-%}
 const char undef_value = -128;
@@ -149,6 +149,9 @@ void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
     {%- endif -%}
 }
 {%- endif -%}
+
+// ___concrete-globals___
+// ___end concrete-globals___
 
 {%- if hasStigmergy -%}
 //

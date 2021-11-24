@@ -1,10 +1,10 @@
-void init() {
-    unsigned char j = 0;
-
+void init(void) {
     {%- for agent in agents -%}
     {%- assign a = agent.end | minus: 1 -%}
     {%- for i in (agent.start..a) -%}
 
+    {%-unless simulation-%}
+    unsigned char j = 0;
     for (j=0; j<MAXKEYI; j++) {
         I[{{i}}][j] = __CPROVER_nondet_int();
     }
@@ -18,6 +18,7 @@ void init() {
     HinCnt[{{i}}] = 0;
     HoutCnt[{{i}}] = 0;
     {%- endif -%}
+    {%-endunless-%}
 
     {%- for p in agent.pcs -%}
     {%- if p.value.size == 1 -%}
@@ -35,6 +36,12 @@ void init() {
     {{ item.bexpr | replace: "==", "=" }};
         {%- endif -%}
     {%- endfor -%}
+
+    // ___concrete-init___
+    // ___end concrete-init___
+    
+    {%-if simulation-%}
+    {%-else-%}
     {%- for agent in agents -%}
     {%- for item in agent.initvars -%}
         {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
@@ -44,6 +51,9 @@ void init() {
         {%- endif -%}
     {%- endfor -%}
     {%- endfor -%}
+    {%-endif-%}
+    
+
     {%- if hasStigmergy -%}
     {%- for item in tstamps -%}
     Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();
@@ -51,7 +61,9 @@ void init() {
     now();
     {%- endif -%}
 
+    {%-unless simulation-%}
     {%-for item in assumes-%}
     __CPROVER_assume({{item.value}}); //{{item.name}}
     {%-endfor-%}
+    {%-endunless-%}
 }
