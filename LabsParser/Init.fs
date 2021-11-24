@@ -1,29 +1,11 @@
 ﻿module internal Init
 
 open FParsec
+open LabsCore.Expr
 open LabsCore.Grammar
 open LabsCore.Tokens
 open Common
 open Expressions
-
-
-//let rec pconstexpr:Parser<Expr<unit,unit>> =
-//    let errorMsg (var: string) =
-//        if var.StartsWith "_" then
-//            sprintf "undefined external variable %s" var
-//        else
-//            sprintf "unexpected variable %s in constant expression" var
-//    
-//    let toUnitExpr = Expr.map id (fun _ o -> {var=(); offset=o})
-//    
-//    makeExprParser simpleRef (skipString tID .>> notInIdentifier)
-//    >>= fun expr ->
-//        let vars = Expr.getVars expr
-//        if vars.IsEmpty then
-//            Set.map errorMsg vars
-//            |> String.concat "\n"
-//            |> fail
-//        else preturn (toUnitExpr expr)
 
 let pconstexpr:Parser<Expr<unit,unit>> = 
     makeExprParser 

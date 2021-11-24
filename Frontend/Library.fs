@@ -1,11 +1,13 @@
 ﻿module Frontend.Frontend
 open Frontend.Checks
 open Frontend.SymbolTable
-open Frontend.Outcome
-open Frontend.STS
 open Frontend.Message
 open LabsCore
+open LabsCore.Expr
+open LabsCore.BExpr
 open LabsCore.Grammar
+open Frontend.Outcome
+open Frontend.STS
 
 // Duplicate attributes in different agents are legal.
 let private envAndLstigVars sys lstigs =

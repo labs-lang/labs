@@ -2,6 +2,8 @@
 open Frontend
 open Frontend.Message
 open LabsCore
+open LabsCore.Expr
+open LabsCore.BExpr
 open LabsCore.Grammar
 open System.IO
 

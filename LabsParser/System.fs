@@ -1,6 +1,7 @@
 ﻿module internal System
 open FParsec
 
+open LabsCore.Expr
 open LabsCore.Grammar
 open LabsCore.Tokens
 open Init
@@ -8,7 +9,7 @@ open Processes
 open Expressions
 
 let pspawn =
-    let pspawnexpr:Parser<Expr<unit,unit>> = 
+    let pspawnexpr: Parser<Expr<unit,unit>> = 
         makeExprParser 
             (fun _ -> fail "unexpected variable in constant expression") 
             (skipString tID >>. notInIdentifier >>. fail "unexpected id in constant expression")

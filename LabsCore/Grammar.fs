@@ -1,8 +1,10 @@
-
 module LabsCore.Grammar
-open Tokens
+
+open System
 open FParsec
 open FSharpPlus.Lens
+open LabsCore.Expr
+open LabsCore.BExpr
 
 type Node<'a> = {
     Name: string
@@ -34,94 +36,6 @@ type Location =
             | I -> "Interface" | E -> "Environment"
             | L(n, _) -> $"Stigmergy ({n})" 
 
-type ArithmOp =
-    | Plus | Minus
-    | Times | Div | Mod
-    | Min | Max
-    override this.ToString() = 
-        match this with
-        | Plus -> tPLUS | Minus -> tMINUS
-        | Times -> tMUL | Div -> tDIV | Mod -> tMOD
-        | Min -> tMIN | Max -> tMAX
-
-type UnaryOp = 
-    | Abs | UnaryMinus
-    override this.ToString() =
-        match this with
-        | Abs -> tABS
-        | UnaryMinus -> tMINUS
-
-type LeafExpr<'b> =
-    | Id of 'b
-    | Const of int
-    | Extern of string
-    override this.ToString() = 
-        match this with
-        | Id _ -> tID
-        | Const v -> string v 
-        | Extern s -> "_" + s
-type Expr<'a, 'b> =
-    | Leaf of LeafExpr<'b>
-    | Nondet of Expr<'a, 'b> * Expr<'a, 'b> * Position
-    | Ref of Ref<'a, 'b>
-    | Unary of UnaryOp * Expr<'a, 'b>
-    | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
-    | RawCall of Name:string * Args:Expr<'a, 'b> list
-    override this.ToString() = 
-        match this with
-        | Leaf l -> string l
-        | Nondet (start, bound, _) -> $"[{start}..{bound}]"
-        | Ref r -> string r
-        | Unary(op, e) -> 
-            let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in $"%s{s}({e})"
-        | RawCall (name, args) -> $"""@{name}({args |> List.map string |> String.concat ", "})"""
-        | Arithm(e1, op, e2) ->
-            match op with
-            | Min | Max -> $"{op}({e1}, {e2})" 
-            | _ -> $"{e1} {op} {e2}"
-
-and Ref<'a, 'b> = 
-    {Var:'a; Offset: Expr<'a, 'b> option}
-    override this.ToString() = 
-        match this.Offset with
-        | Some e -> $"{this.Var}[{e}]"
-        | None -> this.Var.ToString()
-
-type CmpOp = 
-    | Equal
-    | Greater
-    | Less
-    | Leq
-    | Geq
-    | Neq
-    override this.ToString() = 
-        match this with
-        | Less -> "<"
-        | Equal -> "=="
-        | Greater -> ">"
-        | Leq -> "<="
-        | Geq -> ">="
-        | Neq -> "!="
-
-type Bop =
-    | Conj
-    | Disj
-    override this.ToString() = 
-        match this with Conj -> tCONJ | Disj -> tDISJ
-
-///<summary>Boolean expressions.</summary>
-type BExpr<'a, 'b> =
-    | BLeaf of bool
-    | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
-    | Neg of BExpr<'a, 'b>
-    | Compound of Bop * BExpr<'a, 'b> list
-    override this.ToString() =
-        match this with
-        | BLeaf true -> tTRUE | BLeaf false -> tFALSE
-        | Neg b -> $"%s{tNEG}({b})"
-        | Compare(e1, op, e2) -> $"({e1}) {op} ({e2})"
-        | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat $" {op} "
-
 type Action<'a> = {
     ActionType: Location
     Updates: (Ref<'a, unit> * Expr<'a, unit>) list
@@ -141,11 +55,27 @@ type Init =
      | Choose of Expr<unit,unit> list
      | Range of Expr<unit,unit> * Expr<unit,unit>
      | Undef
+with
+     member this.Pick (id_) =
+         let rnd = Random()
+         let pickRandom lst = List.item (rnd.Next(List.length lst)) lst
+             
+         match this with
+         | Undef -> -128
+         | Choose l -> l |> List.map (Expr.evalConstExpr (fun _ -> id_)) |> pickRandom
+         | Range(minValueExpr, boundExpr) ->
+             let minValue = Expr.evalConstExpr (fun _ -> id_) minValueExpr
+             let bound = Expr.evalConstExpr (fun _ -> id_) boundExpr
+             rnd.Next(bound-minValue)+minValue
+             
+     
      override this.ToString() =
         match this with
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> $"{min}..{max}"
         | Undef -> "undef"
+        
+    
 
 
 type Stmt<'a> = 

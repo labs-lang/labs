@@ -1,6 +1,8 @@
 ﻿module internal Stigmergies
 
 open FParsec
+open LabsCore.Expr
+open LabsCore.BExpr
 open LabsCore.Grammar
 open LabsCore.Tokens
 open Init

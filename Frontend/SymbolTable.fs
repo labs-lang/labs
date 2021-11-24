@@ -2,7 +2,9 @@ namespace Frontend
 open System.Text.RegularExpressions
 open FSharpPlus.Lens
 open LabsCore
-open Grammar
+open LabsCore.Grammar
+open LabsCore.Expr
+open LabsCore.BExpr
 open Externs
 open Message
 open Outcome
@@ -87,11 +89,11 @@ module internal SymbolTable =
             {
                 Location=var.Location;
                 Name=var.Name;
-                Vartype=match var.Vartype with Scalar -> Scalar | Array e -> Array (Expr.evalCexprNoId e);
+                Vartype=match var.Vartype with Scalar -> Scalar | Array e -> Array (LabsCore.Expr.evalCexprNoId e);
                 Init=var.Init
             }
         
-        map (Var.replaceExterns externs) vardef
+        map (VarExterns.replaceExterns externs) vardef
         |> map toVarInt
         |> fun x ->
             match x.Def.Vartype with
@@ -112,7 +114,7 @@ module internal SymbolTable =
     
     let toVarRef f r o =
         {Var=f r.Var; Offset=o}
-    let toVarExpr f e = 
+    let toVarExpr f e =
         Expr.map id (toVarRef f) e
     let toVarBExpr f b =
         BExpr.map BLeaf (toVarExpr f) b
@@ -133,7 +135,7 @@ module internal SymbolTable =
         Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
     
     let private handleProcessNode externs table p =
-        map (Process.simplify >> Process.fixGuardedPar >> toVarProcess table >> Process.replaceExterns externs) p
+        map (Process.simplify >> Process.fixGuardedPar >> toVarProcess table >> ProcessExterns.replaceExterns externs) p
     
     /// <summary>Builds a map from actions to guards.</summary>
     /// <remarks>This function assumes that all occurrences of the form
@@ -162,7 +164,7 @@ module internal SymbolTable =
         zero {table with Processes=Map.add p.Name p'.Def table.Processes; Guards=Map.union table.Guards (setGuards p'.Def)}
     
     let tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
-        let link = map (BExpr.replaceExterns externs >> toVarBExpr (fun (x,y) -> findString table x, y)) s.Def.Link
+        let link = map (BExprExterns.replaceExterns externs >> toVarBExpr (fun (x,y) -> findString table x, y)) s.Def.Link
         zero {table with Stigmergies=table.Stigmergies.Add(s.Name, link.Def)}
     
     let tryAddIface externs (a:Node<Agent>) table =
@@ -192,7 +194,7 @@ module internal SymbolTable =
             spawn
             |> List.map (fun (d:Node<_>) -> d.Name, d)
             |> Map.ofList
-            |> Map.mapValues (map (Expr.replaceExterns externs >> Expr.evalCexprNoId ))
+            |> Map.mapValues (map (ExprExterns.replaceExterns externs >> Expr.evalCexprNoId ))
                      
         let valid, others = Map.partition (fun _ d -> d.Def > 0) spawn'
         let zeroes, negatives = Map.partition (fun _ d -> d.Def = 0) others 
@@ -204,10 +206,10 @@ module internal SymbolTable =
         wrap {table with SymbolTable.Spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
 
     let tryAddProperty externs (p:Node<Property<string>>) (table:SymbolTable) =
-        let fn = (BExpr.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
+        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
         zero {table with Properties= Map.add p.Name (map (over _predicate fn) p) table.Properties}
     let tryAddAssume externs (p:Node<Property<string>>) (table:SymbolTable) =
-        let fn = (BExpr.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
+        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
         zero {table with Assumes= Map.add p.Name (map (over _predicate fn) p) table.Assumes}
     
     let lstigVariablesOf table name =

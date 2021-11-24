@@ -1,5 +1,6 @@
 ﻿module internal Properties
 open FParsec
+open LabsCore.Expr
 open LabsCore.Grammar
 open Expressions
 
@@ -51,7 +52,7 @@ let pproperty withModality =
         }})
     |> withSkippedString (fun s x -> {x with Source=s}) 
 
-let pproperties =
+let pproperties : Parser<_> =
     wsUnit
     >>. pproperty true |> many
     |> ws

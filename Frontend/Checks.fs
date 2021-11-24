@@ -1,4 +1,5 @@
 module internal Frontend.Checks
+
 open LabsCore.Grammar
 open Message
 open Outcome

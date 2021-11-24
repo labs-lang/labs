@@ -1,7 +1,7 @@
 ﻿module internal Expressions
 
-open LabsCore.Grammar
 open LabsCore.Tokens
+open LabsCore.Expr
 open LabsCore.BExpr
 open FParsec
 
