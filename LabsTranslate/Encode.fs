@@ -160,7 +160,7 @@ let private funcName t =
 let private guards table t =
     table.Guards.TryFind t.Action |> Option.defaultValue Set.empty
 
-let private encodeAgent trKit goto sync table (a:AgentTable) =
+let private encodeAgent trKit goto block sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
         let guards = guards table t
         let assignments = t.Action.Def |> (function Act a -> Some a | _ -> None)
@@ -199,7 +199,6 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             |> Seq.map (fun (a, b, c) -> Lst [ Str a; Str b; Str c ])
             |> Lst
             
-        
         [
             "aux", auxs
             "hasStigmergy", Bool (table.M.NextL > 0)
@@ -229,10 +228,26 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
                 |> Option.defaultValue Seq.empty
                 |> Lst         
         ]
-        |> render goto
     
-    Set.map encodeTransition a.Sts
-    |> Seq.reduce (<??>)
+    let encoder (t:Transition) =
+        match t.Action.Def with
+        | Block stmts ->
+            let encodes =
+                List.map (fun a -> {t with Action={t.Action with Def=Act a}} |> encodeTransition |> Map.ofList) stmts
+            let hd = encodes.Head
+            
+            [ 
+                "assignments", seq { for e in encodes -> e.["assignments"] } |> Lst
+                "labs", seq { for e in encodes -> e.["labs"] } |> Lst
+                "qrykeys",  seq { for e in encodes -> e.["qrykeys"] } |> Lst
+            ]
+            |> Map.ofList
+            |> fun d -> Map.union d hd
+            |> Map.toList
+            |> render block
+        | _ -> encodeTransition t |> render goto
+    
+    a.Sts |> Set.map encoder |> Seq.reduce (<??>)
 
 let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
     let scheduleTransition t =
@@ -282,6 +297,7 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
 let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
     let trKit = makeTranslationKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper | Lnt_Monitor -> Lnt.wrapperMonitor
     let goto = parse (trKit.TemplateInfo.Get "goto")
+    let block = parse (trKit.TemplateInfo.Get "block")
     
     let baseDict = [
         "bound", Int bound
@@ -295,7 +311,7 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
     <?> (encodeInit trKit baseDict)
     <?> (fun x -> 
             (Map.values x.Agents)
-            |> Seq.map (encodeAgent trKit goto sync x)
+            |> Seq.map (encodeAgent trKit goto block sync x)
             |> Seq.reduce (<??>))
     <?> (encodeMain trKit baseDict fair noprops prop)
     <~~> zero () 

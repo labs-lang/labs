@@ -44,8 +44,12 @@ do pprocRef :=
         let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase
         let pSkip = getPosition .>>. safeStrReturn tSKIP Skip |>> doBase
         let pParen = followedBy (skipChar '(') >>. (betweenParen pproc)
-        
+        let pBlock =
+            sepBy1 (ws paction) (ws SEQ) |> betweenBracesPos
+            |>> fun (pos, stmts) -> doBase (pos, Block stmts)
+                    
         choice [
+             pBlock
              attempt pGuarded <!> "Guarded"
              attempt pNil <!> "Nil"
              attempt pSkip <!> "Skip"

@@ -41,7 +41,11 @@ module ProcessExterns =
         let baseFn b =
             let doUpdate (r, expr) =
                 {r with Offset=Option.map (ExprExterns.replaceExterns externs) r.Offset}, ExprExterns.replaceExterns externs expr
+            let doAction a = {a with Updates = List.map doUpdate a.Updates}
             match b.Def with
-            | Act a -> BaseProcess {b with Def= Act {a with Updates = List.map doUpdate a.Updates}}
+            | Act a ->
+                BaseProcess {b with Def=doAction a |> Act}
+            | Block stmts ->
+                BaseProcess {b with Def=List.map doAction stmts |> Block}
             | _ -> BaseProcess b
         LabsCore.Process.map baseFn (BExprExterns.replaceExterns externs)

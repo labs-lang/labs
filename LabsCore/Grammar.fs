@@ -82,6 +82,7 @@ type Stmt<'a> =
     | Nil 
     | Skip
     | Act of 'a Action
+    | Block of Action<'a> list
     | Name of string
 with
     override this.ToString() =
@@ -89,6 +90,10 @@ with
         | Nil -> "0"
         | Skip -> "√"
         | Act a -> string a
+        | Block stmts ->
+            List.map string stmts
+            |> String.concat "; "
+            |> sprintf "{ %s }"
         | Name s -> s
 
 type Composition =
