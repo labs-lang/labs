@@ -49,11 +49,11 @@ type Expr<'a, 'b> =
             | Min | Max -> $"{op}({e1}, {e2})" 
             | _ -> $"{e1} {op} {e2}"
 and Ref<'a, 'b> = 
-    {Var:'a; Offset: Expr<'a, 'b> option}
-    override this.ToString() = 
-        match this.Offset with
-        | Some e -> $"{this.Var}[{e}]"
-        | None -> this.Var.ToString()
+    {Var:'a; Offset: Expr<'a, 'b> option; OfAgent: Expr<'a, 'b> option}
+    override this.ToString() =
+        let ofAgent = match this.OfAgent with None -> "" | Some e -> $" of {e}"
+        let offset = match this.Offset with None -> "" | Some e -> $"[{e}]" 
+        $"%O{this.Var}{offset}{ofAgent}"
 
 /// Syntactic equality check.
 let rec equal e1 e2 =
@@ -68,9 +68,9 @@ let rec equal e1 e2 =
         (equal e11 e21) && (equal e12 e22)
     | Unary(o1, e1_), Unary(o2, e2_) when o1 = o2 -> equal e1_ e2_
     | Ref r1, Ref r2 when r1.Var = r2.Var ->
-        match r1.Offset, r2.Offset with
-        | Some o1, Some o2 -> equal o1 o2
-        | None, None -> true
+        match r1.Offset, r2.Offset, r1.OfAgent, r2.OfAgent with
+        | Some o1, Some o2, Some of1, Some of2 -> (equal o1 o2) && (equal of1 of2) 
+        | None, None, None, None -> true
         | _ -> false
     | RawCall(n1, a1), RawCall(n2, a2) ->
         n1 = n2 &&
@@ -100,7 +100,7 @@ let rec cata fleaf farithm funary fnondet fref fraw expr =
     | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
     | Unary(op, e) -> funary op (recurse e)
     | Nondet(e1, e2, pos) -> fnondet (recurse e1) (recurse e2) pos
-    | Ref r -> fref r.Var (Option.map recurse r.Offset)
+    | Ref r -> fref r.Var (Option.map recurse r.Offset) (Option.map recurse r.OfAgent)
     | RawCall(n, args) -> fraw n (List.map recurse args)
 
 let rec map fleaf fref expr =
@@ -111,7 +111,8 @@ let rec map fleaf fref expr =
     | Arithm(e1, op, e2) -> Arithm(recurse e1, op, recurse e2)
     | Ref r -> 
         let newOffset = r.Offset |> Option.map recurse
-        Ref(fref r newOffset)
+        let newOf = r.OfAgent |> Option.map recurse
+        Ref(fref r newOffset newOf)
     | RawCall (n, args) -> RawCall(n, List.map recurse args)
     | Unary(u, e) -> Unary(u, recurse e)
 

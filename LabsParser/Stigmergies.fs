@@ -15,7 +15,7 @@ let plink =
     let linkref p =
         pipe3
             (ws KEYNAME) (opt (betweenBrackets p)) (spaces >>. pc1orc2)
-            (fun a b c -> {Var=a,c; Offset=b})
+            (fun a b c -> {Var=(a, c); Offset=b; OfAgent=None})
     let linkId = (ws (skipString tID)) >>. pc1orc2
     getPosition .>>. makeBExprParser (makeExprParser linkref linkId)
     |>> (fun (pos, link) -> {Name="link"; Pos=pos; Def=link; Source=""})

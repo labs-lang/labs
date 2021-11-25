@@ -14,7 +14,7 @@ module ExprExterns =
                 | Some i -> Const i
                 | None -> raise (LabsException {What=NoValueForExtern s; Where=[]})
             | Const x -> Const x
-        LabsCore.Expr.map leafFn (fun r o -> {r with Offset=o}) expr
+        LabsCore.Expr.map leafFn (fun r o of_ -> {r with Offset=o; OfAgent=of_}) expr
         
 module BExprExterns =
     /// Replaces external parameters with their values.

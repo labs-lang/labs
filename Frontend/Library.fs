@@ -71,9 +71,9 @@ let run externs (sys, lstigs, agents', assume, properties) =
 let initBExprs idfn (v:Var<_>, i: int) =
     let mapFn r =
         let leafFn l = match l with | Id _ -> idfn | _ -> l
-        Expr.map leafFn (fun _ o -> {r with Offset=o})
+        Expr.map leafFn (fun _ o of_ -> {r with Offset=o; OfAgent=of_})
     let refs =
-        let r = {Var=(v, i); Offset = None}
+        let r = {Var=(v, i); Offset = None; OfAgent = None}
         match v.Vartype with
         | Scalar -> [r]
         | Array s -> List.map (fun i -> {r with Offset = Some (Leaf (Const i))}) [0 .. s-1]

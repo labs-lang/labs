@@ -5,9 +5,15 @@ open LabsCore.Expr
 open LabsCore.BExpr
 open FParsec
 
-let simpleRef p = 
-    KEYNAME .>>. (opt (betweenBrackets p))
-    |>> fun (str, offset) -> {Var=str; Offset=offset}
+let simpleRef p =
+    tuple3
+        KEYNAME
+        (opt (betweenBrackets p) |> ws)
+        (choice [
+            ((followedBy OF) >>. ws OF >>. p |>> Some)
+            ((notFollowedBy OF) >>% None)
+        ])
+    |>> fun (str, offset, ofAgent) -> {Var=str; Offset=offset; OfAgent=ofAgent}
 
 type ParseBExpr<'a, 'b> = 
     | E of Expr<'a, 'b>

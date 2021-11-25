@@ -18,17 +18,18 @@ let private refTypeCheck v (offset:'a option) =
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let getLstigVars expr =
-    Expr.getVars expr
+    getVars expr
     |> Set.filter (fun (v, _) -> isLstigVar v)
 
 /// Translates a variable reference.
-let private trref trLocation name (v:Var<int>, i:int) offset =
+let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
     do refTypeCheck v offset //TODO move
+    let agent = match ofAgent with None -> name | Some a -> a
     let index =
         match offset with
         | None -> string i
         | Some off -> $"%i{i} + {off}"
-    trLocation v.Location name index
+    trLocation v.Location agent index
 
 /// Translates a boolean expression.
 let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =
@@ -60,13 +61,13 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
             | Some e -> e
             | None -> failwithf $"Undefined agent {name}"
         
-        let propRef1 ((v:Var<_>, i), c) offset =
+        let propRef1 ((v:Var<_>, i), c) offset ofagent =
             match c with
             | None -> 
                 if v.Location <> E then failwithf $"{v.Name} is not an environment variable"
-                {Var=((v, i), c); Offset=offset}
+                {Var=((v, i), c); Offset=offset; OfAgent=None}
             | Some c ->
-                {Var=((v, i), (Some <| (string << propId) c)); Offset=offset}
+                {Var=((v, i), (Some <| (string << propId) c)); Offset=offset; OfAgent=ofagent}
 
         let trLeaf leaf =
             match leaf with
@@ -127,7 +128,7 @@ type TranslationKit = {
     CollectAuxVars : Expr<Var<int> * int, unit> -> Set<string * string * string>
 }
 
-type RefTranslator<'a> = 'a -> string option -> string
+type RefTranslator<'a> = 'a -> string option -> string option -> string
 
 type ITranslateConfig =
     abstract member InitId : int -> LeafExpr<'b>

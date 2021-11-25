@@ -1,9 +1,9 @@
 ﻿module LabsTranslate.Encode
 
 open Frontend
-open LabsCore.Expr
 open LabsCore.Grammar
 open Frontend.STS
+open LabsCore.Expr
 open LabsCore.BExpr
 open LabsCore.Tokens
 open FSharpPlus

@@ -19,6 +19,7 @@ let tFALSE = "false"
 let tNEG = "!"
 let tCONJ = "and"
 let tDISJ = "or"
+let tOF = "of"
 
 let tSKIP = "Skip"
 

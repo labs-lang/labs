@@ -13,7 +13,7 @@ let propertyRef p =
             followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
             preturn None
         ])
-        (fun k offset y -> {Var=(k, y); Offset=offset})
+        (fun k offset y -> {Var=(k, y); Offset=offset; OfAgent=None})
 
 let pquantifier =
         pipe3
