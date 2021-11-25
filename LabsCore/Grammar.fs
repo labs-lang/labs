@@ -59,16 +59,16 @@ type Init =
      | Range of Expr<unit,unit> * Expr<unit,unit>
      | Undef
 with
-     member this.Pick (id_) =
+     member this.Pick id_ =
          let rnd = Random()
          let pickRandom lst = List.item (rnd.Next(List.length lst)) lst
              
          match this with
          | Undef -> -128
-         | Choose l -> l |> List.map (Expr.evalConstExpr (fun _ -> id_)) |> pickRandom
+         | Choose l -> l |> List.map (evalConstExpr (fun _ -> id_)) |> pickRandom
          | Range(minValueExpr, boundExpr) ->
-             let minValue = Expr.evalConstExpr (fun _ -> id_) minValueExpr
-             let bound = Expr.evalConstExpr (fun _ -> id_) boundExpr
+             let minValue = evalConstExpr (fun _ -> id_) minValueExpr
+             let bound = evalConstExpr (fun _ -> id_) boundExpr
              rnd.Next(bound-minValue)+minValue
              
      

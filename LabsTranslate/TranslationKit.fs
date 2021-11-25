@@ -42,15 +42,15 @@ let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =
             /// Checks that expr is "well-defined"
             /// (i.e., referenced vars must not be equal to "undef_value")
             let checkWellDef expr =
-                Set.filter f (Expr.getRefs expr)
+                Set.filter f (getRefs expr)
                 |> Set.map (fun r -> Compare(Ref(r), Neq, Leaf(Extern "undef_value")))
-            BExpr.cata (fun _ -> Set.empty) id (fun _ e1 e2 -> Set.union (checkWellDef e1) (checkWellDef e2)) (fun _ -> Set.unionMany) bexpr
+            cata (fun _ -> Set.empty) id (fun _ e1 e2 -> Set.union (checkWellDef e1) (checkWellDef e2)) (fun _ -> Set.unionMany) bexpr
         
     if undefs.IsEmpty then bexpr
     else
         Set.add bexpr undefs
         |> fun s -> Compound(Conj, s |> Set.toList)
-    |> BExpr.cata bleafFn negFn compareFn compoundFn
+    |> cata bleafFn negFn compareFn compoundFn
     
 let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property<_>>) =
     let ex = Map.exists (fun _ (_, q)-> q = Exists) p.Def.Quantifiers
@@ -76,7 +76,7 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
             | Id name -> (string << propId) name |> Id
             | _ -> leaf
         
-        BExpr.map BLeaf (Expr.map trLeaf (fun r -> propRef1 r.Var))
+        map BLeaf (Expr.map trLeaf (fun r -> propRef1 r.Var))
         
     if (ex && fa) then 
         p.Name
@@ -96,7 +96,7 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
             [amin..amax-1]
             |> List.map (addToSubs >> translateWithSubs)
             |> fun l -> Compound(trQuantifier quantifier, l)
-            |> BExpr.simplify
+            |> simplify
         else
             (translateSub subs) prop.Predicate
     
@@ -181,6 +181,7 @@ module internal C =
         | I -> sprintf "I[%s][%O]"
         | L _ -> sprintf "Lvalue[%s][%O]"
         | E -> (fun _ -> sprintf "E[%O]")
+        | Local -> fun _ _ -> "" 
 
     let private translate trRef trId expr =
         let leafFn = function
@@ -239,6 +240,7 @@ module internal Lnt =
         | I -> sprintf "%s.I[IntToNat(%O)]" 
         | L _ -> sprintf "%s.L[IntToNat(%O)]"
         | E -> fun _ -> sprintf "E[IntToNat(%O)]"
+        | Local -> fun _ _ -> n
         |> fun f -> f name e
 
     let translateInitLocation _ _ _ = "x"

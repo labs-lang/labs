@@ -96,7 +96,7 @@ module internal SymbolTable =
             {
                 Location=var.Location;
                 Name=var.Name;
-                Vartype=match var.Vartype with Scalar -> Scalar | Array e -> Array (LabsCore.Expr.evalCexprNoId e);
+                Vartype=match var.Vartype with Scalar -> Scalar | Array e -> Array (evalCexprNoId e);
                 Init=var.Init
             }
         
@@ -218,7 +218,7 @@ module internal SymbolTable =
             spawn
             |> List.map (fun (d:Node<_>) -> d.Name, d)
             |> Map.ofList
-            |> Map.mapValues (map (ExprExterns.replaceExterns externs >> Expr.evalCexprNoId ))
+            |> Map.mapValues (map (ExprExterns.replaceExterns externs >> evalCexprNoId ))
                      
         let valid, others = Map.partition (fun _ d -> d.Def > 0) spawn'
         let zeroes, negatives = Map.partition (fun _ d -> d.Def = 0) others 
