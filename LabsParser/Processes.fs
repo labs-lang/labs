@@ -15,11 +15,12 @@ let paction =
             charReturn '-' I;
             charReturn '~' (L("",0))
         ]
+    let pWalrus = stringReturn ":=" Location.Local 
     tuple3 
         (ws (simpleRef pexpr) |> sepbycommas)
-        (ws parseArrow) 
+        (ws (parseArrow <|> pWalrus)) 
         (ws pexpr |> sepbycommas)
-    >>= (fun (refs, action, exprs) -> 
+    >>= (fun (refs, action, exprs) ->
         try {ActionType=action; Updates=List.zip refs exprs} |> preturn with
         | :? System.ArgumentException -> 
             fail "A multiple assignment should contain the same number of variables and expressions.")

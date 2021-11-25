@@ -31,10 +31,12 @@ type Location =
     | I 
     | L of name:string * tupleIndex: int
     | E
+    | Local
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
             | L(n, _) -> $"Stigmergy ({n})" 
+            | Local -> "Local" 
 
 type Action<'a> = {
     ActionType: Location
@@ -43,6 +45,7 @@ type Action<'a> = {
     with 
         override this.ToString() = 
             (match this.ActionType with
+            | Local _ -> sprintf "%s := %s"
             | I -> sprintf "%s <- %s"
             | L _ -> sprintf "%O <~ %O"
             | E -> sprintf "%O <-- %O")

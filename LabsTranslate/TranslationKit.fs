@@ -29,7 +29,9 @@ let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
         match offset with
         | None -> string i
         | Some off -> $"%i{i} + {off}"
-    trLocation v.Location agent index
+    match v.Location with
+    | Local -> v.Name
+    | _ -> trLocation v.Location agent index
 
 /// Translates a boolean expression.
 let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =

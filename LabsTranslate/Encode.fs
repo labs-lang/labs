@@ -115,11 +115,11 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
 
-    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E"
+    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "__LOCAL"
     let agents =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
-            table.Agents.[name].Variables
+            table.Agents.[name].Attributes
             |> List.append (table.Agents.[name].LstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
                 trKit.InitTr (v, snd table.M.[v.Name]) tid
@@ -181,11 +181,17 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             |> Lst
         
         let liquidAssignment (k:Ref<Var<int>*int, unit>, expr) =
-            let size = match (fst k.Var).Vartype with Array s -> s | _ -> 0
+            let v = fst k.Var
+            let size = match v.Vartype with Array s -> s | _ -> 0
+            let loc =
+                v.Location
+                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "LOCAL"
+                |> Str
             Dict [
+                "name", v.Name |> Str
+                "loc", loc    
                 "key",  Int (snd k.Var)
-                "offset",
-                    k.Offset |>> (trKit.AgentExprTr >> Str) |> Option.defaultValue (Int 0)
+                "offset", k.Offset |>> (trKit.AgentExprTr >> Str) |> Option.defaultValue (Int 0)
                 "size", Int size
                 "expr", trKit.AgentExprTr expr |> Str
             ]
@@ -214,12 +220,6 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
                 string t.Action.Def
                 |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
                 |> Str
-            "loc",
-                assignments
-                |>> fun a -> a.ActionType
-                |>> function | I -> "attr" | L _ -> "lstig" | E -> "env"
-                |> Option.defaultValue ""
-                |> Str
             "qrykeys", qrykeys
             "sync", sync |> Bool
             "assignments", assignments
@@ -235,8 +235,21 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             let encodes =
                 List.map (fun a -> {t with Action={t.Action with Def=Act a}} |> encodeTransition |> Map.ofList) stmts
             let hd = encodes.Head
-            
-            [ 
+            let locals =
+                let liquidVar v = Dict [
+                    "name", v.Name |> Str
+                    "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> s
+                ]
+                stmts
+                |> Seq.map (fun a -> List.map (fst >> fun r -> fst r.Var) a.Updates)
+                |> Seq.concat
+                |> Seq.filter (fun v -> match v.Location with Local -> true | _ -> false)
+                |> Seq.distinctBy (fun v -> v.Name)
+                |> Seq.map liquidVar
+                |> Lst
+
+            [
+                "locals", locals 
                 "assignments", seq { for e in encodes -> e.["assignments"] } |> Lst
                 "labs", seq { for e in encodes -> e.["labs"] } |> Lst
                 "qrykeys",  seq { for e in encodes -> e.["qrykeys"] } |> Lst

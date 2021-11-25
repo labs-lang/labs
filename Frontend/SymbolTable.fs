@@ -1,6 +1,7 @@
 namespace Frontend
 open System.Text.RegularExpressions
 open FSharpPlus.Lens
+open Frontend
 open LabsCore
 open LabsCore.Grammar
 open LabsCore.Expr
@@ -32,6 +33,7 @@ with
             | I -> {this with Map= updateMap this.NextI; NextI = updateNext this.NextI} 
             | E -> {this with Map= updateMap this.NextE; NextE = updateNext this.NextE}            
             | L _ -> {this with Map = updateMap this.NextL; NextL = updateNext this.NextL}
+            | Local -> this
 
 type AgentTable = {
     Sts: TransitionSystem
@@ -49,6 +51,11 @@ with
             Variables=[]
             Lstig=Set.empty
         }
+    
+    member this.Attributes =
+        this.Variables
+        |> List.filter (fun v -> match v.Location with I -> true | _ -> false)
+        
     member this.LstigVariables (table:SymbolTable) =
         table.Variables
         |> Map.filter (fun _ v -> match v.Location with | L (s, _) when this.Lstig.Contains s -> true | _ -> false)
@@ -107,32 +114,49 @@ module internal SymbolTable =
         else zero {table with Variables = table.Variables.Add(vardef.Name, (processVar externs vardef).Def)}
     
     /// Basic function to retrieve the mapping of variable named k
-    let findString table k =
-        //TODO add correct position
-        table.M.TryFind k
-        |> function Some x -> x | None -> raise (LabsException {What=UndefRef k; Where=[]}) 
+    let findString locals table k =
+        if Map.containsKey k locals
+        then {Name=k; Vartype=Scalar; Location=Local; Init=Undef}, 0
+        else
+            table.M.TryFind k
+            |> function Some x -> x | None -> raise (LabsException {What=UndefRef k; Where=[]}) 
     
-    let toVarRef f r o =
-        {Var=f r.Var; Offset=o}
+    let toVarRef f r o of_ = {Var=f r.Var; Offset=o; OfAgent=of_}
     let toVarExpr f e =
         Expr.map id (toVarRef f) e
     let toVarBExpr f b =
         BExpr.map BLeaf (toVarExpr f) b
     
     let toVarProcess table proc =
-        let toVarBase f b =    
-            match b.Def with 
-            | Act a ->
+        let toVarBase f b =
+            let toVarAct locals a =
                 let newupdates =
                     a.Updates
                     |> List.map (fun (r, e) -> 
-                        toVarRef f r (Option.map (toVarExpr f) r.Offset), toVarExpr f e)
-                Act {ActionType=a.ActionType; Updates=newupdates}
+                        toVarRef (f locals) r (Option.map (toVarExpr (f locals)) r.Offset) (Option.map (toVarExpr (f locals)) r.OfAgent),
+                        toVarExpr (f locals) e)
+                {ActionType=a.ActionType; Updates=newupdates}
+            match b.Def with 
+            | Act a -> toVarAct Map.empty a |> Act
+            | Block b ->
+                let locals =
+                    let isLocal = function Local -> true | _ -> false
+                    List.mapi (fun i act ->
+                        if isLocal act.ActionType
+                        then Some (List.map (fst >> fun r -> r.Var, i) act.Updates)
+                        else None
+                    ) b
+                    |> List.choose id
+                    |> List.concat
+                    |> Map.ofSeq
+                List.map (toVarAct locals) b |> Block 
             | Nil -> Nil
             | Skip -> Skip
             | Name s -> Name s
             |> fun def' -> {Def=def'; Pos=b.Pos; Name=b.Name; Source=b.Source}
-        Process.map ((toVarBase (findString table)) >> BaseProcess) (toVarBExpr (findString table)) proc
+            |> BaseProcess
+        let fs locals = findString locals table
+        Process.map (toVarBase fs) (toVarBExpr (fs Map.empty)) proc
     
     let private handleProcessNode externs table p =
         map (Process.simplify >> Process.fixGuardedPar >> toVarProcess table >> ProcessExterns.replaceExterns externs) p
@@ -164,7 +188,7 @@ module internal SymbolTable =
         zero {table with Processes=Map.add p.Name p'.Def table.Processes; Guards=Map.union table.Guards (setGuards p'.Def)}
     
     let tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
-        let link = map (BExprExterns.replaceExterns externs >> toVarBExpr (fun (x,y) -> findString table x, y)) s.Def.Link
+        let link = map (BExprExterns.replaceExterns externs >> toVarBExpr (fun (x,y) -> (findString Map.empty) table x, y)) s.Def.Link
         zero {table with Stigmergies=table.Stigmergies.Add(s.Name, link.Def)}
     
     let tryAddIface externs (a:Node<Agent>) table =
@@ -206,10 +230,10 @@ module internal SymbolTable =
         wrap {table with SymbolTable.Spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
 
     let tryAddProperty externs (p:Node<Property<string>>) (table:SymbolTable) =
-        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
+        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
         zero {table with Properties= Map.add p.Name (map (over _predicate fn) p) table.Properties}
     let tryAddAssume externs (p:Node<Property<string>>) (table:SymbolTable) =
-        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> findString table x, y)
+        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
         zero {table with Assumes= Map.add p.Name (map (over _predicate fn) p) table.Assumes}
     
     let lstigVariablesOf table name =
