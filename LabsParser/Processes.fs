@@ -1,6 +1,7 @@
 module internal Processes
 
 open FParsec
+open LabsCore.Expr
 open LabsCore.Grammar
 open LabsCore.Tokens
 open Expressions    
@@ -10,18 +11,29 @@ let pexpr = makeExprParser simpleRef (skipString tID .>> notInIdentifier)
 /// Parses elementary processes ("actions")
 let paction =
     let parseArrow =
-        skipChar '<' >>. choice [
+        (followedByString "<") >>. skipChar '<' >>. choice [
             followedBy (skipString "--") >>. stringReturn "--" Location.E; 
             charReturn '-' I;
             charReturn '~' (L("",0))
+        ] |> ws .>>. (ws pexpr |> sepbycommas)
+    let pPick =
+        ws (skipString tPICK)
+        >>. ws pexpr
+        |>> fun e -> evalConstExpr (fun _ -> failwith "id not allowed here.") e |> Location.Pick, [e]
+    
+    let pWalrus =
+        let tWalrus = ":="
+        followedByString tWalrus
+        >>. ws (skipString tWalrus)
+        >>. choice [
+            pPick
+            (ws pexpr |> sepbycommas) |>> fun exprs -> Location.Local, exprs
         ]
-    let pWalrus = stringReturn ":=" Location.Local 
-    tuple3 
+    tuple2 
         (ws (simpleRef pexpr) |> sepbycommas)
-        (ws (parseArrow <|> pWalrus)) 
-        (ws pexpr |> sepbycommas)
-    >>= (fun (refs, action, exprs) ->
-        try {ActionType=action; Updates=List.zip refs exprs} |> preturn with
+        ((ws parseArrow) <|> pWalrus) 
+    >>= (fun (refs, (loc, exprs)) ->
+        try {ActionType=loc; Updates=List.zip refs exprs} |> preturn with
         | :? System.ArgumentException -> 
             fail "A multiple assignment should contain the same number of variables and expressions.")
 

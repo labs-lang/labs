@@ -31,6 +31,9 @@ let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
         | Some off -> $"%i{i} + {off}"
     match v.Location with
     | Local -> v.Name
+    | Pick _ ->
+        let off = match offset with None -> "" | Some off -> $"[{off}]"
+        $"{v.Name}{off}"  
     | _ -> trLocation v.Location agent index
 
 /// Translates a boolean expression.
@@ -181,7 +184,7 @@ module internal C =
         | I -> sprintf "I[%s][%O]"
         | L _ -> sprintf "Lvalue[%s][%O]"
         | E -> (fun _ -> sprintf "E[%O]")
-        | Local -> fun _ _ -> "" 
+        | Local | Pick _ -> fun _ _ -> "" 
 
     let private translate trRef trId expr =
         let leafFn = function
@@ -240,7 +243,7 @@ module internal Lnt =
         | I -> sprintf "%s.I[IntToNat(%O)]" 
         | L _ -> sprintf "%s.L[IntToNat(%O)]"
         | E -> fun _ -> sprintf "E[IntToNat(%O)]"
-        | Local -> fun _ _ -> n
+        | Local | Pick _  -> fun _ _ -> n
         |> fun f -> f name e
 
     let translateInitLocation _ _ _ = "x"

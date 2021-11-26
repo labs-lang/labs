@@ -115,7 +115,7 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
 
-    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "__LOCAL"
+    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "LOCAL" | Pick _ -> "PICK"
     let agents =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
@@ -185,7 +185,7 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             let size = match v.Vartype with Array s -> s | _ -> 0
             let loc =
                 v.Location
-                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "LOCAL"
+                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "LOCAL" | Pick _ -> "PICK" 
                 |> Str
             Dict [
                 "name", v.Name |> Str
@@ -238,12 +238,13 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             let locals =
                 let liquidVar v = Dict [
                     "name", v.Name |> Str
+                    "loc", string v.Location |> Str 
                     "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> s
                 ]
                 stmts
                 |> Seq.map (fun a -> List.map (fst >> fun r -> fst r.Var) a.Updates)
                 |> Seq.concat
-                |> Seq.filter (fun v -> match v.Location with Local -> true | _ -> false)
+                |> Seq.filter (fun v -> match v.Location with Local | Pick _ -> true | _ -> false)
                 |> Seq.distinctBy (fun v -> v.Name)
                 |> Seq.map liquidVar
                 |> Lst

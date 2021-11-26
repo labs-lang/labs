@@ -18,25 +18,39 @@ void {{label}}(int tid) {
     {%- endfor -%}
 
     {%- for l in locals-%}
-    TYPEOFVALUES {{l.name}}{%-if l.size > 0-%}[{{l.size}}]{%-endif-%};
+    {%-if l.loc contains "Pick"-%}// ___symbolic-pick {{l.name}} {{l.size}}___{%endif%}
+    TYPEOFVALUES {{l.name}}{%-if l.size > 0-%}[{{l.size}}]{%-endif-%}; /* {{l.loc}} */
+    {%-if l.loc contains "Pick" and l.size > 0-%}
+    {%-for i in (1..l.size)-%}
+    __CPROVER_assume(({{l.name}}[{{forloop.index0}}] >= 0) & ({{l.name}}[{{forloop.index0}}] < MAXCOMPONENTS) & ({{l.name}}[{{forloop.index0}}] != tid));
+    {%-endfor-%}
+    {%-capture allDifferent-%}
+    {%-for i in (1..l.size)-%}{%- assign outer = forloop %}{%-for j in (1..i)-%}
+    {%-if i != j-%}({{l.name}}[{{i | minus : 1}}] != {{l.name}}[{{j | minus : 1}}]) & {% endif-%}
+    {%-endfor-%}{%-endfor-%}
+    {%-endcapture-%}
+    {%-if allDifferent != "" -%}__CPROVER_assume({{allDifferent}} 1);{%-endif-%}
+    
+    // ___end symbolic-pick {{l.name}} {{l.size}}___
+    {%-endif-%}
     {%- endfor -%}
 
     {%- if assignments -%}
     {%- for a in assignments-%}{%- assign outer = forloop %}
     {%- for item in a -%}
-    {%- if item.size != 0 -%}
+    {%- if item.size != 0 -%}{% unless item.loc contains "Pick" %}
     TYPEOFVALUES offset{{outer.index0}}_{{forloop.index0}} = {{item.offset}};
     __CPROVER_assert(offset{{outer.index0}}_{{forloop.index0}} >= 0 && offset{{outer.index0}}_{{forloop.index0}} < {{item.size}}, "array bound");
-    {%- endif -%}
-    {%- if item.loc != "LOCAL" -%}
-    TYPEOFVALUES val{{outer.index0}}_{{forloop.index0}} = {{item.expr}};
-    {%-else-%}
+    {%- endunless -%}{%- endif -%}
+    {%- if item.loc == "LOCAL"  -%}
     {{item.name}}{%- if item.size != 0 %}[offset{{forloop.index0}}]{% endif %} = {{item.expr}};
+    {%-elsif item.loc == "attr" or item.loc == "lstig" or item.loc == "env"-%}
+    TYPEOFVALUES val{{outer.index0}}_{{forloop.index0}} = {{item.expr}};
     {%-endif-%}
     {%- endfor -%}
     {%- for item in a -%}
     {%- capture check -%}{%- if outer.first and forloop.first -%}1{%- else -%}0{%- endif -%}{%- endcapture -%}
-    {%- if item.loc != "LOCAL" -%}
+    {%-if item.loc == "attr" or item.loc == "lstig" or item.loc == "env"-%}
     {{item.loc}}(tid, {{item.key}}{%- if item.size != 0 %} + offset{{forloop.index0}}{% endif -%}, val{{outer.index0}}_{{forloop.index0}}, {{check}});
     {%- endif -%}{%- endfor -%}
     {%- endfor -%}

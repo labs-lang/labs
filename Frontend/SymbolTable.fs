@@ -33,7 +33,7 @@ with
             | I -> {this with Map= updateMap this.NextI; NextI = updateNext this.NextI} 
             | E -> {this with Map= updateMap this.NextE; NextE = updateNext this.NextE}            
             | L _ -> {this with Map = updateMap this.NextL; NextL = updateNext this.NextL}
-            | Local -> this
+            | Local | Pick _ -> this
 
 type AgentTable = {
     Sts: TransitionSystem
@@ -116,7 +116,10 @@ module internal SymbolTable =
     /// Basic function to retrieve the mapping of variable named k
     let findString locals table k =
         if Map.containsKey k locals
-        then {Name=k; Vartype=Scalar; Location=Local; Init=Undef}, 0
+        then
+            let _, loc = locals.[k]
+            let vtype = match loc with Pick n -> Array n | _ -> Scalar
+            {Name=k; Vartype=vtype; Location=loc; Init=Undef}, 0
         else
             table.M.TryFind k
             |> function Some x -> x | None -> raise (LabsException {What=UndefRef k; Where=[]}) 
@@ -140,10 +143,10 @@ module internal SymbolTable =
             | Act a -> toVarAct Map.empty a |> Act
             | Block b ->
                 let locals =
-                    let isLocal = function Local -> true | _ -> false
+                    let isLocal = function Local | Pick _ -> true | _ -> false
                     List.mapi (fun i act ->
                         if isLocal act.ActionType
-                        then Some (List.map (fst >> fun r -> r.Var, i) act.Updates)
+                        then Some (List.map (fst >> fun r -> r.Var, (i, act.ActionType)) act.Updates)
                         else None
                     ) b
                     |> List.choose id

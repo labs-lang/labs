@@ -27,3 +27,5 @@ let tSEQ = ";"
 let tCHOICE = "++"
 let tPAR = "||"
 let tGUARD = "->"
+
+let tPICK = "pick"

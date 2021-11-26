@@ -32,19 +32,22 @@ type Location =
     | L of name:string * tupleIndex: int
     | E
     | Local
+    | Pick of num:int
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
             | L(n, _) -> $"Stigmergy ({n})" 
-            | Local -> "Local" 
+            | Local -> "Local"
+            | Pick n -> $"Pick {n}"
 
 type Action<'a> = {
     ActionType: Location
     Updates: (Ref<'a, unit> * Expr<'a, unit>) list
     }
     with 
-        override this.ToString() = 
+        override this.ToString() =
             (match this.ActionType with
+            | Pick n -> fun v _ -> $"{v} := pick {n}"
             | Local _ -> sprintf "%s := %s"
             | I -> sprintf "%s <- %s"
             | L _ -> sprintf "%O <~ %O"
