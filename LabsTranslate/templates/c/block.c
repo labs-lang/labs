@@ -12,13 +12,13 @@ void {{label}}(int tid) {
 
     {%-if hasStigmergy and assignments-%}
     __CPROVER_assume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
-    {%-endif -%}
+    {%-endif-%}
     {%-for guard in guards %}
     __CPROVER_assume({{ guard }});
-    {%- endfor -%}
+    {%-endfor-%}
 
     {%- for l in locals-%}
-    {%-if l.loc contains "Pick"-%}// ___symbolic-pick {{l.name}} {{l.size}}___{%endif%}
+    {%-if l.loc contains "Pick"-%}// ___symbolic-pick___{%endif%}
     TYPEOFVALUES {{l.name}}{%-if l.size > 0-%}[{{l.size}}]{%-endif-%}; /* {{l.loc}} */
     {%-if l.loc contains "Pick" and l.size > 0-%}
     {%-for i in (1..l.size)-%}
@@ -31,7 +31,7 @@ void {{label}}(int tid) {
     {%-endcapture-%}
     {%-if allDifferent != "" -%}__CPROVER_assume({{allDifferent}} 1);{%-endif-%}
     
-    // ___end symbolic-pick {{l.name}} {{l.size}}___
+    // ___end symbolic-pick___
     {%-endif-%}
     {%- endfor -%}
 
