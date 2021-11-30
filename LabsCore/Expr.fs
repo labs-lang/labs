@@ -1,16 +1,17 @@
 ﻿module LabsCore.Expr
+open System
 open Tokens
 open FParsec
 
 
 type ArithmOp =
     | Plus | Minus
-    | Times | Div | Mod
+    | Times | Div | RoundDiv | Mod
     | Min | Max
     override this.ToString() = 
         match this with
         | Plus -> tPLUS | Minus -> tMINUS
-        | Times -> tMUL | Div -> tDIV | Mod -> tMOD
+        | Times -> tMUL | Div -> tDIV | RoundDiv -> tROUNDDIV | Mod -> tMOD
         | Min -> tMIN | Max -> tMAX
 
 type UnaryOp = 
@@ -136,6 +137,9 @@ let evalConstExpr idfun expr =
         | Minus -> (-)
         | Times -> (*)
         | Div -> (/)
+        | RoundDiv -> fun x y ->
+            let result = (x + (y-1)) / y
+            if x = Int32.MaxValue then -result else result
         | Mod -> (%)
         | Max -> max
         | Min -> min

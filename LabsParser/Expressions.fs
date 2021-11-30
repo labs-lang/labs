@@ -125,7 +125,8 @@ let makeExprParser pref pid : Parser<_> =
     opp.AddOperator(InfixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 1, Associativity.Left, arithm Minus))
 
     opp.AddOperator(InfixOperator(tMUL, wsUnit, 2, Associativity.Left, arithm Times))   
-    opp.AddOperator(InfixOperator(tDIV, wsUnit, 2, Associativity.Left, arithm Div))   
+    opp.AddOperator(InfixOperator(tDIV, wsUnit, 2, Associativity.Left, arithm Div))
+    opp.AddOperator(InfixOperator(tROUNDDIV, notFollowedBy (skipChar '=') |> ws, 2, Associativity.Left, arithm RoundDiv))
     opp.AddOperator(InfixOperator(tMOD, wsUnit, 2, Associativity.Left, arithm Mod))   
     
     opp.AddOperator(PrefixOperator(tABS, followedBy (skipChar '('), 3, false, fun x -> Unary(Abs, x)))

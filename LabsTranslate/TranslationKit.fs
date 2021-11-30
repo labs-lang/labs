@@ -162,7 +162,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
         |> fun f -> List.map f bexprs
 
     let mainGuardTr =
-        conf.TrBExpr None (conf.TrExpr (trref conf.TrLoc "firstAgent") (fun () -> "NatToInt(Nat(tid))"))
+        conf.TrBExpr None (conf.TrExpr (trref conf.TrLoc "firstAgent") (fun () -> conf.AgentName))
     
     let propTr =
         translateProp conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc
@@ -196,6 +196,7 @@ module internal C =
             | Minus -> sprintf "(%s) - (%s)"
             | Times -> sprintf "(%s) * (%s)"
             | Div -> sprintf "(%s) / (%s)"
+            | RoundDiv -> sprintf "__round_div(%s, %s)"
             | Mod -> sprintf "mod(%s, %s)"
             | Max -> sprintf "__max(%s, %s)"
             | Min -> sprintf "__min(%s, %s)"
@@ -258,6 +259,7 @@ module internal Lnt =
             | Minus -> sprintf "(%s - %s)"
             | Times -> sprintf "(%s * %s)"
             | Div -> sprintf "(%s div %s)"
+            | RoundDiv -> sprintf "rounddiv(%s, %s)"
             | Mod -> sprintf "(%s mod %s)"
             | Max -> sprintf "max(%s, %s)"
             | Min -> sprintf "min(%s, %s)"
