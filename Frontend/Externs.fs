@@ -1,6 +1,5 @@
 module Frontend.Externs
-open LabsCore.Expr
-open LabsCore.BExpr
+open LabsCore.ExprTypes
 open LabsCore.Grammar
 open Message
 
@@ -14,6 +13,7 @@ module ExprExterns =
                 | Some i -> Const i
                 | None -> raise (LabsException {What=NoValueForExtern s; Where=[]})
             | Const x -> Const x
+            
         LabsCore.Expr.map leafFn (fun r o of_ -> {r with Offset=o; OfAgent=of_}) expr
         
 module BExprExterns =

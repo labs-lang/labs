@@ -11,6 +11,7 @@ let tABS = "abs"
 let tID = "id"
 let tMIN = "min"
 let tMAX = "max"
+let tCOND = "ifelse"
 let tCOMMENT = "#"
 
 let tRAW = "$"

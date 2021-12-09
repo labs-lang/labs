@@ -1,41 +1,5 @@
 module LabsCore.BExpr
-open Tokens
-open Expr
-
-type CmpOp = 
-    | Equal
-    | Greater
-    | Less
-    | Leq
-    | Geq
-    | Neq
-    override this.ToString() = 
-        match this with
-        | Less -> "<"
-        | Equal -> "=="
-        | Greater -> ">"
-        | Leq -> "<="
-        | Geq -> ">="
-        | Neq -> "!="
-
-type Bop =
-    | Conj
-    | Disj
-    override this.ToString() = 
-        match this with Conj -> tCONJ | Disj -> tDISJ
-
-///<summary>Boolean expressions.</summary>
-type BExpr<'a, 'b> =
-    | BLeaf of bool
-    | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
-    | Neg of BExpr<'a, 'b>
-    | Compound of Bop * BExpr<'a, 'b> list
-    override this.ToString() =
-        match this with
-        | BLeaf true -> tTRUE | BLeaf false -> tFALSE
-        | Neg b -> $"%s{tNEG}({b})"
-        | Compare(e1, op, e2) -> $"({e1}) {op} ({e2})"
-        | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat $" {op} "
+open ExprTypes
 
 
 /// Returns a "canonical" version of bexpr.
@@ -68,8 +32,8 @@ let rec cata fleaf fneg fcompare fcompound bexpr =
 let rec simplify bexpr =
     let compareFn op e1 e2 =
         match op with  
-        | Equal when (Expr.equal e1 e2) -> BLeaf true
-        | Neq when (Expr.equal e1 e2) -> BLeaf false
+        | Equal when (equal e1 e2) -> BLeaf true
+        | Neq when (equal e1 e2) -> BLeaf false
         | _ -> Compare(e1, op, e2)
     let compoundFn op ls =
         let lsSimpl = List.map simplify ls

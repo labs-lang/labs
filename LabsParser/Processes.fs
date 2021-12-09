@@ -6,7 +6,11 @@ open LabsCore.Grammar
 open LabsCore.Tokens
 open Expressions    
 
-let pexpr = makeExprParser simpleRef (skipString tID .>> notInIdentifier)
+
+let rec private _pe () = makeExprParser simpleRef (skipString tID .>> notInIdentifier) _pb
+and _pb = makeBExprParser (_pe ())
+
+let pexpr = _pe () //makeExprParser simpleRef (skipString tID .>> notInIdentifier) (makeBExprParser pexpr)
 
 /// Parses elementary processes ("actions")
 let paction =

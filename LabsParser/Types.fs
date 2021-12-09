@@ -1,7 +1,6 @@
 ﻿[<AutoOpen>]
 module Types
-open LabsCore.Expr
-open LabsCore.BExpr
+open LabsCore.ExprTypes
 open LabsCore.Grammar
 open FSharpPlus.Lens
 

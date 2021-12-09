@@ -2,6 +2,7 @@
 open Frontend
 open Frontend.Message
 open LabsCore
+open LabsCore.ExprTypes
 open LabsCore.Expr
 open LabsCore.BExpr
 open LabsCore.Grammar
@@ -107,10 +108,11 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
         match c with
         | None -> trref trLocation "" (v, i) offset
         | Some c -> (trref trLocation c (v, i) offset)
-            
-    trProp Map.empty p.Def
-    |> trBExpr (trExpr propRef id)
+
+    let rec trb bexpr = trBExpr tre bexpr 
+    and tre = trExpr propRef id trb
     
+    trProp Map.empty p.Def |> trb
 
 type TemplateInfo = {
     BaseDir: string
@@ -142,29 +144,45 @@ type ITranslateConfig =
     abstract member TrLoc<'a> : Location -> string -> 'a -> string
     abstract member TrInitLoc<'a> : Location -> string -> 'a -> string
     abstract member TrLinkId : LinkComponent -> string
-    abstract member TrExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> Expr<'a, 'b> -> string
+    abstract member TrExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> (BExpr<'a, 'b> -> string) -> Expr<'a, 'b> -> string
     abstract member TrBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
     abstract member CollectAuxVars : (Expr<'a, 'b> -> string) -> Expr<'a, 'b> -> Set<string * string * string>
 
 
 /// Creates a translation kit from the given configuration
 let makeTranslationKit (conf:ITranslateConfig) =
-    let agentExprTr = conf.TrExpr (trref conf.TrLoc conf.AgentName) (fun () -> conf.AgentName)
+    
+    let guardTr exprTranslate bexpr = conf.TrBExpr None exprTranslate bexpr 
+    
+    let rec mainGuardTr bexpr =
+        let tr = conf.TrExpr (trref conf.TrLoc "firstAgent") (fun () -> conf.AgentName) mainGuardTr
+        guardTr tr bexpr
+    
+    // TODO check that ids are translated correctly
+    let rec agentExprTr expr =
+        conf.TrExpr (trref conf.TrLoc conf.AgentName)  (fun () -> conf.AgentName) (guardTr agentExprTr) expr
     let agentGuardTr = conf.TrBExpr (Some <| fun r -> (fst r.Var).Init = Undef) agentExprTr
     
-    let linkTr =
-        conf.TrExpr (fun (v, cmp) -> trref conf.TrLoc (conf.TrLinkId cmp) v) conf.TrLinkId
-        |> conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)
+    let rec linkTr bexpr =
+        let trLinkExpr = conf.TrExpr (fun (v, cmp) -> trref conf.TrLoc (conf.TrLinkId cmp) v) conf.TrLinkId linkTr
+        conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef) trLinkExpr bexpr
     
     let initTr (v, i) tid =
         let bexprs = Frontend.initBExprs (conf.InitId tid) (v, i)
-        conf.TrBExpr None (conf.TrExpr (trref conf.TrInitLoc (string tid)) (fun () -> (string tid)))
-        |> fun f -> List.map f bexprs
+        let rec trBExpr b =
+            conf.TrBExpr
+                None
+                (conf.TrExpr (trref conf.TrInitLoc (string tid)) (fun () -> (string tid)) trBExpr)
+                b
+        List.map trBExpr bexprs
 
-    let mainGuardTr =
-        conf.TrBExpr None (conf.TrExpr (trref conf.TrLoc "firstAgent") (fun () -> conf.AgentName))
     
     let propTr =
+//        let rec trb bexpr =
+//            conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc trb
+            
+        
+        
         translateProp conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc
     
     {
@@ -186,7 +204,7 @@ module internal C =
         | E -> (fun _ -> sprintf "E[%O]")
         | Local | Pick _ -> fun _ _ -> "" 
 
-    let private translate trRef trId expr =
+    let private translate trRef trId trBExpr expr =
         let leafFn = function
             | Id i -> trId i
             | Const i -> string i
@@ -205,8 +223,9 @@ module internal C =
             | Abs -> sprintf "__abs(%s)"
         let nondetFn e1 e2 _ = sprintf $"nondetInRange({e1}, {e2})"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
-            
-        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn expr
+        let ifFn cond ift iff = $"(%s{trBExpr cond}) ? ({ift}) : ({iff})"
+        
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
     let rec private trBExprC filter trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
@@ -224,7 +243,7 @@ module internal C =
             member _.InitId n = Const n
             member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
             member _.TrBExpr filter trExpr b = trBExprC filter trExpr b
-            member _.TrExpr trRef trId e = translate trRef trId e
+            member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars _ _ = Set.empty
@@ -249,7 +268,7 @@ module internal Lnt =
 
     let translateInitLocation _ _ _ = "x"
 
-    let private translateExpr trRef trId expr =
+    let private translateExpr trRef trId trBExpr expr =
         let leafFn = function
             | Id i -> $"(%s{trId i} of Int)"
             | Const i -> $"(%i{i} of Int)"
@@ -269,7 +288,8 @@ module internal Lnt =
         let nondetFn = fun _ _ (pos:Position) -> $"nondet_{pos.GetHashCode()}" 
         //failwith "nondet expressions are currently not supported in LNT"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
-        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn expr
+        let ifFn cond ift iff = $"ifelse({trBExpr cond}, {ift}, {iff})"
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
     let rec private trBExprLnt filter trExpr bexpr =
         let bleafFn b = if b then "true" else "false"
@@ -286,6 +306,7 @@ module internal Lnt =
         match expr with
         | Nondet(e1, e2, pos) ->
             recurse e1 |> Set.union (recurse e2) |> Set.add ($"nondet_{pos.Line}_{pos.Column}", trExpr e1, trExpr e2)
+        | IfElse (_, e1, e2) // TODO collect auxs in condition too
         | Arithm (e1, _, e2) -> recurse e1 |> Set.union (recurse e2)
         | Unary(_, e) -> recurse e
         | Ref r -> r.Offset |> Option.map recurse |> Option.defaultValue Set.empty
@@ -299,7 +320,7 @@ module internal Lnt =
             member _.InitId _ = Extern "NatToInt(Nat(a.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
             member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
-            member _.TrExpr trRef trId e = translateExpr trRef trId e
+            member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
@@ -311,7 +332,7 @@ module internal Lnt =
             member _.InitId _ = Extern "NatToInt(Nat(a.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
             member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
-            member _.TrExpr trRef trId e = translateExpr trRef trId e
+            member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e

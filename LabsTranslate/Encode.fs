@@ -3,7 +3,7 @@
 open Frontend
 open LabsCore.Grammar
 open Frontend.STS
-open LabsCore.Expr
+open LabsCore.ExprTypes
 open LabsCore.BExpr
 open LabsCore.Tokens
 open FSharpPlus
@@ -115,7 +115,7 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
 
-    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "LOCAL" | Pick _ -> "PICK"
+    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "Local" | Pick _ -> "Pick"
     let agents =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
@@ -185,7 +185,7 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             let size = match v.Vartype with Array s -> s | _ -> 0
             let loc =
                 v.Location
-                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "LOCAL" | Pick _ -> "PICK" 
+                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "Local" | Pick _ -> "Pick" 
                 |> Str
             Dict [
                 "name", v.Name |> Str

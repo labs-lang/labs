@@ -14,8 +14,9 @@
     <Compile Include="List.fs" />
     <Compile Include="Map.fs" />
     <Compile Include="Tokens.fs" />
-    <Compile Include="Expr.fs" />
+    <Compile Include="ExprTypes.fs" />
     <Compile Include="BExpr.fs" />
+    <Compile Include="Expr.fs" />
     <Compile Include="Grammar.fs" />
     <Compile Include="Process.fs" />
   </ItemGroup>

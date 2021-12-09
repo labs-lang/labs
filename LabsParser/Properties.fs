@@ -1,6 +1,6 @@
 ﻿module internal Properties
 open FParsec
-open LabsCore.Expr
+open LabsCore.ExprTypes
 open LabsCore.Grammar
 open Expressions
 
@@ -30,7 +30,7 @@ let pproperty withModality =
         (ws (skipString "id"))
         >>. (ws OF)
         >>.(ws KEYNAME)
-    let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink)
+    let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink (fail "ifelse in properties not supported yet"))
     let pmodality = 
         choice [
             stringReturn "finally" Finally

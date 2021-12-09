@@ -3,8 +3,7 @@ open Frontend.Checks
 open Frontend.SymbolTable
 open Frontend.Message
 open LabsCore
-open LabsCore.Expr
-open LabsCore.BExpr
+open LabsCore.ExprTypes
 open LabsCore.Grammar
 open Frontend.Outcome
 open Frontend.STS

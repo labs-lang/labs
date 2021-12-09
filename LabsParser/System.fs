@@ -1,7 +1,7 @@
 ﻿module internal System
 open FParsec
 
-open LabsCore.Expr
+open LabsCore.ExprTypes
 open LabsCore.Grammar
 open LabsCore.Tokens
 open Init
@@ -13,6 +13,7 @@ let pspawn =
         makeExprParser 
             (fun _ -> fail "unexpected variable in constant expression") 
             (skipString tID >>. notInIdentifier >>. fail "unexpected id in constant expression")
+            (fail "ifelse in spawn not supported yet")
     
     (pipe3
         (followedBy IDENTIFIER >>. getPosition)

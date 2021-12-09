@@ -1,7 +1,7 @@
 ﻿module internal Init
 
 open FParsec
-open LabsCore.Expr
+open LabsCore.ExprTypes
 open LabsCore.Grammar
 open LabsCore.Tokens
 open Common
@@ -11,7 +11,8 @@ let pconstexpr:Parser<Expr<unit,unit>> =
     makeExprParser 
         (fun _ -> fail "unexpected variable in constant expression") 
         (skipString "id" >>. notFollowedBy (skipSatisfy isAlphanum))
-        
+        (fail "ifelse in constexpr is not supported yet")
+                
 let pvar loc = 
     pipe3 (followedBy KEYNAME >>. getPosition) KEYNAME (opt (betweenBrackets pconstexpr))
         (fun pos name -> 

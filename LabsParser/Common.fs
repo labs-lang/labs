@@ -35,7 +35,7 @@ let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum)
 
 // Parses reserved keyword so they are not parsed as identifiers or names
 let private reserved : Parser<_> = 
-    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX; tOF; tPICK]
+    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX; tOF; tPICK; tCOND]
     |> List.map pstring 
     |> choice
     .>> notInIdentifier

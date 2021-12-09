@@ -1,7 +1,7 @@
 ﻿module internal Expressions
 
 open LabsCore.Tokens
-open LabsCore.Expr
+open LabsCore.ExprTypes
 open LabsCore.BExpr
 open FParsec
 
@@ -83,7 +83,7 @@ let makeBExprParser pexpr =
 
     expr >>= ParseBExpr.getB
 
-let makeExprParser pref pid : Parser<_> =
+let makeExprParser pref pid pbexpr : Parser<_> =
     let opp = OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser
     let arithm op x y = Arithm(x, op, y)
@@ -109,10 +109,16 @@ let makeExprParser pref pid : Parser<_> =
         >>. betweenParen ( pipe2 expr ((ws COMMA) >>. expr) (arithm op))
     let pmax = pprefixbinary tMAX Max
     let pmin = pprefixbinary tMIN Min
+    let pcond =
+        followedBy (skipString tCOND)
+        >>. (ws (skipString tCOND))
+        >>. betweenParen (tuple3 (pbexpr .>> ws COMMA) (expr .>> ws COMMA) expr |>> IfElse)
+    
     opp.TermParser <- [
             term
             pmax
             pmin
+            pcond
             (betweenParen expr) <!> "paren"
         ]
         |> List.map ws

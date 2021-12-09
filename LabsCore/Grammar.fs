@@ -3,8 +3,8 @@ module LabsCore.Grammar
 open System
 open FParsec
 open FSharpPlus.Lens
+open LabsCore.ExprTypes
 open LabsCore.Expr
-open LabsCore.BExpr
 
 type Node<'a> = {
     Name: string
@@ -80,8 +80,6 @@ with
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> $"{min}..{max}"
         | Undef -> "undef"
-        
-    
 
 
 type Stmt<'a> = 

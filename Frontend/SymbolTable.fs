@@ -4,8 +4,8 @@ open FSharpPlus.Lens
 open Frontend
 open LabsCore
 open LabsCore.Grammar
+open LabsCore.ExprTypes
 open LabsCore.Expr
-open LabsCore.BExpr
 open Externs
 open Message
 open Outcome
