@@ -250,6 +250,7 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
                 |> Lst
 
             [
+                "guards", guards table t |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
                 "locals", locals 
                 "assignments", seq { for e in encodes -> e.["assignments"] } |> Lst
                 "labs", seq { for e in encodes -> e.["labs"] } |> Lst
