@@ -42,7 +42,7 @@ void {{label}}(int tid) {
     TYPEOFVALUES offset{{outer.index0}}_{{forloop.index0}} = {{item.offset}};
     __CPROVER_assert(offset{{outer.index0}}_{{forloop.index0}} >= 0 && offset{{outer.index0}}_{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endunless -%}{%- endif -%}
-    {%- if item.loc == "LOCAL"  -%}
+    {%- if item.loc == "Local"  -%}
     {{item.name}}{%- if item.size != 0 %}[offset{{forloop.index0}}]{% endif %} = {{item.expr}};
     {%-elsif item.loc == "attr" or item.loc == "lstig" or item.loc == "env"-%}
     TYPEOFVALUES val{{outer.index0}}_{{forloop.index0}} = {{item.expr}};
