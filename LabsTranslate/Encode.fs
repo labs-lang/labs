@@ -13,7 +13,7 @@ open TranslationKit
 open Liquid
 
 /// Supported target languages.
-type EncodeTo = | C | Lnt | Lnt_Monitor
+type EncodeTo = | C | Lnt | Lnt_Monitor | Lnt_Parallel
 
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, int*int> =
@@ -165,6 +165,17 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
         let guards = guards table t
         let assignments = t.Action.Def |> (function Act a -> Some a | _ -> None)
         
+        // LStig Variables that are being updated
+        // and therefore should not be queried  
+        let LStigVarsAssignedTo =
+            assignments
+            |>> (fun a -> List.map fst a.Updates)
+            |>> (fun x -> List.map (fun r -> r.Var) x)
+            |>> (List.filter (fst >> isLstigVar))
+            |>> Set.ofList
+            |> Option.defaultValue Set.empty
+            
+        
         /// Set of keys that the agent will have to confirm
         /// TODO maybe move to Frontend?
         let qrykeys =
@@ -176,6 +187,7 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             |>> Set.unionMany
             |> Option.orElse (Some Set.empty)
             |>> Set.union (guards |> Set.map getLstigVarsBExpr |> Set.unionMany)
+            |>> fun s -> Set.difference s LStigVarsAssignedTo 
             |>> Seq.map (Int << snd)
             |> Option.defaultValue Seq.empty
             |> Lst
@@ -310,7 +322,12 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
     |> render (parse (trKit.TemplateInfo.Get "main"))
 
 let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
-    let trKit = makeTranslationKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper | Lnt_Monitor -> Lnt.wrapperMonitor
+    let trKit = makeTranslationKit <|
+                match encodeTo with
+                | C -> C.wrapper
+                | Lnt -> Lnt.wrapper
+                | Lnt_Monitor -> Lnt.wrapperMonitor
+                | Lnt_Parallel -> Lnt.wrapperParallel
     let goto = parse (trKit.TemplateInfo.Get "goto")
     let block = parse (trKit.TemplateInfo.Get "block")
     
@@ -318,6 +335,7 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
         "bound", Int bound
         "hasStigmergy", Bool (table.M.NextL > 0)
         "hasEnvironment", Bool (table.M.NextE > 0)
+        "MAXCOMPONENTS", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
         "simulation", Bool sim
     ]
     

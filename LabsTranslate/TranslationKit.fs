@@ -266,6 +266,15 @@ module internal Lnt =
         | Local | Pick _  -> fun _ _ -> n
         |> fun f -> f name e
 
+    let private translateLocationParallel loc n e =
+        let forLink =
+            match n with | "a1" -> "1" | "a2" -> "2" | _ -> ""
+        match loc with
+        | I -> $"I{forLink}[IntToNat({e})]"
+        | L _ -> $"L{forLink}[IntToNat({e})]"
+        | E -> $"E[IntToNat({e})]"
+        | Local | Pick _  -> n
+    
     let translateInitLocation _ _ _ = "x"
 
     let private translateExpr trRef trId trBExpr expr =
@@ -337,3 +346,16 @@ module internal Lnt =
             member _.TrInitLoc loc x y = translateInitLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
     }
+    
+    let wrapperParallel = {
+            new ITranslateConfig with
+                member _.TemplateInfo = {BaseDir = "templates/lnt-parallel"; Extension = "lnt"}
+                member _.AgentName = "NatToInt(Nat(id))"
+                member _.InitId _ = Extern "NatToInt(Nat(id))"
+                member _.TrLinkId x = match x with | C1 -> "NatToInt(Nat(id1))" | C2 -> "NatToInt(Nat(id2))"
+                member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
+                member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
+                member _.TrLoc loc x y = translateLocationParallel loc x y
+                member _.TrInitLoc loc x y = translateInitLocation loc x y
+                member _.CollectAuxVars tr e = collectAux tr e
+        }
