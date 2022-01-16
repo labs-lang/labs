@@ -19,9 +19,9 @@ RELEASENAME = sliver-v$(VERSION)_$(strip $(subst -,_, ${platform}))
 rmsentinels :
 	@rm -f build/${platform}/sliver.py
 	@rm -f build/${platform}/backends/cseq/cseq.py
-	@rm -f build/${platform}/labs/templates/main.c
+	@rm -f build/${platform}/labs/templates/c/main.c
 
-build/%/labs/templates/main.c : $(templates)
+build/%/labs/templates/c/main.c : $(templates)
 	@echo Copying templates...
 	@cp -r LabsTranslate/templates build/$(platform)/labs;
 
@@ -73,7 +73,7 @@ build/%/backends/cbmc-simulator :
 
 osx : rmsentinels \
 	build/osx.10.12-x64/labs/LabsTranslate \
-	build/osx.10.12-x64/labs/templates/main.c \
+	build/osx.10.12-x64/labs/templates/c/main.c \
 	build/osx.10.12-x64/pyparsing.py \
 	build/osx.10.12-x64/click \
 	build/osx.10.12-x64/sliver.py \
@@ -81,7 +81,7 @@ osx : rmsentinels \
 
 linux : rmsentinels \
 	build/linux-x64/labs/LabsTranslate \
-	build/linux-x64/labs/templates/main.c \
+	build/linux-x64/labs/templates/c/main.c \
 	build/linux-x64/pyparsing.py \
 	build/linux-x64/click \
 	build/linux-x64/sliver.py \
