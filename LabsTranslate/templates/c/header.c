@@ -22,7 +22,9 @@ TYPEOFVALUES __abs(TYPEOFVALUES x) {
 
 TYPEOFVALUES __max(TYPEOFVALUES x, TYPEOFVALUES y) { return (x > y) ? x : y; }
 TYPEOFVALUES __min(TYPEOFVALUES x, TYPEOFVALUES y) { return (x < y) ? x : y; }
-TYPEOFVALUES __round_div(TYPEOFVALUES x, TYPEOFVALUES y) { return (x + (y-1)) / y; }
+TYPEOFVALUES __round_div(TYPEOFVALUES num, TYPEOFVALUES den) {
+    return (num*den>=0) ? (num + (den/2)) / den : -((-num + (den/2)) / den) ;
+}
 
 TYPEOFVALUES mod(TYPEOFVALUES n, TYPEOFVALUES m) {
   return n >= 0 ? n % m : m + (n % m);
