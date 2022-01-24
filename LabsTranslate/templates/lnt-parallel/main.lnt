@@ -1,3 +1,25 @@
+process sched [tick, doInit: IDchannel] is
+   var t : ID, j:Nat in
+      {% if fair %}t := ID(0);{% endif %}
+      loop
+      select 
+        -- individual actions
+        {%-if fair-%}
+        tick (t); tick(t);
+        t := ID((Nat(t) + 1) mod MAXCOMPONENTS)
+        {%-else-%}
+        t := any ID; tick (t); tick(t)
+        {%-endif-%}
+        []
+        -- initialization, but also message passing
+        {%-for i in (1..MAXCOMPONENTS)-%}
+        doInit(ID({{i}}));doInit(ID({{i}})){% unless forloop.last %};{% endunless %}
+        {%-endfor-%}
+      end select
+      end loop
+   end var
+end process
+
 function canProceed(id:ID, I:Iface, pc:PC{%-if hasStigmergy-%}, L : Lstig{%endif%}{%if hasEnvironment%}, E: Env{%endif%}): Bool is
     return ({%- for item in schedule -%}
         ({% for pc in item.entry -%}(pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
@@ -64,7 +86,7 @@ process agent [tick, doInit:IDchannel, attr: any{%if hasStigmergy%}, put, qry, l
                 use sender;
                 doInit(id); -- wait for your turn
                 if link (recI, I, recL, L, sender, id, key) then
-                  request(key, id, sender, ?cmp);
+                  request(key, sender, id, ?cmp);
                   if (cmp == GREATER) then
                     for k := key while k <= TUPLEEND (key) by k := k + 1 loop
                       if L[k] <> recL[k] then --20210428
@@ -104,7 +126,7 @@ process agent [tick, doInit:IDchannel, attr: any{%if hasStigmergy%}, put, qry, l
                 use sender;
                 doInit(id); -- wait for your turn
                 if link (recI, I, recL, L, sender, id, key) then
-                  request(key, id, sender, ?cmp);
+                  request(key, sender, id, ?cmp);
                   if (cmp != SAME) then
                     Zput := insert (key, Zput);
                     if cmp == GREATER then

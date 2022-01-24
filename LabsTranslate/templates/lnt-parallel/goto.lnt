@@ -37,7 +37,7 @@ process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnv
 
     {%- if hasStigmergy and qrykeys.size > 0 -%}
     {%- for item in qrykeys -%}
-    Zqry := insert(TUPLESTART({{ item.key }}), Zqry);
+    Zqry := insert(TUPLESTART({{ item }}), Zqry);
     {%- endfor -%}
     {%- endif -%}
     {%-for item in assignments-%}

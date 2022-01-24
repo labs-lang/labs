@@ -268,7 +268,10 @@ module internal Lnt =
 
     let private translateLocationParallel loc n e =
         let forLink =
-            match n with | "a1" -> "1" | "a2" -> "2" | _ -> ""
+            match n with
+            | "a1" | "NatToInt(Nat(id1))" -> "1"
+            | "a2" | "NatToInt(Nat(id2))" -> "2"
+            | _ -> ""
         match loc with
         | I -> $"I{forLink}[IntToNat({e})]"
         | L _ -> $"L{forLink}[IntToNat({e})]"

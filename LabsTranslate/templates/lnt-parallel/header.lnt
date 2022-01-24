@@ -14,28 +14,6 @@ module HEADER is
       dest := any Int where ((dest >= start) and (dest < bound))
     end process
 
-    process sched [tick, doInit: IDchannel] is
-       var t : ID, j:Nat in
-          {% if fair %}t := ID(0);{% endif %}
-          loop
-          select 
-            -- individual actions
-            {%-if fair-%}
-            tick (t); tick(t);
-            t := ID((Nat(tid) + 1) mod MAXCOMPONENTS)
-            {%-else-%}
-            t := any ID; tick (t); tick(t)
-            {%-endif-%}
-            []
-            -- initialization, but also message passing
-            for j := 0 while j < MAXCOMPONENTS by j := j + 1 loop
-              doInit(ID(j));doInit(ID(j))
-            end loop
-          end select
-          end loop
-       end var
-    end process
-
     {%- if hasStigmergy -%}
 
     (* Stigmergy *)
@@ -109,7 +87,7 @@ module HEADER is
         end case 
     end function
 
-    -- n*(n+1) / 2
+    -- n*(n-1) / 2
     type MatrixVar is array [0 .. {{ MAXCOMPONENTS | minus: 1 |  times: MAXCOMPONENTS | divided_by: 2 | minus: 1 }}] of Comparison with get, set end type
     -- one Matrix2D for each variable
     type Matrix is array [0 .. {{MAXKEYL | minus: 1}}] of MatrixVar with get, set end type
