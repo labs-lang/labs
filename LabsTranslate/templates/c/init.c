@@ -18,6 +18,14 @@ void init(void) {
     HinCnt[{{i}}] = 0;
     HoutCnt[{{i}}] = 0;
     {%- endif -%}
+    {%- for item in initenv -%}
+        {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
+    E[{{item.index}}] = __CPROVER_nondet_int();
+    __CPROVER_assume({{ item.bexpr }});
+        {%- else -%}
+    {{ item.bexpr | replace: "==", "=" }};
+        {%- endif -%}
+    {%- endfor -%}
     {%-endunless-%}
 
     {%- for p in agent.pcs -%}
@@ -27,15 +35,6 @@ void init(void) {
     pc[{{i}}][{{ p.name }}] = __CPROVER_nondet_int();
     __CPROVER_assume({%- for val in p.value -%} (pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
     {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
-        
-    {%- for item in initenv -%}
-        {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
-    E[{{item.index}}] = __CPROVER_nondet_int();
-    __CPROVER_assume({{ item.bexpr }});
-        {%- else -%}
-    {{ item.bexpr | replace: "==", "=" }};
-        {%- endif -%}
-    {%- endfor -%}
 
     // ___concrete-init___
     // ___end concrete-init___
