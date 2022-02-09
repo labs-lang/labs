@@ -61,7 +61,7 @@ void {{label}}(int tid) {
     {%- for item in a -%}
     {%- capture check -%}{%- if outer.first and forloop.first -%}1{%- else -%}0{%- endif -%}{%- endcapture -%}
     {%-if item.loc == "attr" or item.loc == "lstig" or item.loc == "env"-%}
-    {{item.loc}}(tid, {{item.key}}{%- if item.size != 0 %} + offset{{forloop.index0}}{% endif -%}, val{{outer.index0}}_{{forloop.index0}}, {{check}});
+    {{item.loc}}(tid, {{item.key}}{%- if item.size != 0 %} + offset{{outer.index0}}_{{forloop.index0}}{% endif -%}, val{{outer.index0}}_{{forloop.index0}}, {{check}});
     {%- endif -%}{%- endfor -%}
     {%- endfor -%}
     {%- if hasStigmergy -%}
