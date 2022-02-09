@@ -30,8 +30,18 @@ void {{label}}(int tid) {
     {%-endfor-%}{%-endfor-%}
     {%-endcapture-%}
     {%-if allDifferent != "" -%}__CPROVER_assume({{allDifferent}} 1);{%-endif-%}
-    
     // ___end symbolic-pick___
+    {%-if l.where != ""-%}
+    __LABS_link1 = id;
+    for (unsigned char i = 0; i < {{l.size}}; ++i) {
+        __LABS_link2 = {{l.name}}[i];
+    {%-if simulation-%}
+        if (!({{l.where}})) { __sim_spurious = 1; }
+    {%-else-%}
+        __CPROVER_assume({{l.where}});
+    {%-endif-%}
+    }
+    {%-endif-%}
     {%-endif-%}
     {%- endfor -%}
 

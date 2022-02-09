@@ -1,4 +1,5 @@
 {%-if simulation-%}
+_Bool __sim_spurious = 0;
 char* format;
 #define __sim_assert(COND, LBL) if (!(COND)) format = ("(SIMULATION) Violation: " LBL)
 

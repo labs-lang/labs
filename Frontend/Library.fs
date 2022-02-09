@@ -41,6 +41,7 @@ let run externs (sys, lstigs, agents', assume, properties) =
         List.filter (fun a -> Set.contains a.Def.Name spawned) agents'
     
     zero Frontend.SymbolTable.empty
+    <~> (fun x -> zero {x with Externs=externs})
     <??> check (sys, lstigs, agents', properties)
     (* map non-interface variables *)
     <~> fold (tryAddVar externs) vars

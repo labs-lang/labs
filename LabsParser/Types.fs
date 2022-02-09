@@ -19,9 +19,6 @@ type Agent =
         Processes: Node<Process<string>> list
     }
 
-type LinkComponent = | C1 | C2
-
-type Link<'a> = BExpr<'a * LinkComponent, LinkComponent>
 
 type Stigmergy<'a> =
     {

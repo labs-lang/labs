@@ -65,6 +65,7 @@ with
 and SymbolTable = {
     Spawn: Map<string, int*int>
     Agents: Map<string, AgentTable>
+    Externs: Map<string, int>
     Stigmergies: Map<string, Link<Var<int>*int>>
     Processes : Map<string, Process<Var<int>*int>>
     Variables: Map<string, Var<int>>
@@ -78,6 +79,7 @@ with
         {
             Spawn = Map.empty
             Agents = Map.empty
+            Externs = Map.empty
             Stigmergies = Map.empty
             Processes = Map.empty
             Variables = Map.empty
@@ -118,7 +120,7 @@ module internal SymbolTable =
         if Map.containsKey k locals
         then
             let _, loc = locals.[k]
-            let vtype = match loc with Pick n -> Array n | _ -> Scalar
+            let vtype = match loc with Pick (n, _) -> Array n | _ -> Scalar
             {Name=k; Vartype=vtype; Location=loc; Init=Undef}, 0
         else
             table.M.TryFind k
@@ -282,4 +284,8 @@ module internal SymbolTable =
         |> printfn "%s"
         
         
-type SymbolTable with member this.Dump(prop) = SymbolTable.dump this prop
+type SymbolTable with
+    member this.Dump(prop) = SymbolTable.dump this prop
+    member this.TranslateBExpr(bexpr) =
+        (BExprExterns.replaceExterns this.Externs
+        >> SymbolTable.toVarBExpr (fun (x,y) -> (SymbolTable.findString Map.empty) this x, y)) bexpr

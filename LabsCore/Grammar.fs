@@ -27,18 +27,24 @@ let inline _pos x =
 
 let inline byName v = (^T : (member Name : string) v)
 
+
+type LinkComponent = | C1 | C2
+
+type Link<'a> = BExpr<'a * LinkComponent, LinkComponent>
+
 type Location =
     | I 
     | L of name:string * tupleIndex: int
     | E
     | Local
-    | Pick of num:int
+    | Pick of num:int * where: Link<string> option
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
             | L(n, _) -> $"Stigmergy ({n})" 
             | Local -> "Local"
-            | Pick n -> $"Pick {n}"
+            | Pick (n, None) -> $"Pick {n}"
+            | Pick (n, Some w) -> $"Pick {n} where {w}"
 
 type Action<'a> = {
     ActionType: Location
@@ -47,7 +53,8 @@ type Action<'a> = {
     with 
         override this.ToString() =
             (match this.ActionType with
-            | Pick n -> fun v _ -> $"{v} := pick {n}"
+            | Pick (n, None) -> fun v _ -> $"{v} := pick {n}"
+            | Pick (n, Some w) -> fun v _ -> $"{v} := pick {n} where {w}"
             | Local _ -> sprintf "%s := %s"
             | I -> sprintf "%s <- %s"
             | L _ -> sprintf "%O <~ %O"

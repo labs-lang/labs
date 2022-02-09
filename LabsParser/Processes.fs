@@ -4,7 +4,8 @@ open FParsec
 open LabsCore.Expr
 open LabsCore.Grammar
 open LabsCore.Tokens
-open Expressions    
+open Expressions
+open Stigmergies
 
 
 let rec private _pe () = makeExprParser simpleRef (skipString tID .>> notInIdentifier) _pb
@@ -21,9 +22,11 @@ let paction =
             charReturn '~' (L("",0))
         ] |> ws .>>. (ws pexpr |> sepbycommas)
     let pPick =
-        ws (skipString tPICK)
-        >>. ws pexpr
-        |>> fun e -> evalConstExpr (fun _ -> failwith "id not allowed here.") e |> Location.Pick, [e]
+        (ws (skipString tPICK) >>. ws pexpr) .>>. opt (ws (skipString "where") >>. plink)
+        |>> fun (e, where) ->
+            let num = evalConstExpr (fun _ -> failwith "id not allowed here.") e
+            let w = Option.map (fun w -> w.Def) where
+            Location.Pick (num, w), [e]
     
     let pWalrus =
         let tWalrus = ":="

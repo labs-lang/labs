@@ -160,7 +160,7 @@ let private funcName t =
 let private guards table t =
     table.Guards.TryFind t.Action |> Option.defaultValue Set.empty
 
-let private encodeAgent trKit goto block sync table (a:AgentTable) =
+let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
         let guards = guards table t
         let assignments = t.Action.Def |> (function Act a -> Some a | _ -> None)
@@ -198,10 +198,10 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             let loc =
                 v.Location
                 |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "Local" | Pick _ -> "Pick" 
-                |> Str
+
             Dict [
-                "name", v.Name |> Str
-                "loc", loc    
+                "name", Str v.Name
+                "loc", Str loc    
                 "key",  Int (snd k.Var)
                 "offset", k.Offset |>> (trKit.AgentExprTr >> Str) |> Option.defaultValue (Int 0)
                 "size", Int size
@@ -219,8 +219,6 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
             
         [
             "aux", auxs
-            "hasStigmergy", Bool (table.M.NextL > 0)
-            "hasEnvironment", Bool (table.M.NextE > 0)
             "label", funcName t |> Str
             "last", t.Last |> Bool
             "siblings", t.Siblings |> Seq.map Int |> Lst
@@ -240,6 +238,7 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
                 |> Option.defaultValue Seq.empty
                 |> Lst         
         ]
+        |> List.append baseDict
     
     let encoder (t:Transition) =
         match t.Action.Def with
@@ -252,6 +251,11 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
                     "name", v.Name |> Str
                     "loc", string v.Location |> Str 
                     "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> s
+                    "where",
+                        match v.Location with
+                        | Pick (_, Some w) -> w |> table.TranslateBExpr |> trKit.LinkTr
+                        | _ -> ""
+                        |> Str
                 ]
                 stmts
                 |> Seq.map (fun a -> List.map (fst >> fun r -> fst r.Var) a.Updates)
@@ -268,6 +272,7 @@ let private encodeAgent trKit goto block sync table (a:AgentTable) =
                 "labs", seq { for e in encodes -> e.["labs"] } |> Lst
                 "qrykeys",  seq { for e in encodes -> e.["qrykeys"] } |> Lst
             ]
+            |> List.append baseDict
             |> Map.ofList
             |> fun d -> Map.union d hd
             |> Map.toList
@@ -344,7 +349,7 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
     <?> (encodeInit trKit baseDict)
     <?> (fun x -> 
             (Map.values x.Agents)
-            |> Seq.map (encodeAgent trKit goto block sync x)
+            |> Seq.map (encodeAgent trKit baseDict goto block sync x)
             |> Seq.reduce (<??>))
     <?> (encodeMain trKit baseDict fair noprops prop)
     <~~> zero () 
