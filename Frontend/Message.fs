@@ -27,8 +27,9 @@ type Message<'a> =
         Where: Position list
     }
 
-let private _pprintWithPos header msg where =
-    let pos = where |> List.map string |> String.concat "; "
+let private _pprintWithPos header msg (where: Position list) =
+    let lineColumn (p: Position) = if p.Line > 0 then $":{p.Line}:{p.Column}" else ""
+    let pos = where |> List.map (fun p -> $"{p.StreamName}{lineColumn p}") |> String.concat "; "
     $"[%s{header}] %s{msg} at %s{pos}"
     
 let pprintErr (m:Message<Err>) =
