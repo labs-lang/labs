@@ -8,7 +8,8 @@ void {{label}}(int tid) {
     TYPEOFVALUES val{{forloop.index0}} = {{item.expr}};
     {%- if item.size != 0 -%}
     TYPEOFVALUES offset{{forloop.index0}} = {{item.offset}};
-    __CPROVER_assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}}, "array bound");
+    // TODO make array bound checks optional (e.g., only if --debug is set on the sliver CLI)
+    // __CPROVER_assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endif -%}{%- endfor -%}
 
     {%- for item in assignments -%}
