@@ -8,8 +8,8 @@ process action{{label}} [attrGate, l: any] (in out agent: Agent{%- if hasStigmer
     {%-endfor-%}
     {%-endif-%}
     {%- for item in assignments -%}{%- if item.size != 0 -%}
-    {{loc}}{% if loc == "attr" %}[attrGate]{% elsif loc == "lstig" %}[l]{% endif %}(!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if loc == "lstig" -%}, !?m{%- endif -%});{%- else -%}
-    {{loc}}{% if loc == "attr" %}[attrGate]{% elsif loc == "lstig" %}[l]{% endif %}(!?{% if loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}}, {{item.expr}}{%- if loc == "lstig" -%}, !?m{%- endif -%});
+    {{item.loc}}{% if item.loc == "attr" %}[attrGate]{% elsif item.loc == "lstig" %}[l]{% endif %}(!?{% if item.loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if item.loc == "lstig" -%}, !?m{%- endif -%});{%- else -%}
+    {{item.loc}}{% if item.loc == "attr" %}[attrGate]{% elsif item.loc == "lstig" %}[l]{% endif %}(!?{% if item.loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}}, {{item.expr}}{%- if item.loc == "lstig" -%}, !?m{%- endif -%});
     {%- endif -%}{%- endfor -%}
     {%-if aux-%}
     null

@@ -6,6 +6,7 @@ function CheckAssumes (agents:Agents) is
     if not({{ p.value }}) then return false end if;
     {%- endfor -%}
     return true
+    {%- endif -%}
 end function
 
 process INITAGENT[attrGate, l: any] (in out a:Agent{%-if hasStigmergy-%}, in out m:Matrix{%-endif-%}) is
