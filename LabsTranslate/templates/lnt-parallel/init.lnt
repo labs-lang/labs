@@ -4,7 +4,8 @@ process INITAGENT[attr, l, refresh: any] (id:ID, out var I:Iface, out var p:PC{%
         p := PC (0);
         {%if hasStigmergy%}L := Lstig (0);{%endif%}
         {%- for agent in agents -%}
-        {% unless forloop.first %}els{% endunless %}if (Nat(id) >= {{agent.start}}) and (Nat(id) < {{agent.end}}) then
+
+        {% if forloop.first %}if{% else %}elsif{% endif %} (Nat(id) >= {{agent.start}}) and (Nat(id) < {{agent.end}}) then
 
         {%- for p in agent.pcs -%}
         {%- if p.value.size == 1 -%}

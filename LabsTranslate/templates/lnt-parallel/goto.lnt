@@ -42,7 +42,7 @@ process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnv
     {%- endif -%}
     {%-for item in assignments-%}
     {%-if item.loc == "lstig"-%}
-    Zput := insert(TUPLESTART({{ item.key }}), Zqry);
+    Zput := insert(TUPLESTART({{ item.key }}), Zput);
     {%-endif-%}
     {%-endfor-%}
 
