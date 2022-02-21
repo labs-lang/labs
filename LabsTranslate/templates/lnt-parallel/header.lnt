@@ -95,7 +95,7 @@ module HEADER is
     function index(i,j:Nat): Nat is
         require j < MAXCOMPONENTS;
         require i < j;
-        -- I don't know why, but writing the formula in one line, i.e.,
+        -- Apparently, writing the formula in one line, i.e.,
         -- return (MAXCOMPONENTS * i) + j - tri(i+1)
         -- leads to "out of range" errors from the LOTOS compiler
         var x:Nat in
@@ -126,10 +126,6 @@ module HEADER is
             mkey := m[TUPLESTART(key)];
             for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
                 setComparison(!?mkey, id, i, GREATER)
-                --if (id<i) then mkey[index(id, i)] := GREATER
-                --elsif (id>i) then mkey[index(i, id)] := LESS
-                
-                --end if
             end loop;
             m[TUPLESTART(key)] := mkey
         end var
@@ -144,13 +140,13 @@ module HEADER is
             setComparison(!?mkey, to, i, getComparison(m, key, from, i))
           end if
         end loop;
-        m[TUPLESTART(key)]:= mkey
+        m[TUPLESTART(key)] := mkey
       end var
     end function
 
     process MatrixStorage[refresh, request, debug: any] is
       access debug;
-      var M: Matrix, sender, receiver:ID, key:Nat, cmp:Comparison in 
+      var M: Matrix, sender:ID, key, receiver:Nat, cmp:Comparison in 
         M := Matrix(MatrixVar(SAME));
         loop
           --debug(M);
@@ -159,16 +155,17 @@ module HEADER is
             eval refresh(!?M, key, Nat(sender))
             []
             --always offer all values of M
-            key := any Nat where (key < {{MAXKEYL}}) and (key == TUPLESTART(key));
+            key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
             sender := any ID;
             receiver := any ID where (sender != receiver);
+
             cmp := getComparison(M, key, Nat(sender), Nat(receiver));
-            request(key, sender, receiver, cmp);
+            request(receiver, key, sender, cmp);
             -- if you offered GREATER and it was accepted,
             -- then synchronize sender and receiver
-            if (cmp == GREATER)
+            if (cmp == GREATER) 
             then eval sync1(!?M, key, Nat(sender), Nat(receiver))
-            end if 
+            end if
           end select
         end loop
       end var
@@ -195,15 +192,15 @@ module HEADER is
     {%- if hasStigmergy-%}
 
     process goodLstig(out var l:Lstig) is
-      var l0 : Int in
         l := Lstig(0);
-        l0 := any int where (l0 >= 0) and (l0 <= NatToInt(MAXCOMPONENTS));
-        l[0] := l0
-      end var
+        (*GOODLSTIG*)
+        null
     end process
     {%- endif -%}
 
     process goodIface(out var i:Iface) is
-        i := Iface(0)
+        i := Iface(0);
+        (*GOODIFACE*)
+        null
     end process
 
