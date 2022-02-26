@@ -4,7 +4,7 @@ process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnv
     {%if hasStigmergy%}access l; access refresh;{%endif%}
     {%if hasEnvironment%}access setenv;{%endif%}
 
-    {%-if assignments-%}
+    {%-if assignments.size > 0-%}
     var {% for item in assignments -%}tmp{{forloop.index0}}{%unless forloop.last%}, {%endunless%}{%endfor%}: Int in
     {%-if aux.size > 0 -%}
     var {%for a in aux %}{{ a.first }}:Int{%unless forloop.last%}, {%endunless%}{%-endfor%} in

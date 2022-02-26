@@ -144,7 +144,7 @@ module HEADER is
       end var
     end function
 
-    process MatrixStorage[refresh, request, debug: any] is
+    process Timestamps [refresh, request, debug: any] is
       access debug;
       var M: Matrix, sender:ID, key, receiver:Nat, cmp:Comparison in 
         M := Matrix(MatrixVar(SAME));
@@ -153,19 +153,20 @@ module HEADER is
           select
             refresh(?key, ?sender) where (key < {{MAXKEYL}}) and (key == TUPLESTART(key));
             eval refresh(!?M, key, Nat(sender))
-            []
-            --always offer all values of M
+          []
             key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
             sender := any ID;
-            receiver := any ID where (sender != receiver);
-
-            cmp := getComparison(M, key, Nat(sender), Nat(receiver));
-            request(receiver, key, sender, cmp);
+            receiver := any ID where (sender != receiver) and (getComparison(M, key, Nat(sender), Nat(receiver)) == GREATER);
+            request(receiver, key, sender, GREATER);
             -- if you offered GREATER and it was accepted,
             -- then synchronize sender and receiver
-            if (cmp == GREATER) 
-            then eval sync1(!?M, key, Nat(sender), Nat(receiver))
-            end if
+            eval sync1(!?M, key, Nat(sender), Nat(receiver))
+          []
+            key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
+            sender := any ID;
+            receiver := any ID where (sender != receiver) and (getComparison(M, key, Nat(sender), Nat(receiver)) != GREATER);
+            cmp := getComparison(M, key, Nat(sender), Nat(receiver));
+            request(receiver, key, sender, cmp)
           end select
         end loop
       end var
