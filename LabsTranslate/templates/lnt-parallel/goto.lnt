@@ -61,6 +61,8 @@ process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnv
             p[{{ item.name }}] := x
         end var;
         {%- endif -%}{%- endfor -%}
-        pc := p
+        pc := p;
+        {%- for item in exitcond -%}{%- if item.value.size >= 1-%}i;{%break%}{%endfor%}
+        null
     end var
 end process
