@@ -1,5 +1,6 @@
-function CheckAssumes (agents:Agents) is
-    {%- if assumes.size == 0 %} null
+(*
+function CheckAssumes (agents:Agents): Bool is
+    {%- if assumes.size == 0 %} return true
     {%- else -%}
     {%- for p in assumes -%}
     -- {{ p.name }}
@@ -8,6 +9,7 @@ function CheckAssumes (agents:Agents) is
     return true
     {%- endif -%}
 end function
+*)
 
 process INITAGENT[attrGate, l: any] (in out a:Agent{%-if hasStigmergy-%}, in out m:Matrix{%-endif-%}) is
     var I:Iface, x: Int, p:PC{%-if hasStigmergy-%}, L:Lstig{%- endif %} in
