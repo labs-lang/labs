@@ -289,8 +289,9 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
             "entry", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
             "guards", guards table t |> Seq.map (Str << trKit.MainGuardTr) |> Lst
         ]
-    let alwaysP, finallyP =
-        let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
+    
+    let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
+    let filterPropsByModality modality =
         let maybeFilter m =
             match prop with
             | Some p ->
@@ -298,18 +299,15 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
                 if m'.IsEmpty then failwith $"Property {p} not found." else ()
                 m'
             | None -> m
-        if noprops
-        then (toLiquid [], toLiquid [])
-        else
-            // CAVEAT "fairly" and "fairly_inf" properties are
-            // not passed to templates at the moment.
-            let m1, m2 =
-                table.Properties
-                |> maybeFilter
-                |> Map.partition (fun _ n -> n.Def.Modality = Always) 
-            let _finally = Map.filter (fun _ n -> n.Def.Modality = Finally) m2
-            m1 |> Map.values |> toLiquid, _finally |> Map.values |> toLiquid
-    
+        table.Properties
+        |> maybeFilter
+        |> Map.filter (fun _ n -> n.Def.Modality = modality)
+        |> Map.values
+        
+    let alwaysP = (if noprops then Seq.empty else filterPropsByModality Always) |> toLiquid
+    let eventuallyP = (if noprops then Seq.empty else filterPropsByModality Eventually) |> toLiquid
+    let finallyP = (if noprops then Seq.empty else filterPropsByModality Finally) |> toLiquid
+        
     [
         "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair
@@ -321,6 +319,7 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
             |> Lst
         "alwaysasserts", alwaysP
         "finallyasserts", finallyP
+        "eventuallypredicates", eventuallyP
         "agentscount", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
     ]
     |> List.append baseDict

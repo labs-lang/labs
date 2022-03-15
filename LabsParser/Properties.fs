@@ -33,11 +33,12 @@ let pproperty withModality =
     let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink (fail "ifelse in properties not supported yet"))
     let pmodality = 
         choice [
-            stringReturn "finally" Finally
             stringReturn "always" Always
+            stringReturn "eventually" Eventually
+            stringReturn "fairly" Fairly
             stringReturn "fairly_inf" FairlyInf
-            stringReturn "fairly" Fairly]
-        |> ws
+            stringReturn "finally" Finally
+        ] |> ws
     pipe5
         (followedBy IDENTIFIER >>. getPosition)
         (ws IDENTIFIER .>> (ws EQ))

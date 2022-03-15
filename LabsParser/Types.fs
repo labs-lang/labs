@@ -30,12 +30,14 @@ type Stigmergy<'a> =
 type Modality =
     | Always
     | Finally
+    | Eventually
     | Fairly
     | FairlyInf
     override this.ToString() =
         match this with
         | Always -> "always"
         | Finally -> "finally"
+        | Eventually -> "eventually"
         | Fairly -> "fairly"
         | FairlyInf -> "fairly_inf"
 
