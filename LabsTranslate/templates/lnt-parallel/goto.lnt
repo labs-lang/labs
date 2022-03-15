@@ -23,7 +23,7 @@ process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnv
     {%- elsif item.loc == "lstig" %}
     L[{{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}] := tmp{{forloop.index0}};
     l (id, ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}) of Nat, tmp{{forloop.index0}});
-    refresh (TUPLESTART ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}), id);
+    refresh (id, TUPLESTART ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}));
     {%- elsif item.loc == "env" %}
     setenv ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}, tmp{{forloop.index0}});
     {%- endif -%}
@@ -62,7 +62,7 @@ process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnv
         end var;
         {%- endif -%}{%- endfor -%}
         pc := p;
-        {%- for item in exitcond -%}{%- if item.value.size >= 1-%}i;{%break%}{%endfor%}
+        {%- for item in exitcond -%}{%- if item.value.size >= 1-%}i;{%break%}{%endif%}{%endfor%}
         null
     end var
 end process

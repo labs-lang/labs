@@ -21,7 +21,7 @@ process INITAGENT[attr, l, refresh: any] (id:ID, out var I:Iface, out var p:PC{%
         {%- if hasStigmergy and item.loc == "L" -%}
         L[{{ item.index }}] := x;
         l(Nat(id), {{item.index}} of Nat , x);
-        refresh(TUPLESTART({{item.index}}), id){%- else -%}
+        refresh(id, TUPLESTART({{item.index}})){%- else -%}
         {{item.loc}}[{{ item.index }}] := x;
         attr(Nat(id), {{item.index}} of Nat , x){%- endif -%}
         {%- unless forloop.last-%};{%- endunless -%}

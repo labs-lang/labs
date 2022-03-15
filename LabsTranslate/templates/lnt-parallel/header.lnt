@@ -151,7 +151,7 @@ module HEADER is
         loop
           --debug(M);
           select
-            refresh(?key, ?sender) where (key < {{MAXKEYL}}) and (key == TUPLESTART(key));
+            refresh(?sender, ?key) where (key < {{MAXKEYL}}) and (key == TUPLESTART(key));
             eval refresh(!?M, key, Nat(sender))
           []
             key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));

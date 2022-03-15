@@ -256,7 +256,7 @@ module internal Lnt =
             match n with
             | "agent.id"
             | "NatToInt(Nat(agent.id))" -> "agent"
-            | "firstAgent" -> "a"
+            | "firstAgent" -> "agent"
             | "a1" | "a2" -> n
             | _ -> $"agents[%s{n}]" 
         match loc with
@@ -329,7 +329,7 @@ module internal Lnt =
         new ITranslateConfig with
             member _.TemplateInfo = {BaseDir = "templates/lnt"; Extension = "lnt"}
             member _.AgentName = "NatToInt(Nat(agent.id))"
-            member _.InitId _ = Extern "NatToInt(Nat(a.id))"
+            member _.InitId _ = Extern "NatToInt(Nat(agent.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
             member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
             member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
@@ -341,7 +341,7 @@ module internal Lnt =
         new ITranslateConfig with
             member _.TemplateInfo = {BaseDir = "templates/lnt-monitor"; Extension = "lnt"}
             member _.AgentName = "NatToInt(Nat(agent.id))"
-            member _.InitId _ = Extern "NatToInt(Nat(a.id))"
+            member _.InitId _ = Extern "NatToInt(Nat(agent.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
             member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
             member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
