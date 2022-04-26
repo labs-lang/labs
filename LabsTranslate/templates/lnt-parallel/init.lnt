@@ -1,4 +1,5 @@
 process INITAGENT[attr, l, refresh: any] (id:ID, out var I:Iface, out var p:PC{%-if hasStigmergy-%}, out var L:Lstig{%-endif-%}) is
+    access attr, l, refresh;
     var x: Int in
         I := Iface (0);
         p := PC (0);

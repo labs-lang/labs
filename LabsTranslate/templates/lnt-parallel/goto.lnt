@@ -1,8 +1,9 @@
-process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnvironment%}, setenv{%endif%}: any] (id: ID, in out I: Iface, in out pc:PC{%- if hasStigmergy-%}, in out L: Lstig, in out Zput, Zqry:Pending{%-endif-%}{%if hasEnvironment%}E: Env{%endif%}) is
+process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnvironment%}, setenv{%endif%}: any] (id: ID, in out I: Iface, in out pc:PC{%- if hasStigmergy-%}, in out L: Lstig, in out Zput, Zqry:Pending{%-endif-%}{%if hasEnvironment%}, E: Env{%endif%}) is
     --{{ labs }}
     access attr;
     {%if hasStigmergy%}access l; access refresh;{%endif%}
     {%if hasEnvironment%}access setenv;{%endif%}
+    use id, I, pc{%- if hasStigmergy-%}, L, Zput, Zqry{%-endif-%}{%if hasEnvironment%}, E{%endif%};
 
     {%-if assignments.size > 0-%}
     var {% for item in assignments -%}tmp{{forloop.index0}}{%unless forloop.last%}, {%endunless%}{%endfor%}: Int in

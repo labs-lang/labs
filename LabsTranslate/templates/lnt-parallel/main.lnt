@@ -1,4 +1,5 @@
 function canProceed(id: ID, I: Iface, pc: PC{%-if hasStigmergy-%}, L: Lstig{%endif%}{%if hasEnvironment%}, E: Env{%endif%}): Bool is
+    use id, I, pc{%-if hasStigmergy-%}, L{%endif%}{%if hasEnvironment%}, E{%endif%};
     return ({%- for item in schedule -%}
         ({% for pc in item.entry -%}(pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
         {%-for pc in item.siblings -%}
@@ -52,7 +53,7 @@ process agent [spurious: none, tick: IDchannel, attr{%if hasStigmergy%}, put, qr
     end if
   []
     -- propagate: receiver side when link does not hold
-    var lnk: Bool, key: Nat, recL: Lstig, recI: Iface, sender: ID in
+    var key: Nat, recL: Lstig, recI: Iface, sender: ID in
       key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
       goodLstig(?recL);
       goodIface(?recI);
@@ -96,7 +97,7 @@ process agent [spurious: none, tick: IDchannel, attr{%if hasStigmergy%}, put, qr
     end if
   []
     -- confirm: receiver side when link does not hold
-    var lnk: Bool, key: Nat, recL: Lstig, recI: Iface, sender: ID in
+    var key: Nat, recL: Lstig, recI: Iface, sender: ID in
       key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
       goodLstig(?recL);
       goodIface(?recI);
