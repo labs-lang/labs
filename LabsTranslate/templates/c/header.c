@@ -2,6 +2,7 @@
 _Bool __sim_spurious = 0;
 char* format;
 #define __sim_assert(COND, LBL) if (!(COND)) format = ("(SIMULATION) Violation: " LBL)
+#define __sim_satisfied(COND, LBL) if (COND) format = ("(SIMULATION) Satisfied: " LBL)
 
 {%-endif-%}
 const char undef_value = -128;

@@ -18,7 +18,7 @@ void {{label}}(int tid) {
     {%-endfor-%}
 
     {%- for l in locals-%}
-    {%-if l.loc contains "Pick"-%}// ___symbolic-pick___{%endif%}
+    {%-if l.loc contains "Pick"-%}// ___symbolic-pick{%-if l.where != ""-%}-where{%endif%}___{%endif%}
     TYPEOFVALUES {{l.name}}{%-if l.size > 0-%}[{{l.size}}]{%-endif-%}; /* {{l.loc}} */
     {%-if l.loc contains "Pick" and l.size > 0-%}
     {%-for i in (1..l.size)-%}
@@ -30,11 +30,13 @@ void {{label}}(int tid) {
     {%-endfor-%}{%-endfor-%}
     {%-endcapture-%}
     {%-if allDifferent != "" -%}__CPROVER_assume({{allDifferent}} 1);{%-endif-%}
-    // ___end symbolic-pick___
+    // ___end symbolic-pick{%-if l.where != ""-%}-where{%endif%}___
     {%-if l.where != ""-%}
-    __LABS_link1 = id;
+    TYPEOFAGENTID __LABS_link1 = tid;
+
     for (unsigned char i = 0; i < {{l.size}}; ++i) {
-        __LABS_link2 = {{l.name}}[i];
+        TYPEOFAGENTID __LABS_link2 = {{l.name}}[i];
+        //__CPROVER_assume({{l.where}});
     {%-if simulation-%}
         if (!({{l.where}})) { __sim_spurious = 1; }
     {%-else-%}

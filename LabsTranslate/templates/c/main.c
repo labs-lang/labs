@@ -4,9 +4,13 @@ _Bool __LABS_eventually = 0;
 
 void monitor(void) {
     {% if eventuallypredicates.size > 0 %}
+    {%if simulation%}
+    __sim_satisfied({{eventuallypredicates.first.value}}, "{{eventuallypredicates.first.name}}");
+    {%else%}
     if (!__LABS_eventually & ({{eventuallypredicates.first.value}})) {
          __LABS_eventually = 1;
     }
+    {%endif%}
     {%endif%}    
     {%- for item in alwaysasserts -%}
     {%-if simulation-%}
@@ -30,7 +34,9 @@ void finally(void) {
     __CPROVER_assert(0, "__sliver_simulation__");
     {%- else -%}
     {% if eventuallypredicates.size > 0 %}
+    {%-unless simulation-%}
     __CPROVER_assert(__LABS_eventually, "{{eventuallypredicates.first.name}}");
+    {%-endunless-%}
     {%endif%}
     {%- endif -%}
 }
@@ -111,8 +117,13 @@ int main(void) {
         }
         {%- endif -%}
     }
-    {%- if (simulation or eventuallypredicates.size > 0 or finallyasserts.size > 0) and bound > 0 -%}
+
+    {%- if bound > 0 -%}
+    {%- if simulation -%}
     finally();
+    {%- elsif eventuallypredicates.size > 0 or finallyasserts.size > 0 and bound > 0 -%}
+    finally();
+    {%- endif -%}
     {%- endif -%}
 
 }
