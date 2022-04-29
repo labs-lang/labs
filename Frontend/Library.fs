@@ -58,10 +58,10 @@ let run externs (sys, lstigs, agents', assume, properties) =
     <~> fold (tryAddIface externs) agents
     <~> fold (tryAddStigmergy externs) lstigs
     <~> fold (tryAddProcess externs) sys.Def.Processes
+    <~> (makeSpawnRanges externs) sys.Def.Spawn
     <~> fun x ->
         fold (tryAddAgent externs) agents (x, (Set.empty, (0, ExecPoint.empty, Map.empty, Map.empty)))
     <~> (fst >> zero)
-    <~> (makeSpawnRanges externs) sys.Def.Spawn
     (* properties can only be added after spawn *)
     <~> fold (tryAddProperty externs) properties
     <~> fold (tryAddAssume externs) (assume |> Option.defaultValue [])

@@ -21,6 +21,11 @@ type UnaryOp =
         | UnaryMinus -> tMINUS
 
 
+type Quantifier =
+    | All
+    | Exists
+    override this.ToString() = match this with All -> "forall" | Exists -> "exists"
+
 type CmpOp = 
     | Equal
     | Greater
@@ -53,6 +58,7 @@ type LeafExpr<'b> =
         | Const v -> string v 
         | Extern s -> "_" + s
 type Expr<'a, 'b> =
+    | QB of Map<string, string*Quantifier> * BExpr<'a, 'b>
     | Leaf of LeafExpr<'b>
     | Nondet of Expr<'a, 'b> * Expr<'a, 'b> * Position
     | Ref of Ref<'a, 'b>
@@ -62,6 +68,9 @@ type Expr<'a, 'b> =
     | RawCall of Name:string * Args:Expr<'a, 'b> list
     override this.ToString() = 
         match this with
+        | QB (quants, pred) ->
+            let qs = quants |> Map.values |> Seq.map string |> String.concat ", "
+            $"{qs}, {string pred}"
         | Leaf l -> string l
         | Nondet (start, bound, _) -> $"[{start}..{bound}]"
         | Ref r -> string r

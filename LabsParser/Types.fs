@@ -41,11 +41,6 @@ type Modality =
         | Fairly -> "fairly"
         | FairlyInf -> "fairly_inf"
 
-type Quantifier =
-    | All
-    | Exists
-    override this.ToString() = match this with All -> "forall" | Exists -> "exists"
-
 type Property<'a> =
     {
         Name:string

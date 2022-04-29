@@ -15,16 +15,6 @@ let propertyRef p =
         ])
         (fun k offset y -> {Var=(k, y); Offset=offset; OfAgent=None})
 
-let pquantifier =
-        pipe3
-            (ws <| choice [
-                stringReturn "forall" All;
-                stringReturn "exists" Exists
-            ])
-            (ws IDENTIFIER)
-            (ws KEYNAME)
-            (fun a b c -> c, (b, a))
-
 let pproperty withModality =
     let propertyLink = 
         (ws (skipString "id"))

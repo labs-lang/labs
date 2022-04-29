@@ -316,6 +316,7 @@ module internal Lnt =
     let rec collectAux trExpr expr =
         let recurse = collectAux trExpr
         match expr with
+        | QB _ -> Set.empty
         | Nondet(e1, e2, pos) ->
             recurse e1 |> Set.union (recurse e2) |> Set.add ($"nondet_{pos.Line}_{pos.Column}", trExpr e1, trExpr e2)
         | IfElse (_, e1, e2) // TODO collect auxs in condition too

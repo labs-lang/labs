@@ -115,6 +115,7 @@ module internal SymbolTable =
             raise (LabsException {What=Generic $"Unexpected operation on variable {vardef.Name}"; Where=[vardef.Pos]})
         else zero {table with Variables = table.Variables.Add(vardef.Name, (processVar externs vardef).Def)}
     
+    
     /// Basic function to retrieve the mapping of variable named k
     let findString locals table k =
         if Map.containsKey k locals
@@ -132,14 +133,66 @@ module internal SymbolTable =
     let toVarBExpr f b =
         BExpr.map BLeaf (toVarExpr f) b
     
+    let QBToIfElse table quants pred =
+        
+        let translateSub (sub:Map<_,_>) =
+            let propId name =
+                match sub.TryFind name with
+                | Some e -> e
+                | None -> failwithf $"Undefined agent {name}"
+            
+            let rec doExpr =
+                function
+                | Leaf f -> Leaf f
+                | Ref r when sub.ContainsKey (string r.Var) ->
+                    propId (string r.Var)
+                | Ref r ->
+                    Ref {r with
+                            Offset = Option.map doExpr r.Offset
+                            OfAgent = Option.map doExpr r.OfAgent
+                    }
+                | Arithm (e1, op, e2) -> Arithm(doExpr e1, op, doExpr e2)
+                | Unary (op, e) -> Unary(op, doExpr e)
+                | Nondet (e1, e2, p) -> Nondet (doExpr e1, doExpr e2, p)
+                | IfElse (c, tt, ff) -> IfElse (c, doExpr tt, doExpr ff)
+                | RawCall (n, args) -> RawCall (n, List.map doExpr args)
+                | QB _ -> failwith "Unexpected: nested QB"
+            
+            BExpr.map BLeaf doExpr
+            
+        
+        let rec trProp subs (qs:Map<_,_>) pr =
+            let trQuantifier = function | All -> Conj | Exists -> Disj
+            if not qs.IsEmpty then
+                let nextId = Map.pick (fun k _ -> Some k) qs
+                
+                let agent, quantifier = qs.[nextId]
+                let amin, amax = table.Spawn.[agent]
+                let addToSubs i = Map.add nextId (Leaf (Const i)) subs
+                let translateWithSubs s =
+                    trProp s (qs.Remove nextId) pr 
+
+                [amin..amax-1]
+                |> List.map (addToSubs >> translateWithSubs)
+                |> fun l -> Compound(trQuantifier quantifier, l)
+                |> BExpr.simplify
+            else
+                (translateSub subs) pr
+        trProp Map.empty quants pred
+        |> fun b -> IfElse(b, Leaf (Const 1), Leaf( Const 0))
+    
     let toVarProcess table proc =
         let toVarBase f b =
             let toVarAct locals a =
                 let newupdates =
-                    a.Updates
-                    |> List.map (fun (r, e) -> 
+                    a.Updates                    
+                    |> List.map (fun (r, e) ->
+                        let e1 =
+                            match e with
+                            | QB (qs, p) -> QBToIfElse table qs p
+                            | _ -> e
                         toVarRef (f locals) r (Option.map (toVarExpr (f locals)) r.Offset) (Option.map (toVarExpr (f locals)) r.OfAgent),
-                        toVarExpr (f locals) e)
+                        toVarExpr (f locals) e1)
                 {ActionType=a.ActionType; Updates=newupdates}
             match b.Def with 
             | Act a -> toVarAct Map.empty a |> Act

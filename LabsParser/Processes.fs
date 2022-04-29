@@ -1,6 +1,7 @@
 module internal Processes
 
 open FParsec
+open LabsCore.ExprTypes
 open LabsCore.Expr
 open LabsCore.Grammar
 open LabsCore.Tokens
@@ -12,6 +13,7 @@ let rec private _pe () = makeExprParser simpleRef (skipString tID .>> notInIdent
 and _pb = makeBExprParser (_pe ())
 
 let pexpr = _pe () //makeExprParser simpleRef (skipString tID .>> notInIdentifier) (makeBExprParser pexpr)
+let pguard = makeBExprParser pexpr
 
 /// Parses elementary processes ("actions")
 let paction =
@@ -27,6 +29,13 @@ let paction =
             let num = evalConstExpr (fun _ -> failwith "id not allowed here.") e
             let w = Option.map (fun w -> w.Def) where
             Location.Pick (num, w), [e]
+    let pCheck =
+         followedBy (ws (skipString "forall" <|> skipString "exists"))
+         >>. ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
+         .>>. pguard
+         |>> fun (quants, pred) ->
+             Location.Local, [QB (quants, pred)]
+    
     
     let pWalrus =
         let tWalrus = ":="
@@ -34,6 +43,7 @@ let paction =
         >>. ws (skipString tWalrus)
         >>. choice [
             pPick
+            pCheck
             (ws pexpr |> sepbycommas) |>> fun exprs -> Location.Local, exprs
         ]
     tuple2 
@@ -54,7 +64,6 @@ do pprocRef :=
     let compose a b = Comp(a, b)
 
     let pGuarded = 
-        let pguard = makeBExprParser pexpr
         followedBy ((ws pguard) >>. (ws GUARD))
         >>. pipe3
             getPosition (ws pguard) ((ws GUARD) >>. pproc)

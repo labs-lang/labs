@@ -2,9 +2,19 @@ module LabsCore.Expr
 open LabsCore.ExprTypes
 open System
 
+let rec internal foldB foldExpr acc bexpr =
+    let recurse = foldB foldExpr
+    match bexpr with
+    | BLeaf _ -> acc
+    | Compare (e1, _, e2) ->
+        Seq.fold foldExpr acc [e1; e2]
+    | Neg b -> recurse acc b 
+    | Compound (_, bexprs) -> Seq.fold recurse acc bexprs
+
 let rec fold fleaf fref acc expr = 
     let recurse = fold fleaf fref
     match expr with
+    | QB (_, p) -> foldB recurse acc p 
     | Leaf l -> fleaf acc l
     | Nondet(e1, e2, _)
     | Arithm(e1, _, e2) ->
@@ -21,7 +31,9 @@ let rec fold fleaf fref acc expr =
 
 let rec cata fleaf farithm funary fnondet fref fraw fif expr = 
     let recurse = cata fleaf farithm funary fnondet fref fraw fif
+    
     match expr with
+    | QB _ -> failwith $"Unexpected call to cata on QB" 
     | Leaf l -> fleaf l
     | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
     | Unary(op, e) -> funary op (recurse e)
@@ -32,7 +44,15 @@ let rec cata fleaf farithm funary fnondet fref fraw fif expr =
 
 let rec map_ fleaf fref fcond expr =
     let recurse = map_ fleaf fref fcond
+    let rec mapP = function
+        | BLeaf b -> BLeaf b
+        | Compare (e1, op, e2) ->
+            Compare (recurse e1, op, recurse e2)
+        | Neg b -> Neg (mapP b)
+        | Compound (bop, bexprs) -> Compound (bop, List.map mapP bexprs)
+    
     match expr with
+    | QB (q, p) -> QB(q, mapP p)
     | Leaf l -> Leaf(fleaf l)
     | Nondet(e1, e2, pos) -> Nondet(recurse e1, recurse e2, pos)
     | Arithm(e1, op, e2) -> Arithm(recurse e1, op, recurse e2)

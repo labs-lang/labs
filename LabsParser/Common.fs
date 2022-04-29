@@ -3,6 +3,7 @@ module internal Common
 open FParsec
 
 open LabsCore.Tokens
+open LabsCore.ExprTypes
 
 type Parser<'t> = Parser<'t, unit>
 
@@ -119,3 +120,13 @@ let pstringEq str p =
     
 /// Parses an external parameter name
 let pextern : Parser<_> = ((skipChar '_') >>. KEYNAME)
+
+let pquantifier =
+    pipe3
+        (ws <| choice [
+            stringReturn "forall" All;
+            stringReturn "exists" Exists
+        ])
+        (ws IDENTIFIER)
+        (ws KEYNAME)
+        (fun a b c -> c, (b, a))
