@@ -223,7 +223,10 @@ module internal C =
             | Abs -> sprintf "__abs(%s)"
         let nondetFn e1 e2 _ = sprintf $"nondetInRange({e1}, {e2})"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
-        let ifFn cond ift iff = $"(%s{trBExpr cond}) ? ({ift}) : ({iff})"
+        let ifFn cond ift iff =
+            if ift = "1" && iff = "0"
+            then $"({trBExpr cond})"
+            else $"(%s{trBExpr cond}) ? ({ift}) : ({iff})"
         
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
