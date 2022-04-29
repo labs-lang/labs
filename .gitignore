@@ -460,8 +460,11 @@ out
 .vscode
 .ionide
 
-
 ### CSeq ###
-
 cseq/
+### Glucose ###
+glucose/
+sliver_bk_glucose/
+
+drafts/
 icon.png
