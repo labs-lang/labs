@@ -24,11 +24,11 @@ let paction =
             charReturn '~' (L("",0))
         ] |> ws .>>. (ws pexpr |> sepbycommas)
     let pPick =
-        (ws (skipString tPICK) >>. ws pexpr) .>>. opt (ws (skipString "where") >>. plink)
-        |>> fun (e, where) ->
+        tuple3 (ws (skipString tPICK) >>. ws pexpr) (opt <| ws IDENTIFIER) (opt (ws (skipString "where") >>. plink))
+        |>> fun (e, typ, where) ->
             let num = evalConstExpr (fun _ -> failwith "id not allowed here.") e
             let w = Option.map (fun w -> w.Def) where
-            Location.Pick (num, w), [e]
+            Location.Pick (num, typ, w), [e]
     let pCheck =
          followedBy (ws (skipString "forall" <|> skipString "exists"))
          >>. ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
@@ -59,7 +59,7 @@ let paction =
 // (see pGuarded and pParen)
 let pproc, pprocRef = createParserForwardedToRef()
 
-do pprocRef :=
+do pprocRef.Value <-
     let doBase (pos, stmt) = {Def=stmt; Pos=pos; Source=""; Name=string stmt} |> BaseProcess
     let compose a b = Comp(a, b)
 

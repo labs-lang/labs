@@ -247,13 +247,20 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                 List.map (fun a -> {t with Action={t.Action with Def=Act a}} |> encodeTransition |> Map.ofList) stmts
             let hd = encodes.Head
             let locals =
-                let liquidVar v = Dict [
+                let liquidVar v =
+                    let pickFrom, pickTo =
+                        match v.Location with
+                        | Pick (_, Some typ, _) -> SymbolTable.findAgent table typ t.Action.Pos |> fun (a, b, _) -> a, b
+                        | _ -> 0, table.Spawn |> Map.values |> Seq.map snd |> Seq.max
+                    Dict [
                     "name", v.Name |> Str
                     "loc", string v.Location |> Str 
                     "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> s
+                    "pickFrom", Int pickFrom
+                    "pickTo", Int pickTo
                     "where",
                         match v.Location with
-                        | Pick (_, Some w) -> w |> table.TranslateBExpr |> trKit.LinkTr
+                        | Pick (_, _, Some w) -> w |> table.TranslateBExpr |> trKit.LinkTr
                         | _ -> ""
                         |> Str
                 ]

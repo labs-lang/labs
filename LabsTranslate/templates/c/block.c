@@ -22,7 +22,7 @@ void {{label}}(int tid) {
     TYPEOFVALUES {{l.name}}{%-if l.size > 0-%}[{{l.size}}]{%-endif-%}; /* {{l.loc}} */
     {%-if l.loc contains "Pick" and l.size > 0-%}
     {%-for i in (1..l.size)-%}
-    __CPROVER_assume(({{l.name}}[{{forloop.index0}}] >= 0) & ({{l.name}}[{{forloop.index0}}] < MAXCOMPONENTS) & ({{l.name}}[{{forloop.index0}}] != tid));
+    __CPROVER_assume(({{l.name}}[{{forloop.index0}}] >= {{l.pickFrom}}) & ({{l.name}}[{{forloop.index0}}] < {{l.pickTo}}) & ({{l.name}}[{{forloop.index0}}] != tid));
     {%-endfor-%}
     {%-capture allDifferent-%}
     {%-for i in (1..l.size)-%}{%- assign outer = forloop %}{%-for j in (1..i)-%}

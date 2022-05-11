@@ -37,14 +37,16 @@ type Location =
     | L of name:string * tupleIndex: int
     | E
     | Local
-    | Pick of num:int * where: Link<string> option
+    | Pick of num:int * agentType:string option * where: Link<string> option
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
             | L(n, _) -> $"Stigmergy ({n})" 
             | Local -> "Local"
-            | Pick (n, None) -> $"Pick {n}"
-            | Pick (n, Some w) -> $"Pick {n} where {w}"
+            | Pick (n, typ, w) ->
+                let fmtType = typ |> Option.map (fun x -> $" {x}") |> Option.defaultValue ""
+                let fmtWhere = w |> Option.map (fun x -> $" where {x}") |> Option.defaultValue ""
+                $"Pick {n}{fmtType}{fmtWhere}"
 
 type Action<'a> = {
     ActionType: Location
@@ -53,8 +55,9 @@ type Action<'a> = {
     with 
         override this.ToString() =
             (match this.ActionType with
-            | Pick (n, None) -> fun v _ -> $"{v} := pick {n}"
-            | Pick (n, Some w) -> fun v _ -> $"{v} := pick {n} where {w}"
+            | Pick _->
+                let pick = (string this.ActionType).[1 ..] |> sprintf "p%s"
+                fun v _ -> $"{v} := {pick}"
             | Local _ -> sprintf "%s := %s"
             | I -> sprintf "%s <- %s"
             | L _ -> sprintf "%O <~ %O"
