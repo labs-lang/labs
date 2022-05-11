@@ -89,8 +89,8 @@ with
             Assumes = Map.empty
         }
         
-module internal SymbolTable = 
-    let mapVar (v:Var<_>) table =
+module SymbolTable = 
+    let internal mapVar (v:Var<_>) table =
         zero {table with M = table.M.Mapvar v}
     
     let private processVar externs vardef =
@@ -110,30 +110,35 @@ module internal SymbolTable =
                 raise (LabsException {What=NonPositiveArraySize vardef.Name; Where=[vardef.Pos]})
             | _ -> x
             
-    let tryAddVar externs (vardef:Node<Var<Expr<unit, unit>>>) table =
+    let internal tryAddVar externs (vardef:Node<Var<Expr<unit, unit>>>) table =
         if table.Variables.ContainsKey vardef.Name then
             raise (LabsException {What=Generic $"Unexpected operation on variable {vardef.Name}"; Where=[vardef.Pos]})
         else zero {table with Variables = table.Variables.Add(vardef.Name, (processVar externs vardef).Def)}
     
     
     /// Basic function to retrieve the mapping of variable named k
-    let findString locals table k =
+    let public findString locals table k =
         if Map.containsKey k locals
         then
             let _, loc = locals.[k]
-            let vtype = match loc with Pick (n, _) -> Array n | _ -> Scalar
+            let vtype = match loc with Pick (n, _, _) -> Array n | _ -> Scalar
             {Name=k; Vartype=vtype; Location=loc; Init=Undef}, 0
         else
             table.M.TryFind k
             |> function Some x -> x | None -> raise (LabsException {What=UndefRef k; Where=[]}) 
     
-    let toVarRef f r o of_ = {Var=f r.Var; Offset=o; OfAgent=of_}
-    let toVarExpr f e =
+    let findAgent table name pos =
+        match Map.tryFind name table.Spawn, Map.tryFind name table.Agents with
+        | Some (start, bound), Some y -> start, bound, y
+        | _ -> raise (LabsException {What=UndefAgent name; Where=[pos]})
+    
+    let private toVarRef f r o of_ = {Var=f r.Var; Offset=o; OfAgent=of_}
+    let private toVarExpr f e =
         Expr.map id (toVarRef f) e
-    let toVarBExpr f b =
+    let internal toVarBExpr f b =
         BExpr.map BLeaf (toVarExpr f) b
     
-    let QBToIfElse table quants pred =
+    let private QBToIfElse table quants pred =
         
         let translateSub (sub:Map<_,_>) =
             let propId name =
@@ -181,7 +186,7 @@ module internal SymbolTable =
         trProp Map.empty quants pred
         |> fun b -> IfElse(b, Leaf (Const 1), Leaf( Const 0))
     
-    let toVarProcess table proc =
+    let private toVarProcess table proc =
         let toVarBase f b =
             let toVarAct locals a =
                 let newupdates =
@@ -225,7 +230,7 @@ module internal SymbolTable =
     /// have been transformed into
     /// (guard -> Seq([Skip; Par(...)). 
     /// </remarks>
-    let setGuards proc =
+    let private setGuards proc =
         let baseFn (guards, acc) b = (guards, Map.add b guards acc)
         let guardFn (guards, acc) g = (Set.add g guards, acc)
         let compFn typ recurse (guards, acc) (l:List<_>) =
@@ -241,20 +246,20 @@ module internal SymbolTable =
         Process.fold baseFn guardFn compFn (Set.empty, Map.empty) proc                    
         |> snd
     
-    let tryAddProcess externs (p: Node<Process<_>>) table =
+    let internal tryAddProcess externs (p: Node<Process<_>>) table =
         let p' = handleProcessNode externs table p
         zero {table with Processes=Map.add p.Name p'.Def table.Processes; Guards=Map.union table.Guards (setGuards p'.Def)}
     
-    let tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
+    let internal tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
         let link = map (BExprExterns.replaceExterns externs >> toVarBExpr (fun (x,y) -> (findString Map.empty) table x, y)) s.Def.Link
         zero {table with Stigmergies=table.Stigmergies.Add(s.Name, link.Def)}
     
-    let tryAddIface externs (a:Node<Agent>) table =
+    let internal tryAddIface externs (a:Node<Agent>) table =
         let iface = List.map (processVar externs >> (fun x -> x.Def)) a.Def.Iface
         fold mapVar iface table
         <~> fun t -> zero {t with Agents = table.Agents.Add(a.Name, {AgentTable.empty with Variables=iface |> List.sortBy t.M.IndexOf})}
     
-    let tryAddAgent externs (a:Node<Agent>) (table, state) =
+    let internal tryAddAgent externs (a:Node<Agent>) (table, state) =
         List.map ((handleProcessNode externs table) >> (fun node -> node.Name, node.Def)) a.Def.Processes
         |> (Map.ofList >> zero)
         <~> fun p ->
@@ -266,7 +271,7 @@ module internal SymbolTable =
             let agent = {table.Agents.[a.Name] with Processes=p'; Sts=lts'; InitCond=initCond; Lstig=a.Def.Lstig |> Set.ofList}
             zero ({table with Agents = table.Agents.Add(a.Name, agent); Guards=guards}, (Set.empty, acc))        
     
-    let makeSpawnRanges externs spawn table =
+    let internal makeSpawnRanges externs spawn table =
         let makeRanges mp =
             mp 
             |> Map.fold (fun (c, m) name d -> let c' = c + d.Def in (c', (Map.add name (c, c') m) )) (0, Map.empty) 
@@ -287,10 +292,10 @@ module internal SymbolTable =
 
         wrap {table with SymbolTable.Spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
 
-    let tryAddProperty externs (p:Node<Property<string>>) (table:SymbolTable) =
+    let internal tryAddProperty externs (p:Node<Property<string>>) (table:SymbolTable) =
         let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
         zero {table with Properties= Map.add p.Name (map (over _predicate fn) p) table.Properties}
-    let tryAddAssume externs (p:Node<Property<string>>) (table:SymbolTable) =
+    let internal tryAddAssume externs (p:Node<Property<string>>) (table:SymbolTable) =
         let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
         zero {table with Assumes= Map.add p.Name (map (over _predicate fn) p) table.Assumes}
     
@@ -300,7 +305,7 @@ module internal SymbolTable =
         |> Map.values
         |> Seq.sortBy table.M.IndexOf
     
-    let maybeFilterProp prop m =
+    let private maybeFilterProp prop m =
         match prop with
         | Some p ->
             let m' = Map.filter (fun k _ -> k = p) m
