@@ -41,7 +41,7 @@ module Process =
         let recurse = map fbase fguard
         match proc with
         | BaseProcess b -> fbase b
-        | Guard(n) ->
+        | Guard n ->
             let g, p = n.Def
             let p' = recurse p
             Guard(setl _def (fguard g, p') n)
@@ -120,3 +120,26 @@ module Process =
                 | _ -> BaseProcess b
             map baseFn id procDefs.[name]
         expandFn Set.empty name
+        
+    /// Returns the set of "pick" variables defined in a process p
+    /// Notice that p must be already unfolded
+    let collectPicks p =
+        let doAction a =
+            match a.ActionType with
+            | Pick _ -> Set.singleton (string a.Updates.Head) 
+            | _ -> Set.empty
+        
+        let fbase acc (b:Node<Stmt<_>>) =
+            match b.Def with
+            | Act a -> doAction a |> Set.union acc
+            | Block b -> List.map doAction b |> Set.unionMany |> Set.union acc
+            | Name _
+            | Skip _
+            | Nil _ -> acc
+            
+        let fcomp _ recurse acc procs =
+            List.map (recurse Set.empty) procs
+            |> Set.unionMany
+            |> Set.union acc
+            
+        fold fbase (fun acc _ -> acc) fcomp Set.empty p

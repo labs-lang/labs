@@ -327,6 +327,12 @@ module SymbolTable =
             let iface = table.Agents.[agentName].Variables |> List.map dumpVar |> String.concat ";"
             let lstig = table.Agents.[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"
             printfn $"{agentName} %i{_start},%i{_end}\n{iface}\n{lstig}"
+        
+        let dumpPicks agentName =
+            let picks = table.Agents.[agentName].Processes.["Behavior"] |> Process.collectPicks |> String.concat ","
+            printf $"{agentName} {picks};"
+        
+        
         printfn "%s" (table.Variables |> Map.filter (fun _ -> isEnvVar) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
         Map.map dumpSpawn table.Spawn |> ignore
         table.Properties
@@ -340,6 +346,7 @@ module SymbolTable =
         |> Map.values
         |> String.concat ";"
         |> printfn "%s"
+        Map.map (fun k _ -> dumpPicks k) table.Spawn |> ignore
         
         
 type SymbolTable with
