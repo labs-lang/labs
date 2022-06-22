@@ -59,7 +59,8 @@ process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnv
         {%- else -%}
         var x: Nat in
             x := any Nat where ({%- for val in item.value -%}(x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%});
-            p[{{ item.name }}] := x
+            p[{{ item.name }}] := x;
+            i
         end var;
         {%- endif -%}{%- endfor -%}
         pc := p;
