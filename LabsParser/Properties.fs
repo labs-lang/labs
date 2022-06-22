@@ -25,8 +25,8 @@ let pproperty withModality =
         choice [
             stringReturn "always" Always
             stringReturn "eventually" Eventually
-            stringReturn "fairly" Fairly
-            stringReturn "fairly_inf" FairlyInf
+            attempt (stringReturn "fairly_inf" FairlyInf)
+            attempt (stringReturn "fairly" Fairly)
             stringReturn "finally" Finally
         ] |> ws
     pipe5
