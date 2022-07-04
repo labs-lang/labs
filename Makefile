@@ -18,7 +18,7 @@ RELEASENAME = sliver-v$(VERSION)_$(strip $(subst -,_, ${platform}))
 # Always force to re-make py files and templates
 rmsentinels :
 	@rm -f build/${platform}/sliver.py
-	@rm -f build/${platform}/backends/cseq/cseq.py
+	@rm -f build/${platform}/vendor/cseq/cseq.py
 	@rm -f build/${platform}/labs/templates/c/main.c
 
 build/%/labs/templates/c/main.c : $(templates)
@@ -53,12 +53,12 @@ build/%/click :
 	@cp -r click/LICENSE.rst build/$(platform)/click/ ;
 	@cp -r click/README.rst build/$(platform)/click/ ;
 
-build/%/backends/cseq/cseq.py :
-	@mkdir -p build/$(platform)/backends
+build/%/vendor/cseq/cseq.py :
+	@mkdir -p build/$(platform)/vendor
 	@echo Copying CSeq...
-	@cp -r cseq/ build/$(platform)/backends/cseq/ ;
-	@cp -r sliver/info.py build/$(platform)/backends/cseq/info.py ;
-	@cp -r cseq-modules/* build/$(platform)/backends/cseq/modules ;
+	@cp -r cseq/ build/$(platform)/vendor/cseq ;
+	@cp -r sliver/info.py build/$(platform)/vendor/cseq/info.py ;
+	@cp -r cseq-modules/* build/$(platform)/vendor/cseq/modules ;
 
 build/%/examples :
 	@mkdir -p build/$(platform)
@@ -66,10 +66,10 @@ build/%/examples :
 	@mkdir -p build/$(platform)/examples ;
 	@cp labs-examples/*.labs build/$(platform)/examples/;
 
-build/%/backends/cbmc-simulator :
-	@mkdir -p build/$(platform)/backends
-	@echo Copying backends...
-	@cp -r linux/* build/$(platform)/backends/ ;
+build/%/vendor/cbmc-simulator :
+	@mkdir -p build/$(platform)/vendor
+	@echo Copying backends to vendor/...
+	@cp -r linux/* build/$(platform)/vendor/ ;
 
 osx : rmsentinels \
 	build/osx.10.12-x64/labs/LabsTranslate \
@@ -86,13 +86,13 @@ linux : rmsentinels \
 	build/linux-x64/click \
 	build/linux-x64/sliver.py \
 	build/linux-x64/examples \
-	build/linux-x64/backends/cbmc-simulator
+	build/linux-x64/vendor/cbmc-simulator
 
 osx_cseq: rmsentinels osx \
-	build/osx.10.12-x64/backends/cseq/cseq.py
+	build/osx.10.12-x64/vendor/cseq/cseq.py
 
 linux_cseq: rmsentinels linux \
-	build/linux-x64/backends/cseq/cseq.py
+	build/linux-x64/vendor/cseq/cseq.py
 
 zip_linux : linux_cseq
 	@rm -rf build/$(RELEASENAME);
