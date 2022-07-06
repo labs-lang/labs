@@ -36,6 +36,27 @@ let paction =
          |>> fun (quants, pred) ->
              Location.Local, [QB (quants, pred)]
     
+    let pSingleLhs =
+        let pBracket =
+            followedBy (spaces >>. skipChar '[')
+            >>. spaces
+            >>. pchar '['
+            >>. spaces
+            >>. choice [
+                followedBy (skipChar ']') >>. skipChar ']' >>% None
+                pexpr |>> Some]
+        
+        KEYNAME .>>. (opt (pBracket) |> ws)
+        |>> fun (name, brak) ->
+            let str, offset =
+                match brak with
+                // Scalar lhs (eg. x := ...)
+                | None -> name, None
+                // Array assignment (eg. x[] := ...)
+                | Some None -> $"{name}[]", None
+                // Array element assignment (eg. x[expr] := ...)
+                | Some o -> name, o
+            {Var=str; Offset=offset; OfAgent=None}
     
     let pWalrus =
         let tWalrus = ":="
@@ -47,7 +68,7 @@ let paction =
             (ws pexpr |> sepbycommas) |>> fun exprs -> Location.Local, exprs
         ]
     tuple2 
-        (ws (simpleRef pexpr) |> sepbycommas)
+        (ws pSingleLhs |> sepbycommas)
         ((ws parseArrow) <|> pWalrus) 
     >>= (fun (refs, (loc, exprs)) ->
         try {ActionType=loc; Updates=List.zip refs exprs} |> preturn with

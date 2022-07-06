@@ -117,12 +117,15 @@ module SymbolTable =
     
     
     /// Basic function to retrieve the mapping of variable named k
-    let public findString locals table k =
+    let rec public findString locals table (k: string) =
         if Map.containsKey k locals
         then
             let _, loc = locals.[k]
             let vtype = match loc with Pick (n, _, _) -> Array n | _ -> Scalar
             {Name=k; Vartype=vtype; Location=loc; Init=Undef}, 0
+        elif Map.containsKey $"{k}[]" locals
+        then
+            findString locals table $"{k}[]"
         else
             table.M.TryFind k
             |> function Some x -> x | None -> raise (LabsException {What=UndefRef k; Where=[]}) 

@@ -126,7 +126,7 @@ module Process =
     let collectPicks p =
         let doAction a =
             match a.ActionType with
-            | Pick _ -> Set.singleton (string a.Updates.Head) 
+            | Pick _ -> Set.singleton <| (string a.Updates.Head).Replace("[]", "") 
             | _ -> Set.empty
         
         let fbase acc (b:Node<Stmt<_>>) =

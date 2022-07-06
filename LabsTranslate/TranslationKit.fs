@@ -34,7 +34,7 @@ let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
     | Local -> v.Name
     | Pick _ ->
         let off = match offset with None -> "" | Some off -> $"[{off}]"
-        $"{v.Name}{off}"  
+        $"""{v.Name.Replace("[]", "")}{off}"""  
     | _ -> trLocation v.Location agent index
 
 /// Translates a boolean expression.

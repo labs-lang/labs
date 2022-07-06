@@ -248,12 +248,16 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
             let hd = encodes.Head
             let locals =
                 let liquidVar v =
+                    let isPick = match v.Location with Pick _ -> true | _ -> false
                     let pickFrom, pickTo =
                         match v.Location with
                         | Pick (_, Some typ, _) -> SymbolTable.findAgent table typ t.Action.Pos |> fun (a, b, _) -> a, b
                         | _ -> 0, table.Spawn |> Map.values |> Seq.map snd |> Seq.max
+                    if isPick && not(v.Name.Contains "[]") then
+                        failwith $"'pick' requires an array assignment (maybe you meant '{v.Name}[] := pick ...'?\nat line {t.Action.Pos.Line})"
+                    else
                     Dict [
-                    "name", v.Name |> Str
+                    "name", v.Name.Replace("[]", "") |> Str
                     "loc", string v.Location |> Str 
                     "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> s
                     "pickFrom", Int pickFrom
