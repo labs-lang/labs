@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
-# See http://www.sublimetext.com/docs/3/syntax.html
-# © 2018 Luca Di Stefano, Gran Sasso Science Institute
+# See http://www.sublimetext.com/docs/syntax.html
+# © 2018=2022 Luca Di Stefano, University of Gothenburg
 name: LAbS
 file_extensions:
   - labs
@@ -24,6 +24,7 @@ contexts:
     - include: sysdef
     - include: lstigdef
     - include: agentdef
+    - include: assumedef
     - include: checkdef
 
   identifier:
@@ -32,44 +33,58 @@ contexts:
       pop: true
 
   eq:
-    - match: =
+    - match: (?<!:)=
       scope: source.labs
       pop: true
 
   operators:
-    - match: \babs\b
+    - match: \b(abs|pick|where)\b
       scope: entity.name.function.labs
-    - match: =|!=|>|<|\b(and|or|not|of)\b
+    - match: \b(and|or|not|of)\b|>(=?)|<(=?)|!=|=
       scope: keyword.operator.logical.labs
-    - match: \+|-|\*|/|%
+    - match: \+|-|\*|/|%|
+      scope: keyword.operator.arithmetic.labs
+    - match: ':'
       scope: keyword.operator.arithmetic.labs
 
   procDef:
     - match: ^\s*\b{{identifier}}\b\s*=
       captures:
         1: support.function.labs
-      push: proc
+      set: proc
 
   proc:
-    - match: \b{{identifier}}(?!\s*=)\b
+    - match: (?=^\s*\b{{identifier}}\b\s*=)
+      set: procDef
+    - match: \b{{identifier}}\b
       scope: constant.other.labs
-    - include: procDef
-    - match: <--|<~|<-
+    - match: <--|<~|<-|:=
       scope: keyword.operator.assignment.labs
-    - match: (->|\||&)
-      captures:
-        1: keyword.operator.labs
+    - match: ->|\||&
+      scope: keyword.operator.labs
     - include: operators
+    - include: quantifiers
     - match: \b(Skip|Nil)\b
       scope: constant.other.labs
-    - match: '\}'
-      set: main
+    - match: \{
+      scope: prova.labs
+      push: proc
+    - match: \}
+      scope: prova1.labs
+      pop: true
 
   sysdef:
     - match: \bsystem\b
       scope: keyword.declaration.labs
       set: [system, braces]
 
+
+  brace-open:
+    - match: \{
+      pop: true
+  brace-close:
+    - match: \}
+      pop: true
 
   braces:
     - match: \{
@@ -78,25 +93,22 @@ contexts:
       scope: invalid.illegal.stray-brace.labs
 
   system:
-
     - match: \b(spawn|extern|environment)\b
-      scope: keyword.declaration.labs
+      scope: entity.system-field.labs
       push: eq
     - include: procDef
-    # - include: identifier
     - match: \}
       set: main
-
 
   agentdef: 
     - match: \bagent\b
       scope: keyword.declaration.extends.labs
-      set: [agent, braces, identifier]
+      push: [agent, braces, identifier]
 
   agent:
     - match: \b(interface|stigmergies)\b
       captures:
-        1: entity.other.attribute-name.labs
+        1: entity.other.agent-field.labs
     - include: procDef
     - match: \}
       set: main
@@ -108,9 +120,23 @@ contexts:
 
   lstig:
     - match: \blink\b
-      scope: entity.other.attribute-name.labs
+      scope: entity.other.link.labs
     - include: operators
     - match: '\}'
+      set: main
+
+  assumedef:
+    - match: \bassume\b
+      scope: keyword.assume.labs
+      set: [assume, braces]
+
+  assume:
+    - match: '{{def}}'
+      captures:
+        1: support.function.labs
+    - include: operators
+    - include: quantifiers
+    - match: \}
       set: main
 
   checkdef:
@@ -124,10 +150,24 @@ contexts:
         1: support.function.labs
     # - include: identifier
     - include: operators
+    - include: quantifiers
+    - match: \}
+      set: main
 
-    - match: \b(finally|always|forall|exists)\b
+    - match: \b(always|eventually|fairly(_inf)?|finally|forall)\b
       captures:
-        1: keyword.control.labs
+        1: keyword.modality.labs
+
+  quantifiers:
+    - match: \b(forall|exists)\b
+      captures:
+        1: keyword.quantifier.labs
+      push:
+        - match: '{{identifier}}'
+          pop: true
+        - match: '[^A-Z ][^\b\s]*'
+          scope: invalid.illegal.expected-uppercase.labs
+          pop: true
 
   specials:
     - match: \b_\S+\b
