@@ -2,24 +2,27 @@
 
 ## Preliminary definitions
 
+The key words
+"MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT",
+"RECOMMENDED", "MAY", and "OPTIONAL" in this document
+are to be interpreted as described in [RFC 2119](https://www.ietf.org/rfc/rfc2119.txt).  
+
 Line comments are introduced by a `#` sign.
 
-A `VarName` is formed by a lowercase letter
-followed by alphanumerical characters
-(e.g., `foo`, `fooBar01`, `foo2Bar`).
-
-A `Name` is formed by an uppercase letter
+A `Name` is formed by an *uppercase* letter
 followed by alphanumerical characters
 (e.g., `Foo`, `FooBar01`, `Foo2Bar`).
 
-An `anyName` is either a `VarName` or a `name`.
+A `VarName` is formed by a *lowercase* letter
+followed by alphanumerical characters
+(e.g., `foo`, `fooBar01`, `foo2Bar`).
 
 `NAT` and `INT` denote natural and integer numerals, respectively.
 
 `SepBy(P, S)` denotes either `P`,
 or multiple occurrences of `P` separated by `S`.
 For instance, both `"0"` and `"1, 2, 40"` are valid
-words for `SEP(NAT, ",")`
+words for `SepBy(NAT, ",")`.
 
 `Group(P1, P2, ...)` denotes the concatenation of `P1`, `P2`, etc.,
 without any whitespace between them.
@@ -27,14 +30,27 @@ For instance, `foo()` is a valid word for `Group(VarName, "()")`,
 but `foo ()` is not.
 
 ```ebnf
-SepBy(P, S) = P | P, S, SEP(P, S) ;
+(* Low-level definitions *)
+digit = ? '[0-9]' ? ;
+lowercase-letter = ? '[a-z]' ? ;
+uppercase-letter = ? '[A-Z]' ? ;
+letter = lowercase-letter | uppercase-letter ;
+alphanum = letter | digit ;
+(* --------------------- *)
+
+Name = uppercase-letter, { alphanum } ;
+VarName = lowercase-letter, {alphanum} ;
+
+ExternName = "_", VarName ;
+
+SepBy(P, S) = P { S, SepBy(P, S) } ;
 ```
+
 
 The following literals are either language *keywords*
 or names of *built-in functions*,
 and cannot be used in places where one of
-`VarName`, `Name`, or `anyName`
-is expected.
+`VarName` or `Name` is expected.
 
 ```txt
 abs
@@ -61,12 +77,10 @@ introduced by a **title** (e.g., `system`) and
 wrapped in curly brackets.
 Some sections (namely, `agent` and `stigmergy`)
 may appear multiple times,
-and therefore each occurrence has its own `Name`
+and therefore each occurrence must have its own `Name`
 (e.g., `agent Foo { ... }`, `stigmergy Bar { ... }`).
 
 ### Informal structure
-
-<!-- TODO eBNF definition -->
 
 ```labs
 # One system definition
@@ -85,7 +99,7 @@ stigmergy <Name> {
   # One or more stigmergic variable definitions
 }
 
-# One or more agent definitions
+# Zero or more agent definitions
 agent <Name> {
   interface = ...   # Optional
   stigmergies = ... # Optional
@@ -105,6 +119,40 @@ check {
 }
 ```
 
+### EBNF
+
+```ebnf
+Spec = System, { (Agent | Stigmergy) }, [Assume], Check ;
+
+System =
+  "system", "{",
+    [ "extern:", SepBy(ExternName, ","), "\n" ]
+    [ "environment:", SepBy(VarDecl, ";"), "\n" ]
+    "spawn:", SepBy(Spawn, ",")
+    { "\n", ProcDef }
+  "}" ;
+Spawn = Group(Name, ":"), ConstExpr ;
+
+Agent =
+  "agent", Name, "{",
+    [ "interface:", SepBy(VarDecl, ";"), "\n" ]
+    [ "stigmergies:", SepBy(Name, ","), "\n" ]
+
+    ProcDef, { "\n", ProcDef }
+  "}" ;
+
+Stigmergy =
+  "stigmergy", Name, "{",
+    "link:", Link, "\n"
+
+    ( VarDecl | Tupledecl ), { "\n", ( VarDecl | Tupledecl ) }
+  "}" ;
+
+TupleDecl = SepBy(VarName, ","), ":", SepBy(Init, ",") ;
+
+Assume = "assume", "{", { Name, "=", Pred }, "}" ;
+```
+
 ## Variables
 
 In LAbS, all variables have integer values.
@@ -114,7 +162,7 @@ depending on where it has been declared.
 * **Shared** variables are declared in the `environment` field of `system`.
 * **Stigmergic** variables are declared within a `stigmergy`.
 * **Attributes** are declared in the `interface` field of an `agent`.
-* **Local** variables are (implicitly) declared 
+* **Local** variables are (implicitly) declared
   in an **atomic block**
   within a process definition (see below).
 
@@ -125,7 +173,7 @@ at the time of declaration,
 by means of an initializer expression `Init`.
 
 ```ebnf
-VarDecl = varname ["[", NAT, "]"], ":", Init ;
+VarDecl = Varname ["[", NAT, "]"], ":", Init ;
 Init 
   = INT
   | "undef" (* deprecated? *)
@@ -150,13 +198,14 @@ Expr
   (* Ternary operator *)
   | "if", Expr, "then", Expr, "else", Expr
   (* Call to built-in function *)
-  | builtIn, "(", SepBy(Expr, ","), ")"
+  | BuiltIn, "(", SepBy(Expr, ","), ")"
   (* Call to external function *)
-  | Group("$", anyName), "(", SepBy(Expr, ","), ")" ;
+  | Group("$", (Name | VarName)), "(", SepBy(Expr, ","), ")" ;
 VarRef = VarName ["[", Expr "]"] ["of", Expr] ;
-SharedVarRef = VarName ["[", Expr "]"] (* where varName is the name of a shared variable*) ;
+(* In SharedVarRef, VarName is the name of a shared variable *)
+SharedVarRef = VarName ["[", Expr "]"] ;
 ArithmOp = "+" | "-" | "*" | "/" | ":" | "%" ;
-builtIn = "max" | "min" | "abs" ;
+BuiltIn = "max" | "min" | "abs" ;
 ```
 
 A `BExpr` is either a comparison between two expressions,
@@ -167,6 +216,7 @@ BExpr
   = "true"
   | "false"
   | "!", BExpr
+  | "(", Expr, ")"
   | Expr, cmp, Expr
   | BExpr, LogicOp, BExpr ;
 Cmp = "=" | "!=" | "<" | "<=" | ">" | ">=" ;
@@ -218,7 +268,7 @@ AsgnOp = "<-" | "<~" | "<--" ;
 Lhs = SepBy(VarName, ",") ;
 Rhs = SepBy(ExprOrPred, ",") ;
 ExprOrPred = Expr | Pred ;
-Act_blk 
+Block-Action 
   = Act
   | Lhs, ":=", Rhs
   | Group(VarName, "[]"), ":=", Pick ;
@@ -226,18 +276,19 @@ Act_blk
 Pick = "pick", NAT, [Name], ["where", Link] ;
 ```
 
-## Processes
+## Processes (`P`)
 
 Processes describe the behaviour of agents.
 
 ```ebnf
-P = "Skip"
+P = "Nil" 
+  | "Skip"
   | Act
   | P, ";", P
   | P, "++", P
   | P "||" P
   | BExpr, "->", P
-  | "{", SepBy(Act_blk, ";"), "}"
+  | "{", SepBy(Block-Action, ";"), "}"
   | Name ;
 ProcDef = Name, "=", P
 ```
@@ -257,10 +308,19 @@ PropertyDecl = Name, "=", Modality, Pred
 
 ## Appendix. About this document
 
-| Version number | Date | Description
-|---|---|---|
-| v0.1 | 2022-07-04 | First draft (partial)
+### Versions and change log
+
+* **v0.2** (2022-07-05)
+  * Added RFC 2119 reference 
+  * Added EBNF for specifications
+  * Changed formatting of the "Versions and change log" section
+
+* **v0.1** (2022-07-05) 
+  * First draft (partial)
+
+### Meta-specifications
 
 The source for this document shall use [semantic line breaks](https://sembr.org/).
 
 The source for this document should be linted using [markdownlint](https://github.com/DavidAnson/markdownlint).
+
