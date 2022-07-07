@@ -31,34 +31,32 @@ let ws p = p .>> spaces .>> skipMany (spaces1 <|> lineComment)
 /// Parses whitespace immediately
 let wsUnit = ws (preturn ())
 
-let isAlphanum x = isAsciiLetter x || isDigit x
-let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum)
-
-// Parses reserved keyword so they are not parsed as identifiers or names
-let private reserved : Parser<_> = 
-    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX; tOF; tPICK; tCOND]
-    |> List.map pstring 
-    |> choice
-    .>> notInIdentifier
+let isIdentifierChar x = isAsciiLetter x || isDigit x || x = '_'
+let notInIdentifier : Parser<_> = notFollowedBy (satisfy isIdentifierChar)
 
 let safeSkip str = skipString str .>> notInIdentifier
 let safeStrReturn str ret = safeSkip str >>% ret
 
 let safeIdentifier options =
-    (notFollowedBy reserved >>. identifier options)
-    <|> (followedBy reserved >>. reserved >>= (fail << (sprintf "Unexpected keyword '%s'")))
-    
+    let reserved = [
+        tABS; tCONJ; tDISJ; tELSE; tFALSE;
+        tID; tIF; tMAX; tMIN; tOF; tPICK
+        tSKIP; tTHEN; tTRUE; tUNDEF; tWHERE
+    ]
+    identifier options
+    >>= fun x ->
+        if List.contains x reserved
+        then fail $"Unexpected keyword '{x}'"
+        else preturn x
+
 let KEYNAME : Parser<_> =
-    IdentifierOptions(
-        isAsciiIdStart=isAsciiLower,
-        isAsciiIdContinue=isAlphanum)
+    IdentifierOptions(isAsciiIdStart=isAsciiLower)
     |> safeIdentifier
 
 let IDENTIFIER : Parser<_> = 
-    IdentifierOptions(
-        isAsciiIdStart=isAsciiUpper,
-        isAsciiIdContinue=isAlphanum)
+    IdentifierOptions(isAsciiIdStart=isAsciiUpper)
     |> safeIdentifier
+
 
 /// Helper function, returns string with elements of x separated by commas
 let private toCommaSepString x = x |> Seq.map (sprintf "%O") |> String.concat ", "

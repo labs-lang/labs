@@ -10,7 +10,7 @@ open Expressions
 let pconstexpr:Parser<Expr<unit,unit>> = 
     makeExprParser 
         (fun _ -> fail "unexpected variable in constant expression") 
-        (skipString "id" >>. notFollowedBy (skipSatisfy isAlphanum))
+        (skipString tID >>. notInIdentifier)
         (fail "ifelse in constexpr is not supported yet")
                 
 let pvar loc = 
