@@ -40,7 +40,7 @@ contexts:
   operators:
     - match: \b(abs|pick|where)\b
       scope: entity.name.function.labs
-    - match: \b(and|or|not|of)\b|>(=?)|<(=?)|!=|=
+    - match: \b(and|or|not|of|if|then|else)\b|>(=?)|<(=?)|!=|=
       scope: keyword.operator.logical.labs
     - match: \+|-|\*|/|%|
       scope: keyword.operator.arithmetic.labs
@@ -172,6 +172,8 @@ contexts:
   specials:
     - match: \b_\S+\b
       scope: string.labs
+    - match: \btrue\b|\bfalse\b
+      scope: constant.other.labs
     - match: \b(c1|c2|id)\b
       captures:
         1: support.constant.labs
