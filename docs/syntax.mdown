@@ -57,6 +57,7 @@ abs
 and
 else
 false
+id
 if
 max
 min
@@ -69,6 +70,12 @@ then
 true
 where
 ```
+
+**Note.**
+The `id` keyword may be used in *some* places where a `varName` is expected,
+but not in others: 
+for instance, it may be referred to within an expression,
+but cannot be declared, nor appear in the left-hand side of an assignment.
 
 ## Structure of a LAbS specification
 
@@ -196,7 +203,7 @@ Expr
   (* Unary minus *)
   | "-", Expr
   (* Ternary operator *)
-  | "if", Expr, "then", Expr, "else", Expr
+  | "if", BExpr, "then", Expr, "else", Expr
   (* Call to built-in function *)
   | BuiltIn, "(", SepBy(Expr, ","), ")"
   (* Call to external function *)
