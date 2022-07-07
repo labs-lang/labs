@@ -23,10 +23,10 @@ module ParseBExpr =
     let getB p =
         match p with
         | B b -> preturn (simplify b)
-        | E e -> fail $"{e} is not a boolean expression"
+        | E e -> Compare(e, Neq, Leaf <| Const 0) |> preturn
     let getE p =
         match p with
-        | B b -> fail $"{b} is not an expression"
+        | B b -> fail $"{b} is not an arithmetic expression"
         | E e -> preturn e
     let compare op p1 p2 = 
         match p1, p2 with 
@@ -104,15 +104,19 @@ let makeExprParser pref pid pbexpr : Parser<_> =
         ]
     
     let pprefixbinary tok op =
-        followedBy (skipString tok)
-        >>.(ws (skipString tok))
+        followedBy (safeSkip tok)
+        >>.(ws (safeSkip tok))
         >>. betweenParen ( pipe2 expr ((ws COMMA) >>. expr) (arithm op))
     let pmax = pprefixbinary tMAX Max
     let pmin = pprefixbinary tMIN Min
+    
     let pcond =
-        followedBy (skipString tCOND)
-        >>. (ws (skipString tCOND))
-        >>. betweenParen (tuple3 (pbexpr .>> ws COMMA) (expr .>> ws COMMA) expr |>> IfElse)
+        followedBy (safeSkip tIF)
+        >>. tuple3
+                (ws (safeSkip tIF) >>. pbexpr) 
+                (ws (safeSkip tTHEN) >>. expr)
+                (ws (safeSkip tELSE) >>. expr)
+        |>> IfElse <!> "if-then-else"
     
     opp.TermParser <- [
             term
@@ -123,8 +127,6 @@ let makeExprParser pref pid pbexpr : Parser<_> =
         ]
         |> List.map ws
         |> choice
-
-    
 
     // Same precedence rules as in C
     opp.AddOperator(InfixOperator(tPLUS, notFollowedBy (skipChar '+') |> ws, 1, Associativity.Left, arithm Plus))
