@@ -56,7 +56,9 @@ and cannot be used in places where one of
 abs
 and
 else
+exists
 false
+forall
 id
 if
 max

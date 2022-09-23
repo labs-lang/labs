@@ -7,3 +7,6 @@
 [submodule "labs-examples"]
 	path = labs-examples
 	url = git@github.com:labs-lang/labs-examples.git
+[submodule "cseq"]
+	path = cseq
+	url = git@github.com:lou1306/cseq.git
