@@ -39,8 +39,7 @@ void init(void) {
     // ___concrete-init___
     // ___end concrete-init___
     
-    {%-if simulation-%}
-    {%-else-%}
+    // ___symbolic-init___
     {%- for agent in agents -%}
     {%- for item in agent.initvars -%}
         {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
@@ -50,7 +49,11 @@ void init(void) {
         {%- endif -%}
     {%- endfor -%}
     {%- endfor -%}
-    {%-endif-%}
+
+    {%-for item in assumes-%}
+    __CPROVER_assume({{item.value}}); //{{item.name}}
+    {%-endfor-%}
+    // ___end symbolic-init___
     
 
     {%- if hasStigmergy -%}
@@ -60,9 +63,4 @@ void init(void) {
     now();
     {%- endif -%}
 
-    {%-unless simulation-%}
-    {%-for item in assumes-%}
-    __CPROVER_assume({{item.value}}); //{{item.name}}
-    {%-endfor-%}
-    {%-endunless-%}
 }
