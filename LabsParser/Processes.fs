@@ -40,13 +40,13 @@ let paction =
         let pBracket =
             followedBy (spaces >>. skipChar '[')
             >>. spaces
-            >>. pchar '['
+            >>. skipChar '['
             >>. spaces
             >>. choice [
                 followedBy (skipChar ']') >>. skipChar ']' >>% None
-                pexpr |>> Some]
+                pexpr .>> skipChar ']' |>> Some]
         
-        KEYNAME .>>. (opt (pBracket) |> ws)
+        KEYNAME .>>. (opt pBracket |> ws)
         |>> fun (name, brak) ->
             let str, offset =
                 match brak with
