@@ -1,10 +1,10 @@
 void init(void) {
+    unsigned char j = 0;
     {%- for agent in agents -%}
     {%- assign a = agent.end | minus: 1 -%}
     {%- for i in (agent.start..a) -%}
 
-    {%-unless simulation-%}
-    unsigned char j = 0;
+    // ___symbolic-init___
     for (j=0; j<MAXKEYI; j++) {
         I[{{i}}][j] = __CPROVER_nondet_int();
     }
@@ -26,7 +26,7 @@ void init(void) {
     {{ item.bexpr | replace: "==", "=" }};
         {%- endif -%}
     {%- endfor -%}
-    {%-endunless-%}
+    // ___end symbolic-init___
 
     {%- for p in agent.pcs -%}
     {%- if p.value.size == 1 -%}
