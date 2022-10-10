@@ -71,8 +71,16 @@ build/%/examples :
 	@cp labs-examples/*.labs $@ ;
 
 build/%/sliver/cbmc/cbmc-simulator :
-	@echo Copying backends...
-	@cp -rf linux/* $(SLIVER_DIR)/ ;
+	@echo Copying cbmc...
+	@cp -rf linux/cbmc $(SLIVER_DIR)/ ;
+
+build/linux-x64/sliver/minisat/minisat :
+	@echo Copying minisat...
+	@cp -rf linux/minisat $(SLIVER_DIR)/ ;
+
+build/osx.10.12-x64/sliver/minisat/minisat :
+	@echo Copying minisat...
+	@cp -rf osx/minisat $(SLIVER_DIR)/ ;
 
 osx : rmsentinels \
 	build/osx.10.12-x64/sliver/labs/LabsTranslate \
@@ -80,7 +88,8 @@ osx : rmsentinels \
 	build/osx.10.12-x64/pyparsing.py \
 	build/osx.10.12-x64/click/core.py \
 	build/osx.10.12-x64/sliver.py \
-	build/osx.10.12-x64/examples
+	build/osx.10.12-x64/examples \
+	build/osx.10.12-x64/sliver/minisat/minisat
 
 linux : rmsentinels \
 	build/linux-x64/sliver/labs/LabsTranslate \
@@ -89,7 +98,8 @@ linux : rmsentinels \
 	build/linux-x64/click/core.py \
 	build/linux-x64/sliver.py \
 	build/linux-x64/examples \
-	build/linux-x64/sliver/cbmc/cbmc-simulator
+	build/linux-x64/sliver/cbmc/cbmc-simulator \
+	build/linux-x64/sliver/minisat/minisat
 
 osx_cseq: rmsentinels osx \
 	build/osx.10.12-x64/sliver/cseq/cseq.py
