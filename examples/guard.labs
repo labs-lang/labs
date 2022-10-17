@@ -1,0 +1,20 @@
+system {
+    spawn = Proc1: 1
+}
+
+agent Proc1 {
+    interface = a: 0..10
+
+    Behavior = 
+        (a > 0 and a < 5) ->
+            a <- [0..10];
+            Behavior
+
+}
+
+assume {
+    GreaterThan2 = forall Proc1 x, a of x > 2
+}
+
+check {
+}
