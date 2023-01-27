@@ -37,11 +37,7 @@ void {{label}}(int tid) {
     for (unsigned char i = 0; i < {{l.size}}; ++i) {
         TYPEOFAGENTID __LABS_link2 = {{l.name}}[i];
         //__CPROVER_assume({{l.where}});
-    {%-if simulation-%}
-        if (!({{l.where}})) { __sim_spurious = 1; }
-    {%-else-%}
         __CPROVER_assume({{l.where}});
-    {%-endif-%}
     }
     {%-endif-%}
     {%-endif-%}
