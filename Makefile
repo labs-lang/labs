@@ -19,6 +19,7 @@ SLIVER_DIR = $(BUILD_DIR)/sliver
 
 # Always force to re-make py files and templates
 rmsentinels :
+	@rm -f $(BUILD_DIR)/requirements.txt
 	@rm -f $(BUILD_DIR)/sliver.py
 	@rm -f $(BUILD_DIR)/click/core.py
 	@rm -f $(BUILD_DIR)/pyparsing.py
@@ -33,6 +34,9 @@ build/%/sliver/labs/LabsTranslate : $(sources)
 	@echo Building LabsTranslate...
 	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o $(SLIVER_DIR)/labs -p:PublishSingleFile=true -p:PublishTrimmed=true ;
 	@rm $(SLIVER_DIR)/labs/*.pdb ;
+
+build/%/requirements.txt : sliver/requirements.txt
+	@cp sliver/requirements.txt $(dir $@) ;
 
 build/%/sliver.py : $(sliver_sources)  build/%/pyparsing.py
 	@mkdir -p $(BUILD_DIR)
@@ -88,6 +92,7 @@ osx : rmsentinels \
 	build/osx.10.12-x64/pyparsing.py \
 	build/osx.10.12-x64/click/core.py \
 	build/osx.10.12-x64/sliver.py \
+	build/osx.10.12-x64/requirements.txt \
 	build/osx.10.12-x64/examples \
 	build/osx.10.12-x64/sliver/minisat/minisat
 
@@ -97,6 +102,7 @@ linux : rmsentinels \
 	build/linux-x64/pyparsing.py \
 	build/linux-x64/click/core.py \
 	build/linux-x64/sliver.py \
+	build/linux-x64/requirements.txt \
 	build/linux-x64/examples \
 	build/linux-x64/sliver/cbmc/cbmc-simulator \
 	build/linux-x64/sliver/minisat/minisat
