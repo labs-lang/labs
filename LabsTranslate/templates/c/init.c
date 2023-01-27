@@ -1,4 +1,13 @@
 void init(void) {
+    {%- for item in initenv -%}
+        {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
+    E[{{item.index}}] = __CPROVER_nondet_int();
+    __CPROVER_assume({{ item.bexpr }});
+        {%- else -%}
+    {{ item.bexpr | replace: "==", "=" }};
+        {%- endif -%}
+    {%- endfor -%}
+
     unsigned char j = 0;
     {%- for agent in agents -%}
     {%- assign a = agent.end | minus: 1 -%}
@@ -18,14 +27,6 @@ void init(void) {
     HinCnt[{{i}}] = 0;
     HoutCnt[{{i}}] = 0;
     {%- endif -%}
-    {%- for item in initenv -%}
-        {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
-    E[{{item.index}}] = __CPROVER_nondet_int();
-    __CPROVER_assume({{ item.bexpr }});
-        {%- else -%}
-    {{ item.bexpr | replace: "==", "=" }};
-        {%- endif -%}
-    {%- endfor -%}
     // ___end symbolic-init___
 
     {%- for p in agent.pcs -%}
