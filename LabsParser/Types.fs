@@ -27,25 +27,10 @@ type Stigmergy<'a> =
         Link: Node<Link<'a>>
     }
 
-type Modality =
-    | Always
-    | Finally
-    | Eventually
-    | Fairly
-    | FairlyInf
-    override this.ToString() =
-        match this with
-        | Always -> "always"
-        | Finally -> "finally"
-        | Eventually -> "eventually"
-        | Fairly -> "fairly"
-        | FairlyInf -> "fairly_inf"
 
-type Property<'a> =
+type QuantPredicate<'a> =
     {
-        Name:string
         Predicate:BExpr<'a * string option, string>
-        Modality:Modality
         Quantifiers: Map<string, string * Quantifier>
     }
     override this.ToString() =
@@ -55,14 +40,67 @@ type Property<'a> =
            |> Map.values
            |> String.concat ", "
        let trailingComma = if this.Quantifiers.IsEmpty then "" else ","
-       $"{this.Modality} {quants}{trailingComma} {this.Predicate}" 
-       
+       $"{quants}{trailingComma} {this.Predicate}"
+
+
+type Scope<'a> = 
+    | Between of openScope: QuantPredicate<'a> * closeScope: QuantPredicate<'a>
+    override this.ToString() =
+        match this with
+        | Between (openScope, closeScope) -> $"between {openScope} and {closeScope},"
+
+type Modality<'a> =
+    | Always
+    | Finally
+    | Eventually
+    | Fairly
+    | FairlyInf
+    | ThereIs of scope: Scope<'a>
+    | Globally of scope: Scope<'a>
+    | Precedes of scope: Scope<'a> * precedent: QuantPredicate<'a>
+    override this.ToString() =
+        match this with
+        | ThereIs scope -> $"{scope} thereIs"
+        | Globally scope -> $"{scope} always"
+        | Precedes (scope, prec) -> $"{scope} {prec} precedes"
+        | _ -> this.Name
         
+    member this.Name =
+        match this with
+        | ThereIs _ -> "thereIs" | Globally _ -> "always" | Precedes _ -> "precedes"
+        | Always -> "always"
+        | Finally -> "finally"
+        | Eventually -> "eventually"
+        | Fairly -> "fairly"
+        | FairlyInf -> "fairly_inf"
+        
+
+type Property<'a> =
+    {
+        Name: string
+        Modality: Modality<'a>
+        QuantPredicate: QuantPredicate<'a> 
+    }
+    override this.ToString() = $"{this.Modality} {this.QuantPredicate}" 
+       
+
+let inline _qpred x =
+    let getter prop = prop.QuantPredicate
+    let setter prop qp' = {QuantPredicate=qp'; Name=prop.Name; Modality=prop.Modality}
+    lens getter setter x
+
+let inline _modality x =
+    let getter prop = prop.Modality
+    let setter prop m' = {QuantPredicate=prop.QuantPredicate; Name=prop.Name; Modality=m'}
+    lens getter setter x
+
+
         
 let inline _predicate x =
-    let getter p = p.Predicate
-    let setter p pred' = {Predicate=pred'; Name=p.Name; Quantifiers=p.Quantifiers; Modality=p.Modality}
+    let getter qp = qp.Predicate
+    let setter qp pred' = {Quantifiers=qp.Quantifiers; Predicate=pred'}
     lens getter setter x
-    
+
+
 
 type Ast = Node<Sys> * Node<Stigmergy<string>> list * Node<Agent> list * Node<Property<string>> list

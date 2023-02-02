@@ -23,12 +23,35 @@ let propertyRef p =
         ])
         (fun k offset (ofVar, ofNum) -> {Var=(k, ofVar); Offset=offset; OfAgent=ofNum})
 
-let pproperty withModality =
+
+let pquantpred =
     let propertyLink = 
         (ws (skipString "id"))
         >>. (ws OF)
         >>.(ws KEYNAME)
     let pbaseprop = makeBExprParser (makeExprParser propertyRef propertyLink (fail "ifelse in properties not supported yet"))
+    pipe2
+        ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
+        pbaseprop
+        (fun qs pred -> {
+            Quantifiers=qs
+            Predicate=pred
+        })
+
+let pscope =
+    tuple2
+        ((ws (skipString "between")) >>. (pquantpred |> betweenParen |> ws))
+        ((ws (skipString "and")) >>. (pquantpred |> betweenParen |> ws))
+    |>> Between
+
+let pmode scope =
+    choice [
+        skipString "thereIs" >>% ThereIs scope
+        skipString "always" >>% Globally scope
+        (ws pquantpred) .>> (skipString "precedes") |>> fun prec -> Precedes (scope, prec)
+    ] |> ws
+
+let pproperty withModality =
     let pmodality = 
         choice [
             stringReturn "always" Always
@@ -36,18 +59,18 @@ let pproperty withModality =
             attempt (stringReturn "fairly_inf" FairlyInf)
             attempt (stringReturn "fairly" Fairly)
             stringReturn "finally" Finally
+            (pscope .>> (ws COMMA)) >>= pmode
         ] |> ws
-    pipe5
+    
+    pipe4
         (followedBy IDENTIFIER >>. getPosition)
         (ws IDENTIFIER .>> (ws EQ))
         (if withModality then pmodality else preturn Always)
-        ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
-        pbaseprop
-        (fun pos n m qs pred -> {Pos=pos; Name=n; Source=""; Def= {
+        pquantpred
+        (fun pos n m qp -> {Pos=pos; Name=n; Source=""; Def= {
             Name=n
             Modality=m
-            Quantifiers=qs
-            Predicate=pred
+            QuantPredicate = qp
         }})
     |> withSkippedString (fun s x -> {x with Source=s}) 
 

@@ -56,9 +56,9 @@ let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =
         |> fun s -> Compound(Conj, s |> Set.toList)
     |> cata bleafFn negFn compareFn compoundFn
     
-let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property<_>>) =
-    let ex = Map.exists (fun _ (_, q)-> q = Exists) p.Def.Quantifiers
-    let fa = Map.exists (fun _ (_, q)-> q = All) p.Def.Quantifiers
+let private translateQPred trExpr trBExpr trLocation name (table:SymbolTable) qp =
+    let ex = Map.exists (fun _ (_, q)-> q = Exists) qp.Quantifiers
+    let fa = Map.exists (fun _ (_, q)-> q = All) qp.Quantifiers
     
     //TODO move checks to frontend
     let translateSub (sub:Map<_,_>) =
@@ -87,9 +87,9 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
         
         map BLeaf (Expr.map trLeaf (fun r -> propRef1 r.Var r.OfAgent))
         
-    if (ex && fa) then 
-        p.Name
-        |> failwithf "Property %s: alternating quantifiers are currently not supported"
+    if (ex && fa) then
+        if name <> "" then $"Property {name}: " else ""
+        |> fun n -> failwith $"{n}alternating quantifiers are currently not supported"
 
     let rec trProp subs prop =
         let trQuantifier = function | All -> Conj | Exists -> Disj
@@ -117,7 +117,10 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
     let rec trb bexpr = trBExpr tre bexpr 
     and tre = trExpr propRef id trb
     
-    trProp Map.empty p.Def |> trb
+    trProp Map.empty qp |> trb
+
+let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property<_>>) =
+    translateQPred trExpr trBExpr trLocation p.Name table p.Def.QuantPredicate
 
 type TemplateInfo = {
     BaseDir: string
@@ -136,6 +139,7 @@ type TranslationKit = {
     InitTr: Var<int> * int -> int -> string list
     LinkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
     PropTr: SymbolTable -> Node<Property<Var<int> * int>> -> string
+    QPredTr: SymbolTable -> QuantPredicate<Var<int> * int> -> string
     TemplateInfo : TemplateInfo
     CollectAuxVars : Expr<Var<int> * int, unit> -> Set<string * string * string>
 }
@@ -183,12 +187,9 @@ let makeTranslationKit (conf:ITranslateConfig) =
 
     
     let propTr =
-//        let rec trb bexpr =
-//            conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc trb
-            
-        
-        
         translateProp conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc
+    let qpredTr =
+        translateQPred conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc ""
     
     {
         AgentExprTr = agentExprTr
@@ -196,6 +197,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
         InitTr = initTr
         LinkTr = linkTr
         MainGuardTr = mainGuardTr
+        QPredTr = qpredTr
         PropTr = propTr
         TemplateInfo = conf.TemplateInfo
         CollectAuxVars = conf.CollectAuxVars agentExprTr

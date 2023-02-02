@@ -295,12 +295,31 @@ module SymbolTable =
 
         wrap {table with SymbolTable.Spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
 
+    let private doBExpr externs table bexpr =
+        (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
+        <| bexpr
+    
+    let doProp fn p =
+        let doModality =
+            let doScope =
+                function
+                | Between(openScope, closeScope) -> Between ((over _predicate fn) openScope, (over _predicate fn) closeScope)
+            function
+            | ThereIs scope -> ThereIs (doScope scope)
+            | Globally scope -> Globally (doScope scope)
+            | Precedes (scope, prec) -> Precedes (doScope scope, over _predicate fn prec)
+            | Always -> Always | Eventually -> Eventually | Fairly -> Fairly | FairlyInf -> FairlyInf | Finally -> Finally
+        {
+            QuantPredicate = over _predicate fn p.QuantPredicate
+            Name = p.Name
+            Modality = doModality (view _modality p)
+        }
     let internal tryAddProperty externs (p:Node<Property<string>>) (table:SymbolTable) =
-        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
-        zero {table with Properties= Map.add p.Name (map (over _predicate fn) p) table.Properties}
+        let fn = doBExpr externs table
+        zero {table with Properties= Map.add p.Name (map (doProp fn) p) table.Properties}
     let internal tryAddAssume externs (p:Node<Property<string>>) (table:SymbolTable) =
-        let fn = (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
-        zero {table with Assumes= Map.add p.Name (map (over _predicate fn) p) table.Assumes}
+        let fn = doBExpr externs table
+        zero {table with Assumes= Map.add p.Name (map (doProp fn) p) table.Assumes}
     
     let lstigVariablesOf table name =
         table.Variables
