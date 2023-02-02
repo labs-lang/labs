@@ -314,11 +314,43 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
         |> maybeFilter
         |> Map.filter (fun _ n -> n.Def.Modality = modality)
         |> Map.values
+    
+    let doOtherProps =
+        let doScope =
+            function
+            | Between (o, c) -> Dict [
+                "type", "between" |> Str
+                "open", trKit.QPredTr table o |> Str
+                "close", trKit.QPredTr table c |> Str
+            ]
+        
+        let doProp name prop =
+            let commonFields scope = [
+                "modality", prop.Modality.Name |> Str
+                "name", name |> Str
+                "scope", doScope scope
+                "predicate", trKit.QPredTr table prop.QuantPredicate |> Str
+            ]
+            
+            match prop.Modality with
+            | Always | Eventually | Fairly | FairlyInf | Finally -> None
+            | ThereIs scope | Globally scope -> Dict (commonFields scope) |> Some
+            | Precedes (scope, prec) ->
+                commonFields scope
+                |> Seq.append ["prec", trKit.QPredTr table prec |> Str]
+                |> Dict |> Some
+                
+        table.Properties
+        |> Map.map (fun name v -> doProp name v.Def)
+        |> Map.values |> Seq.choose id
+        
         
     let alwaysP = (if noprops then Seq.empty else filterPropsByModality Always) |> toLiquid
     let eventuallyP = (if noprops then Seq.empty else filterPropsByModality Eventually) |> toLiquid
     let finallyP = (if noprops then Seq.empty else filterPropsByModality Finally) |> toLiquid
-        
+    
+    
+       
     [
         "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair
@@ -330,6 +362,8 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
             |> Lst
         "alwaysasserts", alwaysP
         "finallyasserts", finallyP
+        "otherproperties", doOtherProps |> Lst
+        
         "eventuallypredicates", eventuallyP
         "agentscount", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
     ]
