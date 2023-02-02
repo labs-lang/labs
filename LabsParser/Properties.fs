@@ -6,14 +6,22 @@ open Expressions
 
 //p:Parser<Expr<(string * string option),'a>,unit> -> Parser<Ref<(string * string option),'a>,unit>
 let propertyRef p =
+    let pOf =
+        choice [
+            ws KEYNAME |>> (fun k -> Some k, None)
+            ws puint32 |>> fun n -> None, int n |> Const |> Leaf |> Some    
+        ]
+
     pipe3
         (ws KEYNAME)
         (opt (betweenBrackets p |> ws))
         (choice [
-            followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
-            preturn None
+            followedBy OF >>. ws OF >>. pOf
+            preturn (None, None)
+//            followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
+//            preturn None
         ])
-        (fun k offset y -> {Var=(k, y); Offset=offset; OfAgent=None})
+        (fun k offset (ofVar, ofNum) -> {Var=(k, ofVar); Offset=offset; OfAgent=ofNum})
 
 let pproperty withModality =
     let propertyLink = 

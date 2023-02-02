@@ -67,12 +67,17 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
             | Some e -> e
             | None -> failwithf $"Undefined agent {name}"
         
-        let propRef1 ((v:Var<_>, i), c) offset ofagent =
-            match c with
-            | None -> 
+        let propRef1 ((v:Var<_>, i), c) ref_ofAgent offset ofagent =
+            match c, ref_ofAgent with
+            | None, None ->
+                // no "of"
                 if v.Location <> E then failwithf $"{v.Name} is not an environment variable"
                 {Var=((v, i), c); Offset=offset; OfAgent=None}
-            | Some c ->
+            | None, _ ->
+                // "x of (numeric constant)"
+                {Var=((v, i), c); Offset=offset; OfAgent=ref_ofAgent}
+            | Some c, _ ->
+                // "x of (variable)"
                 {Var=((v, i), (Some <| (string << propId) c)); Offset=offset; OfAgent=ofagent}
 
         let trLeaf leaf =
@@ -80,7 +85,7 @@ let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<
             | Id name -> (string << propId) name |> Id
             | _ -> leaf
         
-        map BLeaf (Expr.map trLeaf (fun r -> propRef1 r.Var))
+        map BLeaf (Expr.map trLeaf (fun r -> propRef1 r.Var r.OfAgent))
         
     if (ex && fa) then 
         p.Name

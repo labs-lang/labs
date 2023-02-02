@@ -10,3 +10,6 @@
 [submodule "cseq"]
 	path = cseq
 	url = git@github.com:lou1306/cseq.git
+[submodule "absentee"]
+	path = absentee
+	url = git@github.com:lou1306/absentee.git
