@@ -2,6 +2,11 @@
 _Bool __LABS_eventually = 0;
 {%endif%}
 
+{%-for item in otherproperties-%}
+{%-if item.scope.type == "between"-%}_Bool __LABS_{{item.name}}_isOpen = 0;{%-endif-%}
+_Bool __LABS_{{item.name}}_isSat = 0;
+{%-endfor-%}
+
 void monitor(void) {
     {% if eventuallypredicates.size > 0 %}
     {%if simulation%}
@@ -19,6 +24,33 @@ void monitor(void) {
     __CPROVER_assert({{item.value}}, "{{item.name}}");
     {%-endif-%}
     {%- endfor -%}
+
+
+    {%-for item in otherproperties-%}
+    // ------------------------------------------------------------------------
+    // {{ item.name}}:
+    // {{ item.scope.type }} {{ item.scope.open }} and {{ item.scope.close }}
+    {%-if item.modality == "precedes"%}    // {{ item.prec }} precedes {{ item.predicate }}
+    {%-else%}    // {{ item.modality }} {{ item.predicate }}
+    {%-endif-%}
+    // If both open and close hold, the scope is null and {{item.name}} passes vacuously
+    if ({{ item.scope.open }} & !({{ item.scope.close }})) __LABS_{{item.name}}_isOpen = 1;
+    {%-if item.modality == "thereIs"-%}
+    if (__LABS_{{item.name}}_isOpen & ({{ item.predicate }})) __LABS_{{item.name}}_isSat = 1;
+    {%-endif-%}
+    {%-if item.modality == "always" -%}
+    if (__LABS_{{item.name}}_isOpen) __CPROVER_assert({{ item.predicate }}, "{{item.name}}");
+    {%-endif-%}
+    // Closing the scope
+    if (__LABS_{{item.name}}_isOpen & ({{ item.scope.close }})) {
+        __LABS_{{item.name}}_isOpen = 0;
+        {%-if item.modality == "thereIs" -%}
+        __CPROVER_assert(__LABS_{{item.name}}_isSat, "{{item.name}}");
+        {%-endif-%}
+    }
+    // ------------------------------------------------------------------------
+    {%-endfor-%}
+
 }
 
 {%- if bound > 0 -%}
