@@ -21,7 +21,8 @@ SLIVER_DIR = $(BUILD_DIR)/sliver
 rmsentinels :
 	@rm -f $(BUILD_DIR)/requirements.txt
 	@rm -f $(BUILD_DIR)/sliver.py
-	@rm -f $(BUILD_DIR)/click/core.py
+	@rm -f $(SLIVER_DIR)/click/core.py
+	@rm -f $(SLIVER_DIR)/absentee/absentee.py
 	@rm -f $(BUILD_DIR)/pyparsing.py
 	@rm -f $(SLIVER_DIR)/labs/templates/c/main.c
 
@@ -55,7 +56,14 @@ build/%/pyparsing.py :
 	@echo Copying pyparsing.py...
 	@cp -r pyparsing.py $@ ;
 
-build/%/click/core.py :
+build/%/sliver/absentee/absentee.py :
+	@mkdir -p build/$(platf:orm)
+	@echo Copying absentee...
+	@cp -r absentee/absentee/ $(dir $@) ;
+	@cp -r absentee/LICENSE $(dir $@) ;
+	@cp -r absentee/README.md $(dir $@) ;
+
+build/%/sliver/click/core.py :
 	@mkdir -p build/$(platform)
 	@echo Copying click...
 	@cp -r click/src/click/ $(dir $@) ;
@@ -78,6 +86,10 @@ build/%/sliver/cbmc/cbmc-simulator :
 	@echo Copying cbmc...
 	@cp -rf linux/cbmc $(SLIVER_DIR)/ ;
 
+build/%/sliver/esbmc/esbmc :
+	@echo Copying esbmc...
+	@cp -rf linux/esbmc $(SLIVER_DIR)/ ;
+
 build/linux-x64/sliver/minisat/minisat :
 	@echo Copying minisat...
 	@cp -rf linux/minisat $(SLIVER_DIR)/ ;
@@ -90,7 +102,8 @@ osx : rmsentinels \
 	build/osx.10.12-x64/sliver/labs/LabsTranslate \
 	build/osx.10.12-x64/sliver/labs/templates/c/main.c \
 	build/osx.10.12-x64/pyparsing.py \
-	build/osx.10.12-x64/click/core.py \
+	build/osx.10.12-x64/sliver/click/core.py \
+	build/osx.10.12-x64/sliver/absentee/absentee.py \
 	build/osx.10.12-x64/sliver.py \
 	build/osx.10.12-x64/requirements.txt \
 	build/osx.10.12-x64/examples \
@@ -100,11 +113,13 @@ linux : rmsentinels \
 	build/linux-x64/sliver/labs/LabsTranslate \
 	build/linux-x64/sliver/labs/templates/c/main.c \
 	build/linux-x64/pyparsing.py \
-	build/linux-x64/click/core.py \
+	build/linux-x64/sliver/click/core.py \
+	build/linux-x64/sliver/absentee/absentee.py \
 	build/linux-x64/sliver.py \
 	build/linux-x64/requirements.txt \
 	build/linux-x64/examples \
 	build/linux-x64/sliver/cbmc/cbmc-simulator \
+	build/linux-x64/sliver/esbmc/esbmc \
 	build/linux-x64/sliver/minisat/minisat
 
 osx_cseq: rmsentinels osx \
