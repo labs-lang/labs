@@ -1,0 +1,64 @@
+system {
+    extern = _n, _gamma, _drop, _evap
+    environment = ph[5]: 0; nextEvap: 1
+    spawn = Ant: _n
+}
+
+# Graph of the map: 0<->1, 0<->2 1<->4, 2<->3, 3<->4
+# pos: 0=nest, 4=food
+# dir: 0 = nest-to-food, 1 = food-to-nest
+agent Ant {
+    interface = pos: 0; dir: 0
+    ChooseNextPos0 = (
+        # Choose path i over j if ph[i] is higher than gamma*ph[j]
+        (pos = 0 and ph[1] > (_gamma * ph[2]) -> pos, dir <- 1, 0)
+        ++
+        (pos = 0 and ph[2] > (_gamma * ph[1]) -> pos, dir <- 2, 0)
+        ++
+        # Otherwise, choose nondeterministically
+        (pos = 0 and ph[1] <= (_gamma * ph[2]) and ph[2] <= (_gamma * ph[1]) -> pos, dir <- 1, 0)
+        ++
+        (pos = 0 and ph[1] <= (_gamma * ph[2]) and ph[2] <= (_gamma * ph[1]) -> pos, dir <- 2, 0)
+    )
+    
+    ChooseNextPosOther = pos != 0 and pos != 4 -> {
+        pos <- 
+            if pos = 1 then if dir=0 then 4 else 0
+            else if pos = 2 then if dir = 0 then 3 else 0
+            else if pos = 3 then if dir = 0 then 4 else 2
+            else -1 # Should never happen
+    }
+
+    ChooseNextPos4 = (
+        # Choose path i over j if ph[i] is higher than gamma*ph[j]
+        (pos = 4 and ph[1] > (_gamma * ph[3]) -> pos, dir <- 1, 1)
+        ++
+        (pos = 4 and ph[3] > (_gamma * ph[1]) -> pos, dir <- 3, 1)
+        ++
+        # Otherwise, choose nondeterministically
+        (pos = 4 and ph[1] <= (_gamma * ph[3]) and ph[3] <= (_gamma * ph[1]) -> pos, dir <- 1, 1)
+        ++
+        (pos = 4 and ph[1] <= (_gamma * ph[3]) and ph[3] <= (_gamma * ph[1]) -> pos, dir <- 3, 1)
+    )
+
+    Behavior = (
+        ChooseNextPos0 ++
+        ChooseNextPos4 ++
+        ChooseNextPosOther
+    ); {
+        # Drop pheromone, but only if on a bridge and going to the nest
+        # Todo: Maybe add a saturation parameter?
+        ph[pos] <-- if (pos = 0 or pos = 4) then ph[pos] else ph[pos] + _drop#;
+        # Evaporate pheromone from nextEvap cell
+        #ph[nextEvap] <-- max(ph[nextEvap] - _evap, 0);
+        # update nextEvap
+        #nextEvap <-- if nextEvap < 3 then nextEvap + 1 else 1
+    }; Behavior
+}
+
+check {
+    # This probably fails in the general case 
+    # (when all/most ants always make the bad choice)
+
+    # ShortPathWins = finally ph[2] = 0 and ph[3] = 0
+}

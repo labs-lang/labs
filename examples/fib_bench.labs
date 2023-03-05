@@ -1,0 +1,23 @@
+# Flawed mutual exclusion algorithm
+# Adapted from:
+# https://www.cse.chalmers.se/edu/course/TDA384_LP1/files/lectures/Lecture03-models_algorithms.pdf
+
+system {
+    environment = i: 1; j: 1
+    spawn = Proc: 2
+}
+
+agent Proc {
+    interface = k: 5
+    Behavior =  
+        (k > 0 -> {
+            i <-- if id > 0 then i + j else i;
+            j <-- if id > 0 then j else i + j;
+            k <- k - 1
+        }; Behavior)
+}
+
+check {
+    #SafeProp = always i <= 144 and j <= 144
+    UnsafeProp = always i < 144 and j < 144
+}

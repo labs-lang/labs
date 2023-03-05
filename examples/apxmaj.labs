@@ -1,0 +1,52 @@
+# Adapted from 
+# https://peregrine.model.in.tum.de/demo/
+
+# Original description:
+# This protocol takes a majority vote. More precisely, it (attempts to) compute
+# whether there are initially more agents in state Y than N. The protocol has
+# only 3 states, but does not always converge to the correct consensus.
+# Described in Dana Angluin, James Aspnes and David Eisenstat. A Simple
+# Population Protocol for Fast Robust Approximate Majority. Distributed
+# Computing, vol. 21, issue 2, pp. 87–102, 2008.
+
+# 0 = N, 1 = Y, 2 = b
+
+system {
+    extern = _yes, _no
+    spawn = Yes: _yes, No: _no
+    Protocol = {
+        p[] := pick 1;
+        state <-
+          if (state of p[0]) = 0 and state = 1 then 2 else # NY -> Nb
+          if (state of p[0]) = 0 and state = 2 then 0 else # Nb -> NN
+          if (state of p[0]) = 1 and state = 0 then 2 else # YN -> Yb
+          if (state of p[0]) = 1 and state = 2 then 1 else # Yb -> YY
+          state
+        } ; Protocol
+}
+
+agent Yes {
+    interface = state: 1
+  
+    Behavior = Protocol
+}
+
+agent No {
+    interface = state: 0
+  
+    Behavior = Protocol
+}
+
+check {
+    #NotAllUndecided = always exists Yes y, exists No n,
+    #state of y != 2 or state of n != 2
+
+    NoYConsensus = always exists Yes y, exists No n,
+    state of y != 1 or state of n != 1
+
+    #NoUndecided = finally forall Yes y, forall No n, 
+    #state of y != 2 and state of n != 2
+    #AllYes = finally forall Yes y, forall No n, 
+    #state of y = 1 and state of n = 1
+    #Z = finally false
+}
