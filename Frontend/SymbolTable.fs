@@ -304,6 +304,7 @@ module SymbolTable =
             let doScope =
                 function
                 | Between(openScope, closeScope) -> Between ((over _predicate fn) openScope, (over _predicate fn) closeScope)
+                | FromUntil(openScope, closeScope) -> FromUntil ((over _predicate fn) openScope, (over _predicate fn) closeScope)
             function
             | ThereIs scope -> ThereIs (doScope scope)
             | Globally scope -> Globally (doScope scope)

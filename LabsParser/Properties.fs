@@ -39,10 +39,16 @@ let pquantpred =
         })
 
 let pscope =
-    tuple2
-        ((ws (skipString "between")) >>. (pquantpred |> betweenParen |> ws))
-        ((ws (skipString "and")) >>. (pquantpred |> betweenParen |> ws))
-    |>> Between
+    let genericScopeParser kw1 kw2 scope =
+        tuple2
+            ((ws (skipString kw1)) >>. (pquantpred |> betweenParen |> ws))
+            ((ws (skipString kw2)) >>. (pquantpred |> betweenParen |> ws))
+        |>> scope
+    
+    choice [
+        (genericScopeParser "between" "and" Between)
+        (genericScopeParser "from" "until" FromUntil)
+    ]
 
 let pmode scope =
     choice [

@@ -45,9 +45,11 @@ type QuantPredicate<'a> =
 
 type Scope<'a> = 
     | Between of openScope: QuantPredicate<'a> * closeScope: QuantPredicate<'a>
+    | FromUntil of openScope: QuantPredicate<'a> * closeScope: QuantPredicate<'a>
     override this.ToString() =
         match this with
         | Between (openScope, closeScope) -> $"between {openScope} and {closeScope},"
+        | FromUntil (openScope, closeScope) -> $"from {openScope} until {closeScope},"
 
 type Modality<'a> =
     | Always

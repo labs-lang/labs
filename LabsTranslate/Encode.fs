@@ -321,8 +321,11 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
             | Between (o, c) -> Dict [
                 "type", "between" |> Str
                 "open", trKit.QPredTr table o |> Str
-                "close", trKit.QPredTr table c |> Str
-            ]
+                "close", trKit.QPredTr table c |> Str]
+            | FromUntil (o, c) -> Dict [
+                "type", "fromUntil" |> Str
+                "open", trKit.QPredTr table o |> Str
+                "close", trKit.QPredTr table c |> Str]
         
         let doProp name prop =
             let commonFields scope = [
