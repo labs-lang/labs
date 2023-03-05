@@ -4,7 +4,13 @@ _Bool __LABS_eventually = 0;
 
 {%-for item in otherproperties-%}
 {%-if item.scope.type == "between"-%}_Bool __LABS_{{item.name}}_isOpen = 0;{%-endif-%}
+{%-if item.scope.type == "fromUntil"-%}_Bool __LABS_{{item.name}}_isOpen = 0;{%-endif-%}
+{%-if item.modality == "thereIs"-%}
 _Bool __LABS_{{item.name}}_isSat = 0;
+{%-endif-%}
+{%-if item.modality == "always"-%}
+_Bool __LABS_{{item.name}}_isSat = 1;
+{%-endif-%}
 {%-endfor-%}
 
 void monitor(void) {
@@ -36,17 +42,15 @@ void monitor(void) {
     // If both open and close hold, the scope is null and {{item.name}} passes vacuously
     if ({{ item.scope.open }} & !({{ item.scope.close }})) __LABS_{{item.name}}_isOpen = 1;
     {%-if item.modality == "thereIs"-%}
-    if (__LABS_{{item.name}}_isOpen & ({{ item.predicate }})) __LABS_{{item.name}}_isSat = 1;
+    if (__LABS_{{item.name}}_isOpen & !({{ item.scope.close }}) & ({{ item.predicate }})) __LABS_{{item.name}}_isSat = 1;
     {%-endif-%}
     {%-if item.modality == "always" -%}
-    if (__LABS_{{item.name}}_isOpen) __CPROVER_assert({{ item.predicate }}, "{{item.name}}");
+    if (__LABS_{{item.name}}_isOpen & !({{ item.scope.close }}) & !({{ item.predicate }})) __LABS_{{item.name}}_isSat = 0;
     {%-endif-%}
     // Closing the scope
     if (__LABS_{{item.name}}_isOpen & ({{ item.scope.close }})) {
         __LABS_{{item.name}}_isOpen = 0;
-        {%-if item.modality == "thereIs" -%}
         __CPROVER_assert(__LABS_{{item.name}}_isSat, "{{item.name}}");
-        {%-endif-%}
     }
     // ------------------------------------------------------------------------
     {%-endfor-%}
@@ -77,7 +81,7 @@ void finally(void) {
 int main(void) {
     init();
     monitor(); // Check invariants on the initial state
-    TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0;{% else %};
+    TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0;{% else %} = __CPROVER_nondet();
     __CPROVER_assume(firstAgent < MAXCOMPONENTS);
     {% endif %};
     {%- if hasStigmergy -%}
