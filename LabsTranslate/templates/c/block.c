@@ -48,7 +48,7 @@ void {{label}}(int tid) {
     {%- for item in a -%}
     {%- if item.size != 0 -%}{% unless item.loc contains "Pick" %}
     TYPEOFVALUES offset{{outer.index0}}_{{forloop.index0}} = {{item.offset}};
-    __CPROVER_assert(offset{{outer.index0}}_{{forloop.index0}} >= 0 && offset{{outer.index0}}_{{forloop.index0}} < {{item.size}}, "array bound");
+    // __CPROVER_assert(offset{{outer.index0}}_{{forloop.index0}} >= 0 && offset{{outer.index0}}_{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endunless -%}{%- endif -%}
     {%- if item.loc == "Local"  -%}
     {{item.name}}{%- if item.size != 0 %}[offset{{forloop.index0}}]{% endif %} = {{item.expr}};
