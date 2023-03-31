@@ -14,7 +14,8 @@ let rec internal foldB foldExpr acc bexpr =
 let rec fold fleaf fref acc expr = 
     let recurse = fold fleaf fref
     match expr with
-    | QB (_, p) -> foldB recurse acc p 
+    | QB (_, p)
+    | Count (_, _, p) -> foldB recurse acc p
     | Leaf l -> fleaf acc l
     | Nondet(e1, e2, _)
     | Arithm(e1, _, e2) ->
@@ -33,7 +34,8 @@ let rec cata fleaf farithm funary fnondet fref fraw fif expr =
     let recurse = cata fleaf farithm funary fnondet fref fraw fif
     
     match expr with
-    | QB _ -> failwith $"Unexpected call to cata on QB" 
+    | QB _
+    | Count _ -> failwith $"Unexpected call to Expr.cata on {expr}"
     | Leaf l -> fleaf l
     | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
     | Unary(op, e) -> funary op (recurse e)
@@ -53,6 +55,7 @@ let rec map_ fleaf fref fcond expr =
     
     match expr with
     | QB (q, p) -> QB(q, mapP p)
+    | Count (typ, name, bexpr) -> Count (typ, name, mapP bexpr) 
     | Leaf l -> Leaf(fleaf l)
     | Nondet(e1, e2, pos) -> Nondet(recurse e1, recurse e2, pos)
     | Arithm(e1, op, e2) -> Arithm(recurse e1, op, recurse e2)

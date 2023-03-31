@@ -33,8 +33,14 @@ let paction =
          followedBy (ws (skipString "forall" <|> skipString "exists"))
          >>. ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
          .>>. pguard
-         |>> fun (quants, pred) ->
-             Location.Local, [QB (quants, pred)]
+         |>> fun (quants, pred) -> Location.Local, [QB (quants, pred)]
+    
+    let pCount =
+        let countToken =  (ws <| skipString "count")
+        followedBy countToken
+        >>. pipe3
+                (countToken >>. ws IDENTIFIER) (ws KEYNAME .>> (ws COMMA)) pguard
+                (fun typ name bexpr -> Location.Local, [Count(typ, name, bexpr)])
     
     let pSingleLhs =
         let pBracket =
@@ -65,6 +71,7 @@ let paction =
         >>. choice [
             pPick
             pCheck
+            pCount
             (ws pexpr |> sepbycommas) |>> fun exprs -> Location.Local, exprs
         ]
     tuple2 

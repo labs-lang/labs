@@ -59,6 +59,7 @@ type LeafExpr<'b> =
         | Extern s -> "_" + s
 type Expr<'a, 'b> =
     | QB of Map<string, string*Quantifier> * BExpr<'a, 'b>
+    | Count of string * string * BExpr<'a, 'b>
     | Leaf of LeafExpr<'b>
     | Nondet of Expr<'a, 'b> * Expr<'a, 'b> * Position
     | Ref of Ref<'a, 'b>
@@ -71,6 +72,7 @@ type Expr<'a, 'b> =
         | QB (quants, pred) ->
             let qs = quants |> Map.values |> Seq.map string |> String.concat ", "
             $"{qs}, {string pred}"
+        | Count (typ, name, bexpr) -> $"count {typ} {name}, {bexpr}"
         | Leaf l -> string l
         | Nondet (start, bound, _) -> $"[{start}..{bound}]"
         | Ref r -> string r

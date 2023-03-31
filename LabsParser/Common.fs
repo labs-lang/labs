@@ -42,7 +42,7 @@ let safeIdentifier options =
         tABS; tCONJ; tDISJ; tELSE; tFALSE;
         tID; tIF; tMAX; tMIN; tOF; tPICK
         tSKIP; tTHEN; tTRUE; tUNDEF; tWHERE
-        "forall"; "exists"
+        "forall"; "exists"; "count"
     ]
     identifier options
     >>= fun x ->

@@ -141,34 +141,33 @@ module SymbolTable =
     let internal toVarBExpr f b =
         BExpr.map BLeaf (toVarExpr f) b
     
+            
+    let private translateSub (sub:Map<_,_>) =
+        let propId name =
+            match sub.TryFind name with
+            | Some e -> e
+            | None -> failwithf $"Undefined agent {name}"
+        
+        let rec doExpr =
+            function
+            | Leaf f -> Leaf f
+            | Ref r when sub.ContainsKey (string r.Var) ->
+                propId (string r.Var)
+            | Ref r ->
+                Ref {r with
+                        Offset = Option.map doExpr r.Offset
+                        OfAgent = Option.map doExpr r.OfAgent
+                }
+            | Arithm (e1, op, e2) -> Arithm(doExpr e1, op, doExpr e2)
+            | Unary (op, e) -> Unary(op, doExpr e)
+            | Nondet (e1, e2, p) -> Nondet (doExpr e1, doExpr e2, p)
+            | IfElse (c, tt, ff) -> IfElse (c, doExpr tt, doExpr ff)
+            | RawCall (n, args) -> RawCall (n, List.map doExpr args)
+            | QB _ -> failwith "Unexpected: nested QB"
+            | Count _ -> failwith "Unexpected: nested Count"
+        
+        BExpr.map BLeaf doExpr 
     let private QBToIfElse table quants pred =
-        
-        let translateSub (sub:Map<_,_>) =
-            let propId name =
-                match sub.TryFind name with
-                | Some e -> e
-                | None -> failwithf $"Undefined agent {name}"
-            
-            let rec doExpr =
-                function
-                | Leaf f -> Leaf f
-                | Ref r when sub.ContainsKey (string r.Var) ->
-                    propId (string r.Var)
-                | Ref r ->
-                    Ref {r with
-                            Offset = Option.map doExpr r.Offset
-                            OfAgent = Option.map doExpr r.OfAgent
-                    }
-                | Arithm (e1, op, e2) -> Arithm(doExpr e1, op, doExpr e2)
-                | Unary (op, e) -> Unary(op, doExpr e)
-                | Nondet (e1, e2, p) -> Nondet (doExpr e1, doExpr e2, p)
-                | IfElse (c, tt, ff) -> IfElse (c, doExpr tt, doExpr ff)
-                | RawCall (n, args) -> RawCall (n, List.map doExpr args)
-                | QB _ -> failwith "Unexpected: nested QB"
-            
-            BExpr.map BLeaf doExpr
-            
-        
         let rec trProp subs (qs:Map<_,_>) pr =
             let trQuantifier = function | All -> Conj | Exists -> Disj
             if not qs.IsEmpty then
@@ -188,7 +187,17 @@ module SymbolTable =
                 (translateSub subs) pr
         trProp Map.empty quants pred
         |> fun b -> IfElse(b, Leaf (Const 1), Leaf( Const 0))
+ 
     
+    let private CountToSum table typ name bexpr =
+        let spawn = match table.Spawn.TryFind typ with Some x -> x | _ -> failwith $"Undefined agent {typ}"
+        [fst spawn .. (snd spawn)-1]
+        |> List.map (fun id -> translateSub (Map.add name (Leaf <| Const id) Map.empty) bexpr)
+        |> List.map (fun e -> QBToIfElse table Map.empty e)
+        |> function
+            | [] -> (Const 0 |> Leaf)
+            | l -> List.reduce(fun e1 e2 -> Arithm(e1, Plus, e2)) l
+
     let private toVarProcess table proc =
         let toVarBase f b =
             let toVarAct locals a =
@@ -198,6 +207,7 @@ module SymbolTable =
                         let e1 =
                             match e with
                             | QB (qs, p) -> QBToIfElse table qs p
+                            | Count (typ, name, expr) -> CountToSum table typ name expr
                             | _ -> e
                         toVarRef (f locals) r (Option.map (toVarExpr (f locals)) r.Offset) (Option.map (toVarExpr (f locals)) r.OfAgent),
                         toVarExpr (f locals) e1)
