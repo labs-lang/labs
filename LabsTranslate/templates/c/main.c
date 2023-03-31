@@ -78,12 +78,13 @@ void finally(void) {
 }
 {%- endif -%}
 
+
+void loopAssumptions(void) { return; }
+
 int main(void) {
     init();
     monitor(); // Check invariants on the initial state
-    TYPEOFAGENTID firstAgent{% if firstagent == 0 and fair %} = 0;{% else %} = __CPROVER_nondet();
-    __CPROVER_assume(firstAgent < MAXCOMPONENTS);
-    {% endif %};
+    TYPEOFAGENTID scheduled = 0;
     {%- if hasStigmergy -%}
     _Bool propagate_or_confirm = 0;
     {%- endif -%}
@@ -97,6 +98,7 @@ int main(void) {
     {%- else -%}
     while(1) {        
     {%- endif -%}
+        loopAssumptions();
         
         {%- if hasStigmergy -%}{%- if bound > 0 -%}
         if (sys_or_not[__LABS_step]) {
@@ -106,32 +108,26 @@ int main(void) {
             // ___concrete-scheduler___
             // ___end concrete-scheduler___
 
-            switch (pc[firstAgent][0]) {
+            {%-unless fair-%}
+            // ___symbolic-scheduler___
+            scheduled = __CPROVER_nondet();
+            scheduled = scheduled < MAXCOMPONENTS ? scheduled : 0;
+            // ___end symbolic-scheduler___
+            {%-endunless-%}
+
+            switch (pc[scheduled][0]) {
             {%- for item in schedule -%}
-                case {{ item.entry.first.value }}: {{ item.name }}(firstAgent); break;
+                case {{ item.entry.first.value }}: {{ item.name }}(scheduled); break;
             {%- endfor -%}
               default: 
-                {%- if bound > 0 -%}
                 __CPROVER_assume(0);
-                {%- else -%}
-                {}
-                {%- endif -%}
             }
             
-            // ___symbolic-scheduler___
             {%- if fair -%}
-            if (firstAgent == MAXCOMPONENTS - 1) {
-                firstAgent = 0;
-            }
-            else {
-                firstAgent++;
-            }
-            {%-else-%}
-            TYPEOFAGENTID nextAgent = __CPROVER_nondet();
-            __CPROVER_assume(nextAgent < MAXCOMPONENTS);
-            firstAgent = nextAgent;
-            {%-endif-%}
+            // ___symbolic-scheduler___
+            scheduled = scheduled == MAXCOMPONENTS - 1 ? 0 : scheduled + 1;
             // ___end symbolic-scheduler___
+            {%-endif-%}
         {%- if hasStigmergy -%}
         }
         else {
