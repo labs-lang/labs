@@ -31,10 +31,12 @@ let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
         | None -> string i
         | Some indexes ->
             let dims = match v.Vartype with Array s -> s | _ -> []
-            let offsets =
-                [0..dims.Length-2]
+            let offsets =   
+                [0..dims.Length-1]
                 |> List.map (fun i -> List.reduce (*) (1::List.rev(dims)).[..i])
                 |> List.rev |> List.map string
+            if offsets.Length <> List.length indexes then
+                failwith $"Cannot zip {offsets} and {indexes} (in trref)"
             List.zip offsets indexes
             |> List.map (fun (off, i) -> $"({off} * {i})")
             |> String.concat " + "

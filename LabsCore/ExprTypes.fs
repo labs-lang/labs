@@ -121,8 +121,8 @@ let rec equal e1 e2 =
     | Ref r1, Ref r2 when r1.Var = r2.Var ->
         match r1.Offset, r2.Offset, r1.OfAgent, r2.OfAgent with
         | Some o1, Some o2, Some of1, Some of2 ->
-            if o1.Length <> o2.Length
-            then false else
+            if o1.Length <> o2.Length then false
+            else
                 List.zip o1 o2
                 |> List.map (fun (x, y) -> equal x y) 
                 |> List.reduce (&&) 

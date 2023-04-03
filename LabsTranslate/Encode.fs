@@ -213,12 +213,12 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                             |> List.map (fun i -> List.reduce (*) (1::List.rev(dims)).[..i])
                             |> List.rev |> List.map string
                         let indexes = List.map (trKit.AgentExprTr) off
-                        
+                        if offsets.Length <> indexes.Length then
+                            failwith $"Cannot zip {offsets} and {indexes} (in EncodeAgent)" 
                         List.zip offsets indexes
                         |> List.map (fun (off, i) -> $"({off} * {i})")
                         |> String.concat " + "
                         |> Str    
-                // k.Offset |>> (trKit.AgentExprTr >> Str) |> Option.defaultValue (Int 0)
                 "size", Int size
                 "expr", trKit.AgentExprTr expr |> Str
             ]
