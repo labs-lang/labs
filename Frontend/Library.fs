@@ -76,7 +76,7 @@ let initBExprs idfn (v:Var<_>, i: int) =
         let r = {Var=(v, i); Offset = None; OfAgent = None}
         match v.Vartype with
         | Scalar -> [r]
-        | Array s -> List.map (fun i -> {r with Offset = Some (Leaf (Const i))}) [0 .. s-1]
+        | Array s -> List.map (fun i -> {r with Offset = Some [Leaf (Const i)]}) [0 .. (List.reduce (*) s)-1]
     match v.Init with
     | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Extern "undef_value"))) refs
     | Choose l ->

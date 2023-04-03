@@ -50,7 +50,7 @@ let paction =
             >>. spaces
             >>. choice [
                 followedBy (skipChar ']') >>. skipChar ']' >>% None
-                pexpr .>> skipChar ']' |>> Some]
+                sepbycommas pexpr .>> skipChar ']' |>> Some]
         
         KEYNAME .>>. (opt pBracket |> ws)
         |>> fun (name, brak) ->
@@ -61,7 +61,7 @@ let paction =
                 // Array assignment (eg. x[] := ...)
                 | Some None -> $"{name}[]", None
                 // Array element assignment (eg. x[expr] := ...)
-                | Some o -> name, o
+                | Some (Some o) -> name, Some o
             {Var=str; Offset=offset; OfAgent=None}
     
     let pWalrus =

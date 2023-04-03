@@ -8,7 +8,7 @@ open FParsec
 let simpleRef p =
     tuple3
         KEYNAME
-        (opt (betweenBrackets p) |> ws)
+        (opt (betweenBrackets (sepbycommas p)) |> ws)
         (choice [
             ((followedBy OF) >>. ws OF >>. p |>> Some)
             ((notFollowedBy OF) >>% None)

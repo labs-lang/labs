@@ -85,10 +85,11 @@ type Expr<'a, 'b> =
             | Min | Max -> $"{op}({e1}, {e2})" 
             | _ -> $"{e1} {op} {e2}"
 and Ref<'a, 'b> = 
-    {Var:'a; Offset: Expr<'a, 'b> option; OfAgent: Expr<'a, 'b> option}
+    {Var:'a; Offset: Expr<'a, 'b> list option; OfAgent: Expr<'a, 'b> option}
     override this.ToString() =
+        let COMMA = ", "
         let ofAgent = match this.OfAgent with None -> "" | Some e -> $" of {e}"
-        let offset = match this.Offset with None -> "" | Some e -> $"[{e}]" 
+        let offset = match this.Offset with None -> "" | Some e -> $"[{List.map string e |> String.concat COMMA}]" 
         $"%O{this.Var}{offset}{ofAgent}"
 
 
@@ -119,7 +120,13 @@ let rec equal e1 e2 =
     | Unary(o1, e1_), Unary(o2, e2_) when o1 = o2 -> equal e1_ e2_
     | Ref r1, Ref r2 when r1.Var = r2.Var ->
         match r1.Offset, r2.Offset, r1.OfAgent, r2.OfAgent with
-        | Some o1, Some o2, Some of1, Some of2 -> (equal o1 o2) && (equal of1 of2) 
+        | Some o1, Some o2, Some of1, Some of2 ->
+            if o1.Length <> o2.Length
+            then false else
+                List.zip o1 o2
+                |> List.map (fun (x, y) -> equal x y) 
+                |> List.reduce (&&) 
+                |> fun x -> x && (equal of1 of2) 
         | None, None, None, None -> true
         | _ -> false
     | RawCall(n1, a1), RawCall(n2, a2) ->

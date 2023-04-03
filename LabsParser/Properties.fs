@@ -14,12 +14,10 @@ let propertyRef p =
 
     pipe3
         (ws KEYNAME)
-        (opt (betweenBrackets p |> ws))
+        (opt (betweenBrackets (sepbycommas p) |> ws))
         (choice [
             followedBy OF >>. ws OF >>. pOf
             preturn (None, None)
-//            followedBy OF >>. (ws OF >>. (ws KEYNAME)) |>> Some
-//            preturn None
         ])
         (fun k offset (ofVar, ofNum) -> {Var=(k, ofVar); Offset=offset; OfAgent=ofNum})
 

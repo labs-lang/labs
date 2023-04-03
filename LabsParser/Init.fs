@@ -14,7 +14,7 @@ let pconstexpr:Parser<Expr<unit,unit>> =
         (fail "ifelse in constexpr is not supported yet")
                 
 let pvar loc = 
-    pipe3 (followedBy KEYNAME >>. getPosition) KEYNAME (opt (betweenBrackets pconstexpr))
+    pipe3 (followedBy KEYNAME >>. getPosition) KEYNAME (opt (betweenBrackets (sepbycommas pconstexpr)))
         (fun pos name -> 
             let v = {Vartype=Scalar; Name=name; Location=loc; Init=Undef}
             function
