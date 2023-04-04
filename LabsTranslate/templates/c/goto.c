@@ -7,7 +7,7 @@ void {{label}}(int tid) {
     {%- if assignments -%}{%- for item in assignments -%}
     TYPEOFVALUES val{{forloop.index0}} = {{item.expr}};
     {%- if item.size != 0 -%}
-    TYPEOFVALUES offset{{forloop.index0}} = {{item.offset}};
+    {% if item.loc == "lstig" %}TYPEOFKEYLID{% elsif item.loc == "attr" %}TYPEOFKEYIID{% else %}TYPEOFKEYEID{% endif %} offset{{forloop.index0}} = {{item.offset}};
     // TODO make array bound checks optional (e.g., only if --debug is set on the sliver CLI)
     // __CPROVER_assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endif -%}{%- endfor -%}

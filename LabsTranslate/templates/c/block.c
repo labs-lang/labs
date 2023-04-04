@@ -47,7 +47,7 @@ void {{label}}(int tid) {
     {%- for a in assignments-%}{%- assign outer = forloop %}
     {%- for item in a -%}
     {%- if item.size != 0 -%}{% unless item.loc contains "Pick" %}
-    TYPEOFVALUES offset{{outer.index0}}_{{forloop.index0}} = {{item.offset}};
+    {%if item.loc == "lstig"%}TYPEOFKEYLID{%elsif item.loc == "attr"%}TYPEOFKEYIID{%else%}TYPEOFKEYEID{%endif%} offset{{outer.index0}}_{{forloop.index0}} = {{item.offset}};
     // __CPROVER_assert(offset{{outer.index0}}_{{forloop.index0}} >= 0 && offset{{outer.index0}}_{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endunless -%}{%- endif -%}
     {%- if item.loc == "Local"  -%}
