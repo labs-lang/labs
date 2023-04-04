@@ -10,6 +10,7 @@ zip_linux: platform = linux-x64
 
 sources = $(wildcard **/*.fs)
 sliver_sources = $(wildcard sliver/**/*.py) 
+labs_examples = $(wildcard labs-examples/*.labs) 
 templates = $(wildcard LabsTranslate/templates/**/*)
 
 VERSION := $(strip $(shell grep version sliver/sliver/app/__about__.py | grep = | sed 's/"//g' | awk 'NF{print $$NF}'))
@@ -76,7 +77,7 @@ build/%/sliver/cseq/cseq.py :
 	@cp -r sliver/sliver/app/info.py $(dir $@)/info.py ;
 	@cp -r cseq-modules/* $(dir $@)/modules ;
 
-build/%/examples :
+build/%/examples : $(labs_examples)
 	@mkdir -p build/$(platform)
 	@echo Copying examples...
 	@mkdir -p $@ ;
