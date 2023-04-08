@@ -33,7 +33,7 @@ TYPEOFVALUES mod(TYPEOFVALUES n, TYPEOFVALUES m) {
 }
 
 TYPEOFVALUES nondetInRange(TYPEOFVALUES minValue, TYPEOFVALUES bound) {
-  TYPEOFVALUES x = __CPROVER_nondet();
+  TYPEOFVALUES x;
   __CPROVER_assume((x >= minValue) & (x < bound));
   return x;
 
