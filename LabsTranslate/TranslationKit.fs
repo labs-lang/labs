@@ -44,7 +44,11 @@ let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
     match v.Location with
     | Local -> v.Name
     | Pick _ ->
-        let off = match offset with None -> "" | Some off -> $"[{off}]"
+        let off =
+            match offset with
+            | None -> ""
+            | Some [off] -> $"[{off}]"
+            | Some o -> failwith $"Illegal pick offset '{o}'" 
         $"""{v.Name.Replace("[]", "")}{off}"""  
     | _ -> trLocation v.Location agent index
 
