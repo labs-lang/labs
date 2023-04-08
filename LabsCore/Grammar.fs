@@ -118,6 +118,7 @@ type Composition =
 type Process<'a> =
     | BaseProcess of Node<Stmt<'a>>
     | Guard of Node<BExpr<'a, unit> * Process<'a>>
+    | FatGuard of Node<BExpr<'a, unit> * Process<'a>>
     | Comp of Composition * Process<'a> list
 
 type VarType<'a> = 

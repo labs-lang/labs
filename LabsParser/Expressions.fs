@@ -74,7 +74,7 @@ let makeBExprParser pexpr =
     
     opp.AddOperator(InfixOperator("<", notInArrow, 2, Associativity.Left, ParseBExpr.compare Less))
     opp.AddOperator(InfixOperator(">", wsUnit, 2, Associativity.Left, ParseBExpr.compare Greater))
-    opp.AddOperator(InfixOperator("=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Equal))
+    opp.AddOperator(InfixOperator("=", ws <| notFollowedBy (skipChar '>'), 2, Associativity.Left, ParseBExpr.compare Equal))
     opp.AddOperator(InfixOperator("!=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Neq))
     opp.AddOperator(InfixOperator("<=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Leq))
     opp.AddOperator(InfixOperator(">=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Geq))

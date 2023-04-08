@@ -3,6 +3,7 @@ module Frontend.STS
 open LabsCore
 open Grammar
 open FSharpPlus.Lens
+open LabsCore.ExprTypes
 
 type ExecPoint = Map<int, int>
 type EntryCond = Map<int, int>
@@ -13,6 +14,7 @@ type Transition =
       Siblings: Set<int>
       Last: bool
       Exit: ExitCond
+      If: (BExpr<Var<int> * int, unit> * ExitCond) option
       Action: Node<Stmt<Var<int> * int>> }
 
 type TransitionSystem = Set<Transition>
@@ -179,12 +181,24 @@ let makeTransitions (state: Accumulator) proc =
                 { Entry = entry
                   Exit = exit
                   Action = b
+                  If = None
                   Siblings = Set.empty
                   Last = false })
                 lts
 
         lts', (setl _2 v' acc)
-
+    
+    let fatguardFn recurse (lts, acc) def =
+        let _, _, _, exit = acc
+        let bexpr, body = def
+        eprintfn $"{bexpr}"
+        let inits = Process.initial body
+        let lts', acc' = recurse (Set.empty, acc) body
+        let lts'' = lts' |> Set.map (fun tr ->
+            if inits.Contains tr.Action then {tr with If = Some (bexpr, exit)}
+            else tr)
+        (Set.union lts lts'', acc')
+    
     let rec compFn typ recurse (lts, acc) l =
         match typ with
         | Seq ->
@@ -246,4 +260,4 @@ let makeTransitions (state: Accumulator) proc =
         [ ((view (_2 << _1) state), Set.singleton 0) ] |> Map.ofList
 
     let state' = setl (_2 << _4) exit state
-    Process.fold baseFn (fun i _ -> i) compFn state' proc, initCond
+    Process.fold baseFn (fun i _ -> i) fatguardFn compFn state' proc, initCond

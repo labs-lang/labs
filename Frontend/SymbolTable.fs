@@ -259,7 +259,7 @@ module SymbolTable =
             | _ ->
                 Seq.map (recurse (guards, acc)) l
                 |> Seq.reduce(fun (_, a1) (_, a2) -> Set.empty, Map.union a2 a1)
-        Process.fold baseFn guardFn compFn (Set.empty, Map.empty) proc                    
+        Process.fold baseFn guardFn (fun _ acc _ -> acc) compFn (Set.empty, Map.empty) proc                    
         |> snd
     
     let internal tryAddProcess externs (p: Node<Process<_>>) table =

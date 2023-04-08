@@ -91,11 +91,16 @@ do pprocRef.Value <-
     let doBase (pos, stmt) = {Def=stmt; Pos=pos; Source=""; Name=string stmt} |> BaseProcess
     let compose a b = Comp(a, b)
 
+    let pGUARDORFATGUARD = choice [
+        followedBy (skipChar '-') >>. GUARD >>% Guard
+        followedBy (skipChar '=') >>. FATGUARD >>% FatGuard
+    ]
+    
     let pGuarded = 
-        followedBy ((ws pguard) >>. (ws GUARD))
-        >>. pipe3
-            getPosition (ws pguard) ((ws GUARD) >>. pproc)
-            (fun pos g p -> Guard({Pos=pos; Name=""; Source=""; Def=(g,p)}))
+        followedBy ((ws pguard) >>. (ws pGUARDORFATGUARD))
+        >>. pipe4
+            getPosition (ws pguard) (ws pGUARDORFATGUARD) pproc
+            (fun pos g typ p -> typ({Pos=pos; Name=""; Source=""; Def=(g,p)}))
         <!> "Guard"
     let pBase =
         let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase

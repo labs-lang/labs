@@ -1,6 +1,19 @@
 void {{label}}(int tid) {
     {% if labs %}//{{labs}}
     {%- endif -%}
+    {%-if ifCond != ""-%}
+    if (!({{ifCond}})) {
+        {%- for item in ifExit -%}
+        {%- if item.value.size == 1-%}
+        pc[tid][{{ item.name }}] = {{ item.value.first }};
+        {%- else -%}
+        TYPEOFPC pc{{item.name}};
+        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+        pc[tid][{{ item.name }}] = pc{{ item.name }};
+        {%- endif -%}{%- endfor -%}
+        return;
+    }
+    {%-endif-%}
     
     {%- include "templates/entry" -%}
 

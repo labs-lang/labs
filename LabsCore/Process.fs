@@ -8,12 +8,13 @@ open FParsec
 /// Functions to manipulate Process objects.
 module Process =
     /// General-purpose fold function.
-    let rec fold fbase fguard fcomp acc proc =
-        let recurse = fold fbase fguard fcomp
+    let rec fold fbase fguard ffatguard fcomp acc proc =
+        let recurse = fold fbase fguard ffatguard fcomp
         match proc with
         | BaseProcess b ->
             fbase acc b
-        | Guard n  ->
+        | FatGuard n  -> ffatguard recurse acc n.Def
+        | Guard n -> 
             recurse (fguard acc (fst n.Def)) (snd n.Def)
         | Comp(typ, l) -> 
             fcomp typ recurse acc l
@@ -26,12 +27,14 @@ module Process =
     /// <param name="fguard">Function to apply to <c>Guard</c> objects.</param>
     /// <param name="fcomp">Function to apply to <c>Comp</c> objects.</param>
     /// <param name="proc">The input process.</param>
-    let rec cata fbase fguard fcomp proc = 
-        let recurse = cata fbase fguard fcomp
+    let rec cata fbase fguard ffatguard fcomp proc = 
+        let recurse = cata fbase fguard ffatguard fcomp
         match proc with
         | BaseProcess b -> fbase b
         | Guard n ->
             fguard n (recurse (snd n.Def))
+        | FatGuard n ->
+            ffatguard n (recurse (snd n.Def))
         | Comp (typ, l) -> fcomp typ (l |> List.map recurse)
 
     /// <summary>
@@ -41,6 +44,10 @@ module Process =
         let recurse = map fbase fguard
         match proc with
         | BaseProcess b -> fbase b
+        | FatGuard n ->
+            let g, p = n.Def
+            let p' = recurse p
+            FatGuard(setl _def (fguard g, p') n)
         | Guard n ->
             let g, p = n.Def
             let p' = recurse p
@@ -50,8 +57,8 @@ module Process =
     /// Pretty-prints <c>proc</c> to a string.
     let rec print proc =
         let printNode b = string b.Def
-        let printGuard g =
-            sprintf "%O %s %s" g tGUARD
+        let printGuard g = sprintf "%O %s %s" g tGUARD
+        let printFatGuard g = sprintf "%O %s %s" g tFATGUARD
         let rec printComp typ l = 
             let sep = 
                 match typ with 
@@ -60,7 +67,7 @@ module Process =
                 | Par -> $" %s{tPAR} "
             String.concat sep l
             |> if (Seq.length l) > 1 then (sprintf "(%s)") else id
-        cata printNode printGuard printComp proc
+        cata printNode printGuard printFatGuard printComp proc
     
     /// Simplifies the process by removing <c>Comp</c>
     /// elements with only one child.
@@ -68,25 +75,25 @@ module Process =
         let comp typ l =
             if List.length l = 1 then l.Head
             else Comp(typ, l)
-        let guard n p =
-            Guard(setl (_def << _2) p n)
-        cata BaseProcess guard comp proc
+        let guard n p = Guard(setl (_def << _2) p n)
+        let fatguard n p = FatGuard(setl (_def << _2) p n)
+        cata BaseProcess guard fatguard comp proc
     
     /// Transforms g -> Par(...) into g -> (Skip; Par(...)).
     let fixGuardedPar proc =
-        let guard n p = 
+        let doguard typ n p = 
             let p' =
                 match p with
                 | Comp (Par, _) -> Comp(Seq, [BaseProcess({Name=""; Pos=n.Pos; Source=""; Def=Skip}); p])
                 | _ -> p
-            Guard(setl (_def << _2) p' n)
-        cata BaseProcess guard (fun typ l -> Comp(typ, l)) proc
+            typ(setl (_def << _2) p' n)
+        cata BaseProcess (doguard Guard) (doguard FatGuard) (fun typ l -> Comp(typ, l)) proc
 
     let private entryOrExit fn =
         let entrycomp = function
         | Seq -> fn
         | Choice | Par -> Set.unionMany
-        cata Set.singleton (fun _ -> id) entrycomp
+        cata Set.singleton (fun _ -> id) (fun _ -> id) entrycomp
 
     /// Returns the entry base processes of proc.
     let initial proc = entryOrExit List.head proc
@@ -142,4 +149,4 @@ module Process =
             |> Set.unionMany
             |> Set.union acc
             
-        fold fbase (fun acc _ -> acc) fcomp Set.empty p
+        fold fbase (fun acc _ -> acc) (fun _ acc _ -> acc) fcomp Set.empty p

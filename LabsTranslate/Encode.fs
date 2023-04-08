@@ -240,10 +240,12 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
             "entrycond", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
             "exitcond", liquidPcs t.Exit
             "guards", guards |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
+            "ifCond",t.If |> Option.map (fst >> trKit.AgentGuardTr) |> Option.defaultValue "" |> Str
+            "ifExit",t.If |> Option.map (snd >> liquidPcs) |> Option.defaultValue (Str "")
             "labs",
                 // TODO do sth smart here
                 string t.Action.Def
-                |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
+                |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD))  
                 |> Str
             "qrykeys", qrykeys
             "sync", sync |> Bool

@@ -2,6 +2,19 @@ void {{label}}(int tid) {
     {%-if labs-%}
     /*{%-for l in labs-%}{{l}}{%unless forloop.last%}; {%endunless%}{%-endfor-%}*/
     {%- endif -%}
+    {%-if ifCond != ""-%}
+    if (!({{ifCond}})) {
+        {%- for item in ifExit -%}
+        {%- if item.value.size == 1-%}
+        pc[tid][{{ item.name }}] = {{ item.value.first }};
+        {%- else -%}
+        TYPEOFPC pc{{item.name}};
+        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+        pc[tid][{{ item.name }}] = pc{{ item.name }};
+        {%- endif -%}{%- endfor -%}
+        return;
+    }
+    {%- endif -%}
 
     {%- if siblings.size > 0 %}    __CPROVER_assume({%- if last -%}
     {%- for item in siblings -%}(pc[tid][{{ item }}] == 0){% unless forloop.last %} && {% endunless %}{%- endfor -%}
