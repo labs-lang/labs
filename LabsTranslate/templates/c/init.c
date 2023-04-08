@@ -3,6 +3,7 @@ void init(void) {
         {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
     E[{{item.index}}] = __CPROVER_nondet();
     __CPROVER_assume({{ item.bexpr }});
+        {%- elsif item.bexpr contains "== (0)" -%}
         {%- else -%}
     {{ item.bexpr | replace: "==", "=" }};
         {%- endif -%}
@@ -39,6 +40,7 @@ void init(void) {
     {%-assign tid = item.bexpr | split: "["-%}
     {%if item.loc == "L" %}Lvalue{%else%}I{%endif%}[{{ tid[1] | remove: "]" }}][{{item.index}}] = __CPROVER_nondet();
     __CPROVER_assume({{ item.bexpr }});
+        {%- elsif item.bexpr contains "== (0)" -%}
         {%- else -%}
     {{ item.bexpr | replace: "==", "=" }};
         {%- endif -%}
