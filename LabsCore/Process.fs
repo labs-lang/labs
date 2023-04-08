@@ -103,7 +103,10 @@ module Process =
 
     /// Adds lbl to the position of a node.
     let tag lbl node =
-        let p=node.Pos in let p' = Position(lbl, p.Index, p.Line, p.Column)
+        let p = node.Pos
+        // Merge with other tags if they exist
+        let label = if p.StreamName.Contains("@") then $"{p.StreamName}|{lbl}" else lbl
+        let p' = Position(label, p.Index, p.Line, p.Column)
         setl _pos p' node
     
     
