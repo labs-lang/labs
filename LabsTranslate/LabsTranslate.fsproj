@@ -23,6 +23,9 @@
         <Compile Include="Encode.fs" />
         <Compile Include="ArgParse.fs" />
         <Compile Include="Program.fs" />
+        <Content Include="templates\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
