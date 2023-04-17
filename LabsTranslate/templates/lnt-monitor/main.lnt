@@ -15,14 +15,14 @@ process monitor [mon: any] (agents: Agents) is
     {%- endif -%}
 end process
 
-function canProceed(a:Agent{%if hasEnvironment%}, e: Env{%endif%}): Bool is
+function canProceed(agent:Agent{%if hasEnvironment%}, e: Env{%endif%}): Bool is
     var tid: ID in
-    tid := a.id;
-    return {% if hasStigmergy -%}(empty(a.Zput) and empty(a.Zqry)) and {% endif-%} 
+    tid := agent.id;
+    return {% if hasStigmergy -%}(empty(agent.Zput) and empty(agent.Zqry)) and {% endif-%} 
         ({%- for item in schedule -%}
-        ({% for pc in item.entry -%}(a.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
+        ({% for pc in item.entry -%}(agent.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
         {%-for pc in item.siblings -%}
-        (a.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
+        (agent.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
         {%- endfor -%}
         {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %})
         {% unless forloop.last -%} or {%- endunless -%}
@@ -40,40 +40,40 @@ function existsEnabled(agents:Agents{%if hasEnvironment%}, e: Env{%endif%}): Boo
 end function
 
 process step [attrGate, l, monitor: any] (in out sys: Sys, tid: ID) is
-    var a:Agent, agents:Agents{%-if hasStigmergy-%}, mat: Matrix{%-endif-%}{%- if hasEnvironment -%}, e: Env{%- endif %} in
+    var agent:Agent, agents:Agents{%-if hasStigmergy-%}, mat: Matrix{%-endif-%}{%- if hasEnvironment -%}, e: Env{%- endif %} in
         agents := sys.agents;
         {% if hasStigmergy-%}mat := sys.m;{%- endif -%}
 
-        a := agents[Nat(tid)];
+        agent := agents[Nat(tid)];
         {%if hasEnvironment -%}e := sys.env;{%- endif %}
 
         {%- if simulation -%}
         if canProceed(a{%- if hasEnvironment -%}, sys.env{%-endif-%}) then
             select
             {%- for item in schedule -%}
-                only if {% for pc in item.entry -%}(a.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
+                only if {% for pc in item.entry -%}(agent.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
             {%- for pc in item.siblings -%}
-            (a.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
+            (agent.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
             {%- endfor -%}
-            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}[attrGate, l](!?a{%-if hasStigmergy-%}, !?mat{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%}) end if
+            {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}[attrGate, l](!?agent{%-if hasStigmergy-%}, !?mat{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%}) end if
             {% unless forloop.last %}[]{%- endunless %}
             {%- endfor -%}
             end select
         end if;
         {%- else -%}
         {%- for item in schedule -%}
-        {%if forloop.first%}if{%else%}elsif{%endif%} {% if hasStigmergy -%}(empty(a.Zput) and empty(a.Zqry)) and {% endif-%} 
-        ({% for pc in item.entry -%}(a.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
+        {%if forloop.first%}if{%else%}elsif{%endif%} {% if hasStigmergy -%}(empty(agent.Zput) and empty(agent.Zqry)) and {% endif-%} 
+        ({% for pc in item.entry -%}(agent.pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
         {%-for pc in item.siblings -%}
-        (a.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
+        (agent.pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
         {%- endfor -%}
-        {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %}) then action{{ item.name }}[attrGate, l](!?a{%-if hasStigmergy-%}, !?mat{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%})
+        {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %}) then action{{ item.name }}[attrGate, l](!?agent{%-if hasStigmergy-%}, !?mat{%-endif-%}{%- if hasEnvironment -%}, !?e{%-endif-%})
         {%- endfor -%}
         else monitor("spurious"); stop
         end if;
         {%- endif -%}
     
-        agents[Nat(tid)] := a;
+        agents[Nat(tid)] := agent;
         sys := sys.{ agents -> agents{%-if hasStigmergy-%}, m -> mat{%-endif-%}{%- if hasEnvironment -%}, env -> e{%-endif-%}}
 
     end var
@@ -85,11 +85,11 @@ process MAIN [monitor, attr, l: any, endInit:None] is
             agents := Agents(emptyAgent);
             {% if hasStigmergy-%}m := Matrix(MatrixVar(SAME));{%- endif -%}
         
-            var i: Nat, a: Agent in
+            var i: Nat, agent: Agent in
                 for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
-                    a := agents[i].{id -> ID(i)};
-                    INITAGENT[attr, l](!?a{%-if hasStigmergy-%}, !?m{%- endif -%});
-                    agents[i] := a
+                    agent := agents[i].{id -> ID(i)};
+                    INITAGENT[attr, l](!?agent{%-if hasStigmergy-%}, !?m{%- endif -%});
+                    agents[i] := agent
                 end loop;
                 {%- if hasEnvironment -%}
                 e := Env(0);

@@ -46,7 +46,7 @@ check {
     #NotAllUndecided = finally exists Yes y, exists No n,
     #state of y != 2 or state of n != 2
 
-    NoYConsensus = finally exists Yes y, exists No n,
+    NoYConsensus = always exists Yes y, exists No n,
     state of y != 1 or state of n != 1
 
     #NoUndecided = finally forall Yes y, forall No n, 

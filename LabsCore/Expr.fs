@@ -1,118 +1,71 @@
-﻿module LabsCore.Expr
-open Tokens
-open FParsec
+module LabsCore.Expr
+open LabsCore.ExprTypes
+open System
 
+let rec internal foldB foldExpr acc bexpr =
+    let recurse = foldB foldExpr
+    match bexpr with
+    | BLeaf _ -> acc
+    | Compare (e1, _, e2) ->
+        Seq.fold foldExpr acc [e1; e2]
+    | Neg b -> recurse acc b 
+    | Compound (_, bexprs) -> Seq.fold recurse acc bexprs
 
-type ArithmOp =
-    | Plus | Minus
-    | Times | Div | Mod
-    | Min | Max
-    override this.ToString() = 
-        match this with
-        | Plus -> tPLUS | Minus -> tMINUS
-        | Times -> tMUL | Div -> tDIV | Mod -> tMOD
-        | Min -> tMIN | Max -> tMAX
-
-type UnaryOp = 
-    | Abs | UnaryMinus
-    override this.ToString() =
-        match this with
-        | Abs -> tABS
-        | UnaryMinus -> tMINUS
-
-type LeafExpr<'b> =
-    | Id of 'b
-    | Const of int
-    | Extern of string
-    override this.ToString() = 
-        match this with
-        | Id _ -> tID
-        | Const v -> string v 
-        | Extern s -> "_" + s
-type Expr<'a, 'b> =
-    | Leaf of LeafExpr<'b>
-    | Nondet of Expr<'a, 'b> * Expr<'a, 'b> * Position
-    | Ref of Ref<'a, 'b>
-    | Unary of UnaryOp * Expr<'a, 'b>
-    | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
-    | RawCall of Name:string * Args:Expr<'a, 'b> list
-    override this.ToString() = 
-        match this with
-        | Leaf l -> string l
-        | Nondet (start, bound, _) -> $"[{start}..{bound}]"
-        | Ref r -> string r
-        | Unary(op, e) -> 
-            let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in $"%s{s}({e})"
-        | RawCall (name, args) -> $"""@{name}({args |> List.map string |> String.concat ", "})"""
-        | Arithm(e1, op, e2) ->
-            match op with
-            | Min | Max -> $"{op}({e1}, {e2})" 
-            | _ -> $"{e1} {op} {e2}"
-and Ref<'a, 'b> = 
-    {Var:'a; Offset: Expr<'a, 'b> option}
-    override this.ToString() = 
-        match this.Offset with
-        | Some e -> $"{this.Var}[{e}]"
-        | None -> this.Var.ToString()
-
-/// Syntactic equality check.
-let rec equal e1 e2 =
-    match e1, e2 with
-    | Leaf l1, Leaf l2 ->
-        match l1, l2 with
-        | Const x, Const y -> x = y
-        | Id i, Id j -> i = j
-        | Extern e1, Extern e2 -> e1 = e2
-        | _ -> false
-    | Arithm(e11, op1, e12), Arithm(e21, op2, e22) when op1 = op2 ->
-        (equal e11 e21) && (equal e12 e22)
-    | Unary(o1, e1_), Unary(o2, e2_) when o1 = o2 -> equal e1_ e2_
-    | Ref r1, Ref r2 when r1.Var = r2.Var ->
-        match r1.Offset, r2.Offset with
-        | Some o1, Some o2 -> equal o1 o2
-        | None, None -> true
-        | _ -> false
-    | RawCall(n1, a1), RawCall(n2, a2) ->
-        n1 = n2 &&
-        a1.Length = a2.Length &&
-        List.zip a1 a2 |> List.forall (fun (x1, x2) -> equal x1 x2)
-    | _ -> false    
-        
 let rec fold fleaf fref acc expr = 
     let recurse = fold fleaf fref
     match expr with
+    | QB (_, p)
+    | Count (_, _, p) -> foldB recurse acc p
     | Leaf l -> fleaf acc l
     | Nondet(e1, e2, _)
     | Arithm(e1, _, e2) ->
         Seq.fold recurse acc [e1; e2]
     | Unary(_, e) -> recurse acc e
     | RawCall(_, args) -> Seq.fold recurse acc args
+    | IfElse(_, e1, e2) ->
+        Seq.fold recurse acc [e1; e2]
     | Ref r ->
         let newacc = fref acc r
         r.Offset 
-        |> Option.map (recurse newacc)
+        |> Option.map (List.fold recurse newacc)
         |> Option.defaultValue newacc
 
-let rec cata fleaf farithm funary fnondet fref fraw expr = 
-    let recurse = cata fleaf farithm funary fnondet fref fraw
+let rec cata fleaf farithm funary fnondet fref fraw fif expr = 
+    let recurse = cata fleaf farithm funary fnondet fref fraw fif
+    
     match expr with
+    | QB _
+    | Count _ -> failwith $"Unexpected call to Expr.cata on {expr}"
     | Leaf l -> fleaf l
     | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
     | Unary(op, e) -> funary op (recurse e)
     | Nondet(e1, e2, pos) -> fnondet (recurse e1) (recurse e2) pos
-    | Ref r -> fref r.Var (Option.map recurse r.Offset)
+    | Ref r ->  
+        fref r.Var (Option.map (List.map recurse) r.Offset) (Option.map recurse r.OfAgent)
     | RawCall(n, args) -> fraw n (List.map recurse args)
+    | IfElse (cond, iftrue, iffalse) -> fif cond (recurse iftrue) (recurse iffalse)
 
-let rec map fleaf fref expr =
-    let recurse = map fleaf fref
+let rec map_ fleaf fref fcond expr =
+    let recurse = map_ fleaf fref fcond
+    let rec mapP = function
+        | BLeaf b -> BLeaf b
+        | Compare (e1, op, e2) ->
+            Compare (recurse e1, op, recurse e2)
+        | Neg b -> Neg (mapP b)
+        | Compound (bop, bexprs) -> Compound (bop, List.map mapP bexprs)
+    
     match expr with
+    | QB (q, p) -> QB(q, mapP p)
+    | Count (typ, name, bexpr) -> Count (typ, name, mapP bexpr) 
     | Leaf l -> Leaf(fleaf l)
     | Nondet(e1, e2, pos) -> Nondet(recurse e1, recurse e2, pos)
     | Arithm(e1, op, e2) -> Arithm(recurse e1, op, recurse e2)
     | Ref r -> 
-        let newOffset = r.Offset |> Option.map recurse
-        Ref(fref r newOffset)
+        let newOffset = r.Offset |> Option.map (List.map recurse)
+        let newOf = r.OfAgent |> Option.map recurse
+        Ref(fref r newOffset newOf)
     | RawCall (n, args) -> RawCall(n, List.map recurse args)
+    | IfElse (cond, iftrue, iffalse) -> IfElse(fcond recurse cond, recurse iftrue, recurse iffalse)
     | Unary(u, e) -> Unary(u, recurse e)
 
 let getRefs expr = fold (fun a _ -> a) (fun a r -> Set.add r a) Set.empty expr
@@ -135,6 +88,9 @@ let evalConstExpr idfun expr =
         | Minus -> (-)
         | Times -> (*)
         | Div -> (/)
+        | RoundDiv -> fun x y ->
+            let result = (x + (y-1)) / y
+            if x = Int32.MaxValue then -result else result
         | Mod -> (%)
         | Max -> max
         | Min -> min
@@ -142,7 +98,7 @@ let evalConstExpr idfun expr =
         | UnaryMinus -> (~-)
         | Abs -> abs
     let failure = (fun _ _ -> failwith "Not a constexpr")
-    cata leafFn arithmFn unaryFn failure failure failure expr
+    cata leafFn arithmFn unaryFn failure failure failure (fun _ -> failure) expr
 
 /// <summary>
 /// Evaluates a constant expression. Fails if the expression contains an 
@@ -152,3 +108,5 @@ let evalConstExpr idfun expr =
 /// <seealso cref="evalConstExpr" />
 /// <returns>The value of <c>expr</c>.</returns>
 let evalCexprNoId expr = evalConstExpr (fun _ -> failwith "id not allowed here.") expr
+
+let map fleaf fref = map_ fleaf fref (BExpr.map BLeaf)

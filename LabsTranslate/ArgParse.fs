@@ -43,7 +43,7 @@ let getExterns (args:ParseResults<_>) =
         vals
         |> Seq.map (fun x -> x.Split "=")
         |> Seq.filter (fun a -> Array.length a = 2)
-        |> Seq.map (fun a -> (a.[0], a.[1]))
+        |> Seq.map (fun a -> (a[0], a[1]))
         |> Map.ofSeq
     try
         args.PostProcessResult (<@ Values @>, parseValues)

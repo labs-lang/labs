@@ -1,0 +1,27 @@
+# Flawed mutual exclusion algorithm
+# Adapted from:
+# https://www.cse.chalmers.se/edu/course/TDA384_LP1/files/lectures/Lecture03-models_algorithms.pdf
+
+system {
+    environment = enter[2]: 0
+    spawn = Proc: 2
+}
+
+agent Proc {
+    interface = cs: 0;  test: 0
+    Behavior = 
+        test <- enter[(id + 1) % 2];
+        test = 0 ->
+            enter[id] <-- 1;
+            cs <- 1;
+            cs <- 0;
+            enter[id] <-- 0;
+            Behavior
+}
+
+check {
+    Mutex0 = between (enter[0] = 1) and (enter[1] = 1), thereIs (enter[0] = 0)
+    # Alternatively
+    # Mutex1 = from (enter[0] = 1) until (enter[0] = 0), always enter[1] = 0
+    #FlipCS = between (true) and (false), (enter[0] = 1) precedes ((cs of 0) = 1)
+}

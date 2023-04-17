@@ -1,0 +1,162 @@
+function canProceed(id: ID, I: Iface, pc: PC{%-if hasStigmergy-%}, L: Lstig{%endif%}{%if hasEnvironment%}, E: Env{%endif%}): Bool is
+    use id, I, pc{%-if hasStigmergy-%}, L{%endif%}{%if hasEnvironment%}, E{%endif%};
+    return ({%- for item in schedule -%}
+        ({% for pc in item.entry -%}(pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
+        {%-for pc in item.siblings -%}
+        (pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
+        {%- endfor -%}
+        {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %})
+        {% unless forloop.last -%} or {%- endunless -%}
+        {%- endfor -%})
+end function
+
+process agent [spurious: none, tick: IDchannel, attr{%if hasStigmergy%}, put, qry, l, refresh, request{%endif%}{%if hasEnvironment%}, getenv, setenv{%endif%}: any] (id: ID) is
+  var t: ID, I: Iface, pc: PC{%-if hasStigmergy-%}, L: Lstig, Zput, Zqry: Pending{%endif%}{%if hasEnvironment%}, E: Env{%endif%} in
+
+  {%if hasStigmergy%}
+  Zput := Pending (false);
+  Zqry := Pending (false);
+  {%-endif-%}
+  INITAGENT[attr{%if hasStigmergy%}, l, refresh{%endif%}] (id, ?I, ?pc{%-if hasStigmergy-%}, ?L{%-endif-%});
+
+  loop select
+    -- Let another agent (t) make a move
+    tick(?t) where t != id
+    []
+    -- Make a move
+    only if (empty (Zput) and empty (Zqry)) then
+        {%if hasEnvironment%}goodEnv(?E); getenv(E);{%endif%}
+        tick(id);
+        if canProceed(id, I, pc{%-if hasStigmergy-%}, L{%endif%}{%if hasEnvironment%}, E{%endif%}) then
+        select
+        {%- for item in schedule -%}
+            only if {% for pc in item.entry -%}(pc[{{pc.name}}] == {{pc.value}}){% unless forloop.last %} and {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} and
+        {%- for pc in item.siblings -%}
+        (pc[{{pc}}] {%-if item.name contains 'last'-%}=={%- else -%}!={%- endif -%} 0){% unless forloop.last %} and {% endunless %}
+        {%- endfor -%}
+        {%- endif -%}{% if item.guards.size > 0 %} and {{ item.guards | join: ' and ' }}{% endif %} then action{{ item.name }}[attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnvironment%}, setenv{%endif%}](id, !?I, !?pc{%-if hasStigmergy-%}, !?L, !?Zput, !?Zqry{%-endif-%}{%- if hasEnvironment -%}, E{%-endif-%}) end if
+        {% unless forloop.last %}[]{%- endunless %}
+        {%- endfor -%}
+        end select
+        else loop spurious end loop
+        end if
+    end if
+  {%if hasStigmergy%}
+  []
+    -- propagate: sender side
+    only if length (Zput) > 0 then
+      var key: Nat in
+         key := any Nat where (key < SIZEOFL) and member (key, Zput)  and (key == TUPLESTART(key));
+         put(id, key, L, I);
+         Zput := remove (key, Zput)
+      end var
+    end if
+  []
+    -- propagate: receiver side when link does not hold
+    var key: Nat, recL: Lstig, recI: Iface, sender: ID in
+      key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
+      goodLstig(?recL);
+      goodIface(?recI);
+      sender := any ID where (sender != id) and not (link (recI, I, recL, L, sender, id, key));
+      put (sender, key, recL, recI)
+    end var
+  []
+    -- propagate: receiver side when link holds
+    var lnk: Bool, key: Nat, recL: Lstig in
+      key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
+      goodLstig(?recL);
+      var recI: Iface, sender: ID, cmp : Comparison in
+        goodIface(?recI);
+        sender := any ID where (sender != id) and link (recI, I, recL, L, sender, id, key);
+        put (sender, key, recL, recI);
+        request(id, key, sender, ?cmp);
+        lnk := (cmp == GREATER) 
+      end var;
+
+      if lnk then
+        var k:Nat in for k := key while k <= TUPLEEND (key) by k := k + 1 loop
+          if L[k] <> recL[k] then --20210428
+            L[k] := recL[k];
+            l (id, k, L[k])
+          else i --20210428
+          end if --20210428
+        end loop end var;
+
+        Zput := insert (key, Zput);
+        Zqry := remove (key, Zqry)
+      end if
+    end var
+  []
+    -- confirm: sender side
+    only if length (Zqry) > 0 then
+      var key: Nat in
+        key := any Nat where (key < SIZEOFL) and member (key, Zqry) and (key == TUPLESTART(key));
+        qry(id, key, L, I);
+        Zqry := remove (key, Zqry)
+      end var
+    end if
+  []
+    -- confirm: receiver side when link does not hold
+    var key: Nat, recL: Lstig, recI: Iface, sender: ID in
+      key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
+      goodLstig(?recL);
+      goodIface(?recI);
+      sender := any ID where (sender != id) and not (link (recI, I, recL, L, sender, id, key));
+      qry (sender, key, recL, recI)
+    end var
+  []
+    -- confirm: receiver side when link holds
+    var lnk: Bool, key: Nat, recL: Lstig in
+      key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
+      goodLstig(?recL);
+      var recI: Iface, sender: ID, cmp: Comparison in
+        goodIface(?recI);
+        sender := any ID where (sender != id) and link (recI, I, recL, L, sender, id, key);
+        qry (sender, key, recL, recI);
+        request(id, key, sender, ?cmp); 
+        if cmp != SAME then Zput := insert (key, Zput) end if;
+        lnk := (cmp == GREATER)
+      end var;
+      if lnk then
+        var k: Nat in for k := key while k <= TUPLEEND(key) by k := k + 1 loop
+          if L[k] <> recL[k] then --20210428
+            L[k] := recL[k];
+            l (id, k, L[k])
+          else i --20210428
+          end if --20210428
+          end loop end var;
+        Zqry := remove (key, Zqry)
+      end if
+    end var
+    {%-endif-%}
+  end select end loop
+  end var
+end process
+
+{%if fair%}
+process sched [tick:IDchannel] is
+  var t:ID in
+  t := ID(0);
+  loop tick(t); t := ID((Nat(t) + 1) mod MAXCOMPONENTS) end loop
+  end var
+end process
+{%endif%}
+
+process main [spurious:none, tick:IDchannel, attr{%if hasStigmergy%}, debug, put, qry, l, refresh, request{%endif%}{%if hasEnvironment%}, getenv, setenv{%endif%}: any] is
+par
+{%if fair%}tick -> sched [tick]
+||{%endif%}
+  {%if hasStigmergy%}refresh, request -> Timestamps[refresh, request, debug]
+||{%endif%}
+  {%if hasEnvironment%}getenv, setenv -> ENV[getenv, setenv]
+||{%endif%}
+  {%if fair%}tick{%endif%}{%if hasStigmergy%}{%if fair%}, {%endif%}refresh, request{%endif%}{%if hasEnvironment%}{%if hasStigmergy%},{%endif%}getenv, setenv{%endif%} -> par tick{%if hasStigmergy%}, put, qry{%endif%} in
+  {%for i in (1..MAXCOMPONENTS)%}
+    agent [spurious, tick, attr{%if hasStigmergy%}, put, qry, l, refresh, request{%endif%}{%if hasEnvironment%}, getenv, setenv{%endif%}] (ID ({{forloop.index0}}))
+  {%unless forloop.last%}||{%endunless%}
+  {%endfor%}
+  end par
+end par
+end process
+
+end module

@@ -1,0 +1,70 @@
+process action{{label}} [attr{%if hasStigmergy%}, l, refresh{%endif%}{%if hasEnvironment%}, setenv{%endif%}: any] (id: ID, in out I: Iface, in out pc:PC{%- if hasStigmergy-%}, in out L: Lstig, in out Zput, Zqry:Pending{%-endif-%}{%if hasEnvironment%}, E: Env{%endif%}) is
+    --{{ labs }}
+    access attr;
+    {%if hasStigmergy%}access l; access refresh;{%endif%}
+    {%if hasEnvironment%}access setenv;{%endif%}
+    use id, I, pc{%- if hasStigmergy-%}, L, Zput, Zqry{%-endif-%}{%if hasEnvironment%}, E{%endif%};
+
+    {%-if assignments.size > 0-%}
+    var {% for item in assignments -%}tmp{{forloop.index0}}{%unless forloop.last%}, {%endunless%}{%endfor%}: Int in
+    {%-if aux.size > 0 -%}
+    var {%for a in aux %}{{ a.first }}:Int{%unless forloop.last%}, {%endunless%}{%-endfor%} in
+    {%-for a in aux-%}
+    nondetRange(?{%for arg in a%}{{ arg }}{%unless forloop.last%}, {%endunless%}{%endfor%});
+    {%-endfor-%}
+    {%-endif-%}
+    {%- for item in assignments -%}
+    tmp{{forloop.index0}} := {{item.expr}};
+    {%- endfor -%}
+
+    {%- for item in assignments -%}
+    {%- if item.loc == "attr" %}
+    I[{{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}] := tmp{{forloop.index0}};
+    attr (id, ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}) of Nat, tmp{{forloop.index0}});
+    {%- elsif item.loc == "lstig" %}
+    L[{{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}] := tmp{{forloop.index0}};
+    l (id, ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}) of Nat, tmp{{forloop.index0}});
+    refresh (id, TUPLESTART ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}));
+    {%- elsif item.loc == "env" %}
+    setenv ({{item.key}}{%- if item.size != 0 %} + {{item.offset}}{%endif%}, tmp{{forloop.index0}});
+    {%- endif -%}
+
+    {%- endfor -%}
+    {%-if aux.size > 0 -%}
+    null
+    end var
+    {%-endif%}
+    null
+    end var;
+    {%-endif-%}
+
+    {%- if hasStigmergy and qrykeys.size > 0 -%}
+    {%- for item in qrykeys -%}
+    Zqry := insert(TUPLESTART({{ item }}), Zqry);
+    {%- endfor -%}
+    {%- endif -%}
+    {%-for item in assignments-%}
+    {%-if item.loc == "lstig"-%}
+    Zput := insert(TUPLESTART({{ item.key }}), Zput);
+    {%-endif-%}
+    {%-endfor-%}
+
+
+    var p: PC in
+        p := pc;
+        
+        {%- for item in exitcond -%}
+        {%- if item.value.size == 1-%}
+        p[{{ item.name }}] := {{ item.value.first }};
+        {%- else -%}
+        var x: Nat in
+            x := any Nat where ({%- for val in item.value -%}(x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%});
+            p[{{ item.name }}] := x;
+            i
+        end var;
+        {%- endif -%}{%- endfor -%}
+        pc := p;
+        {%- for item in exitcond -%}{%- if item.value.size >= 1-%}i;{%break%}{%endif%}{%endfor%}
+        null
+    end var
+end process

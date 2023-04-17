@@ -3,8 +3,8 @@ module LabsCore.Grammar
 open System
 open FParsec
 open FSharpPlus.Lens
+open LabsCore.ExprTypes
 open LabsCore.Expr
-open LabsCore.BExpr
 
 type Node<'a> = {
     Name: string
@@ -27,22 +27,38 @@ let inline _pos x =
 
 let inline byName v = (^T : (member Name : string) v)
 
+
+type LinkComponent = | C1 | C2
+
+type Link<'a> = BExpr<'a * LinkComponent, LinkComponent>
+
 type Location =
     | I 
     | L of name:string * tupleIndex: int
     | E
+    | Local
+    | Pick of num:int * agentType:string option * where: Link<string> option
     override this.ToString() =
         match this with 
             | I -> "Interface" | E -> "Environment"
             | L(n, _) -> $"Stigmergy ({n})" 
+            | Local -> "Local"
+            | Pick (n, typ, w) ->
+                let fmtType = typ |> Option.map (fun x -> $" {x}") |> Option.defaultValue ""
+                let fmtWhere = w |> Option.map (fun x -> $" where {x}") |> Option.defaultValue ""
+                $"Pick {n}{fmtType}{fmtWhere}"
 
 type Action<'a> = {
     ActionType: Location
     Updates: (Ref<'a, unit> * Expr<'a, unit>) list
     }
     with 
-        override this.ToString() = 
+        override this.ToString() =
             (match this.ActionType with
+            | Pick _->
+                let pick = (string this.ActionType)[1 ..] |> sprintf "p%s"
+                fun v _ -> $"{v} := {pick}"
+            | Local _ -> sprintf "%s := %s"
             | I -> sprintf "%s <- %s"
             | L _ -> sprintf "%O <~ %O"
             | E -> sprintf "%O <-- %O")
@@ -56,16 +72,16 @@ type Init =
      | Range of Expr<unit,unit> * Expr<unit,unit>
      | Undef
 with
-     member this.Pick (id_) =
+     member this.Pick id_ =
          let rnd = Random()
          let pickRandom lst = List.item (rnd.Next(List.length lst)) lst
              
          match this with
          | Undef -> -128
-         | Choose l -> l |> List.map (Expr.evalConstExpr (fun _ -> id_)) |> pickRandom
+         | Choose l -> l |> List.map (evalConstExpr (fun _ -> id_)) |> pickRandom
          | Range(minValueExpr, boundExpr) ->
-             let minValue = Expr.evalConstExpr (fun _ -> id_) minValueExpr
-             let bound = Expr.evalConstExpr (fun _ -> id_) boundExpr
+             let minValue = evalConstExpr (fun _ -> id_) minValueExpr
+             let bound = evalConstExpr (fun _ -> id_) boundExpr
              rnd.Next(bound-minValue)+minValue
              
      
@@ -74,14 +90,13 @@ with
         | Choose l -> l |> List.map (sprintf "%O") |> String.concat "," |> sprintf "[%s]"
         | Range(min, max) -> $"{min}..{max}"
         | Undef -> "undef"
-        
-    
 
 
 type Stmt<'a> = 
     | Nil 
     | Skip
     | Act of 'a Action
+    | Block of Action<'a> list
     | Name of string
 with
     override this.ToString() =
@@ -89,6 +104,10 @@ with
         | Nil -> "0"
         | Skip -> "√"
         | Act a -> string a
+        | Block stmts ->
+            List.map string stmts
+            |> String.concat "; "
+            |> sprintf "{ %s }"
         | Name s -> s
 
 type Composition =
@@ -99,11 +118,12 @@ type Composition =
 type Process<'a> =
     | BaseProcess of Node<Stmt<'a>>
     | Guard of Node<BExpr<'a, unit> * Process<'a>>
+    | FatGuard of Node<BExpr<'a, unit> * Process<'a>>
     | Comp of Composition * Process<'a> list
 
 type VarType<'a> = 
     | Scalar
-    | Array of size:'a
+    | Array of size:'a list
 
 type Var<'a> = {
         Name: string

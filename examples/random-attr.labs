@@ -1,0 +1,13 @@
+system {
+    spawn = Proc1: 1
+}
+
+agent Proc1 {
+    interface = x: 0..100
+    
+    Behavior = x <- x ; Behavior
+
+}
+
+check {
+}

@@ -17,6 +17,8 @@ let duplicatesBy groupingFn defFn (lst: 'a list) =
     
 let dupNames lst = duplicatesBy byName id lst
 
+// TODO check that, within a block, local variables are always defined before being accessed
+
 let checkAgent envAndLstigVars (a:Node<Agent>) table =
     let hasBehavior =
         List.exists (fun (x:Node<Process<_>>) -> x.Name = "Behavior") a.Def.Processes

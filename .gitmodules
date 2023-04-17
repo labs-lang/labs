@@ -1,9 +1,0 @@
-[submodule "click"]
-	path = click
-	url = https://github.com/pallets/click
-[submodule "sliver"]
-	path = sliver
-	url = https://github.com/labs-lang/sliver
-[submodule "labs-examples"]
-	path = labs-examples
-	url = git@github.com:labs-lang/labs-examples.git

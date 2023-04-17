@@ -1,0 +1,208 @@
+module HEADER is
+
+    function MAXCOMPONENTS:Nat is return {{MAXCOMPONENTS}} end function
+    function undef_value:Int is return -128 end function
+    {%if hasStigmergy%}function SIZEOFL: Nat is return {{MAXKEYL}} end function{%endif%}
+
+    type ID is X:Nat where X < MAXCOMPONENTS with ==, !=, < end type
+    type PC is array [ 0 .. {{ MAXPC | minus: 1 }} ] of Nat end type
+    type Iface is array [ 0 .. {{ MAXKEYI | minus: 1 }} ] of Int with get, set end type
+
+    channel IDchannel is (x: ID) end channel
+
+    process nondetRange(out var dest:Int, start, bound:Int) is
+      dest := any Int where ((dest >= start) and (dest < bound))
+    end process
+
+    {%- if hasStigmergy -%}
+
+    (* Stigmergy *)
+    type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Int with get, set end type
+    type Pending is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Bool with get, set end type
+
+    function TUPLESTART(n:Nat): Nat is
+        case n in
+        {%- for i in tupleStart -%}
+            {% unless forloop.first %}|{% endunless %} {{ forloop.index0 }} -> return {{i}}
+        {%- endfor -%}
+            | any -> raise unexpected (* should never match *)
+        end case
+    end function
+
+    function TUPLEEND(n:Nat): Nat is
+        case n in
+        {%- for i in tupleEnd -%}
+            {% unless forloop.first %}|{% endunless %} ({{ forloop.index0 }}) -> return {{i}}
+        {%- endfor -%}
+            | any -> raise unexpected (* should never match *)
+        end case
+    end function
+
+    function length(p:Pending): Nat is
+        var n, j:Nat in
+            n := 0;
+            for j := 0 while j < {{MAXKEYL}} by j := j + 1 loop
+                if (p[j]) then n := n + 1 end if
+            end loop;
+            return n
+        end var
+    end function
+
+    function empty(p:Pending): Bool is
+        return (length(p) == 0)
+    end function
+
+    function insert(k: Nat, p:Pending): Pending is
+        var p1 : Pending in
+            p1 := p;
+            p1[k] := true;
+            return p1
+        end var
+    end function
+
+    function remove(k: Nat, p:Pending): Pending is
+        var p1 : Pending in
+            p1 := p;
+            p1[k] := false;
+            return p1
+        end var
+    end function
+
+    function member(k: Nat, p:Pending): Bool is
+        return p[k]
+    end function
+
+    function tri(n:Nat): Nat is
+        (* returns the n-th triangular number *)
+        return (n * (n + 1)) div 2
+    end function
+
+    type Comparison is LESS, SAME, GREATER with ==, != end type
+
+    function inv(c:Comparison): Comparison is
+        case c in
+        LESS -> return GREATER
+        | GREATER -> return LESS
+        | SAME -> return SAME
+        end case 
+    end function
+
+    -- n*(n-1) / 2
+    type MatrixVar is array [0 .. {{ MAXCOMPONENTS | minus: 1 |  times: MAXCOMPONENTS | divided_by: 2 | minus: 1 }}] of Comparison with get, set end type
+    -- one Matrix2D for each variable
+    type Matrix is array [0 .. {{MAXKEYL | minus: 1}}] of MatrixVar with get, set end type
+
+    function index(i,j:Nat): Nat is
+        require j < MAXCOMPONENTS;
+        require i < j;
+        -- Apparently, writing the formula in one line, i.e.,
+        -- return (MAXCOMPONENTS * i) + j - tri(i+1)
+        -- leads to "out of range" errors from the LOTOS compiler
+        var x:Nat in
+            x := tri(i+1);
+            x := (MAXCOMPONENTS * i) + j - x;
+            return x
+        end var
+    end function
+
+    --getComparison(m,i,j) = GREATER iff i's value is fresher than j's
+    function getComparison(m:Matrix, key,i,j:Nat): Comparison is
+        if (i==j) then return SAME
+        elsif (i<j) then return m[key][index(i,j)]
+        else return inv(m[key][index(j,i)])
+        end if
+    end function
+
+    --Enforces that a future call to getComparison(..., i,j) will return "cmp"
+    function setComparison(in out mkey:MatrixVar, i,j:Nat, cmp:Comparison) is
+        if (i<j) then mkey[index(i,j)] := cmp
+        elsif (i>j) then mkey[index(j,i)] := inv(cmp)
+        -- ignore the case i=j
+        end if
+    end function
+
+    function refresh(in out m: Matrix, key, id: Nat) is
+        var i:Nat, mkey:MatrixVar in 
+            mkey := m[TUPLESTART(key)];
+            for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
+                setComparison(!?mkey, id, i, GREATER)
+            end loop;
+            m[TUPLESTART(key)] := mkey
+        end var
+    end function
+
+    function sync1(in out m: Matrix, key, from, to: Nat) is
+      var i:Nat, mkey: MatrixVar in
+        mkey := m[TUPLESTART(key)];
+        setComparison(!?mkey, from, to, SAME);
+        for i := 0 while i < MAXCOMPONENTS by i := i + 1 loop
+          if (i <> from) and (i<>to) then
+            setComparison(!?mkey, to, i, getComparison(m, key, from, i))
+          end if
+        end loop;
+        m[TUPLESTART(key)] := mkey
+      end var
+    end function
+
+    process Timestamps [refresh, request, debug: any] is
+      access debug;
+      var M: Matrix, sender:ID, key, receiver:Nat, cmp:Comparison in 
+        M := Matrix(MatrixVar(SAME));
+        loop
+          --debug(M);
+          select
+            refresh(?sender, ?key) where (key < {{MAXKEYL}}) and (key == TUPLESTART(key));
+            eval refresh(!?M, key, Nat(sender))
+          []
+            key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
+            sender := any ID;
+            receiver := any ID where (sender != receiver) and (getComparison(M, key, Nat(sender), Nat(receiver)) == GREATER);
+            request(receiver, key, sender, GREATER);
+            -- if you offered GREATER and it was accepted,
+            -- then synchronize sender and receiver
+            eval sync1(!?M, key, Nat(sender), Nat(receiver))
+          []
+            key := any Nat where (key < SIZEOFL) and (key == TUPLESTART(key));
+            sender := any ID;
+            receiver := any ID where (sender != receiver) and (getComparison(M, key, Nat(sender), Nat(receiver)) != GREATER);
+            cmp := getComparison(M, key, Nat(sender), Nat(receiver));
+            request(receiver, key, sender, cmp)
+          end select
+        end loop
+      end var
+    end process
+    {%- endif -%}
+
+    {%- if hasEnvironment -%}
+    type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with get, set end type
+    {%- endif -%}
+
+    {%- if hasStigmergy -%}
+    function link(I1, I2: Iface, L1, L2: Lstig, id1, id2: ID, key: Nat):Bool is
+        use I1, I2, L1, L2, id1, id2;
+        {% if links.size > 0 %}{% for l in links %}
+        {% if forloop.first %}if{% else %}elsif{% endif %} ((key >= {{l.start}}) and (key <= {{l.end}})) then
+            return {{l.link}}
+        {% endfor %}
+        else return false
+        end if
+        {% else %}return false {% endif %}
+    end function
+
+    {%- endif -%}
+
+    {%- if hasStigmergy-%}
+
+    process goodLstig(out var l:Lstig) is
+        l := Lstig(0);
+        (*GOODLSTIG*)
+        null
+    end process
+    {%- endif -%}
+
+    process goodIface(out var i:Iface) is
+        i := Iface(0);
+        (*GOODIFACE*)
+        null
+    end process
+

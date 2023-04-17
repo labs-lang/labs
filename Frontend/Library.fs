@@ -3,8 +3,7 @@ open Frontend.Checks
 open Frontend.SymbolTable
 open Frontend.Message
 open LabsCore
-open LabsCore.Expr
-open LabsCore.BExpr
+open LabsCore.ExprTypes
 open LabsCore.Grammar
 open Frontend.Outcome
 open Frontend.STS
@@ -42,6 +41,7 @@ let run externs (sys, lstigs, agents', assume, properties) =
         List.filter (fun a -> Set.contains a.Def.Name spawned) agents'
     
     zero Frontend.SymbolTable.empty
+    <~> (fun x -> zero {x with Externs=externs})
     <??> check (sys, lstigs, agents', properties)
     (* map non-interface variables *)
     <~> fold (tryAddVar externs) vars
@@ -58,10 +58,10 @@ let run externs (sys, lstigs, agents', assume, properties) =
     <~> fold (tryAddIface externs) agents
     <~> fold (tryAddStigmergy externs) lstigs
     <~> fold (tryAddProcess externs) sys.Def.Processes
+    <~> (makeSpawnRanges externs) sys.Def.Spawn
     <~> fun x ->
         fold (tryAddAgent externs) agents (x, (Set.empty, (0, ExecPoint.empty, Map.empty, Map.empty)))
     <~> (fst >> zero)
-    <~> (makeSpawnRanges externs) sys.Def.Spawn
     (* properties can only be added after spawn *)
     <~> fold (tryAddProperty externs) properties
     <~> fold (tryAddAssume externs) (assume |> Option.defaultValue [])
@@ -71,12 +71,22 @@ let run externs (sys, lstigs, agents', assume, properties) =
 let initBExprs idfn (v:Var<_>, i: int) =
     let mapFn r =
         let leafFn l = match l with | Id _ -> idfn | _ -> l
-        Expr.map leafFn (fun _ o -> {r with Offset=o})
+        Expr.map leafFn (fun _ o of_ -> {r with Offset=o; OfAgent=of_})
     let refs =
-        let r = {Var=(v, i); Offset = None}
+        let r = {Var=(v, i); Offset = None; OfAgent = None}
         match v.Vartype with
         | Scalar -> [r]
-        | Array s -> List.map (fun i -> {r with Offset = Some (Leaf (Const i))}) [0 .. s-1]
+        | Array s ->
+            let indexes = [for i in 0..s.Length-1 -> [0..s[i]-1] ]
+            // Kudos to https://stackoverflow.com/a/3334871c for this cartesian product function
+            let rec cart1 LL = 
+                match LL with
+                | [] -> Seq.singleton []
+                | hd::Ls -> seq {for x in hd do for xs in cart1 Ls -> x::xs}
+            let allIndexes = cart1 indexes |> Seq.toList |> List.map (List.map (Leaf << Const))
+            let makeOneRef ind = {r with Offset = Some ind}
+            List.map makeOneRef allIndexes 
+            
     match v.Init with
     | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Extern "undef_value"))) refs
     | Choose l ->

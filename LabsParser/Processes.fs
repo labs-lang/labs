@@ -1,26 +1,84 @@
 module internal Processes
 
 open FParsec
+open LabsCore.ExprTypes
+open LabsCore.Expr
 open LabsCore.Grammar
 open LabsCore.Tokens
-open Expressions    
+open Expressions
+open Stigmergies
 
-let pexpr = makeExprParser simpleRef (skipString tID .>> notInIdentifier)
+
+let rec private _pe () = makeExprParser simpleRef (skipString tID .>> notInIdentifier) _pb
+and _pb = makeBExprParser (_pe ())
+
+let pexpr = _pe () //makeExprParser simpleRef (skipString tID .>> notInIdentifier) (makeBExprParser pexpr)
+let pguard = makeBExprParser pexpr
 
 /// Parses elementary processes ("actions")
 let paction =
     let parseArrow =
-        skipChar '<' >>. choice [
+        (followedByString "<") >>. skipChar '<' >>. choice [
             followedBy (skipString "--") >>. stringReturn "--" Location.E; 
             charReturn '-' I;
             charReturn '~' (L("",0))
+        ] |> ws .>>. (ws pexpr |> sepbycommas)
+    let pPick =
+        tuple3 (ws (skipString tPICK) >>. ws pexpr) (opt <| ws IDENTIFIER) (opt (ws (skipString "where") >>. plink))
+        |>> fun (e, typ, where) ->
+            let num = evalConstExpr (fun _ -> failwith "id not allowed here.") e
+            let w = Option.map (fun w -> w.Def) where
+            Location.Pick (num, typ, w), [e]
+    let pCheck =
+         followedBy (ws (skipString "forall" <|> skipString "exists"))
+         >>. ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
+         .>>. pguard
+         |>> fun (quants, pred) -> Location.Local, [QB (quants, pred)]
+    
+    let pCount =
+        let countToken =  (ws <| skipString "count")
+        followedBy countToken
+        >>. pipe3
+                (countToken >>. ws IDENTIFIER) (ws KEYNAME .>> (ws COMMA)) pguard
+                (fun typ name bexpr -> Location.Local, [Count(typ, name, bexpr)])
+    
+    let pSingleLhs =
+        let pBracket =
+            followedBy (spaces >>. skipChar '[')
+            >>. spaces
+            >>. skipChar '['
+            >>. spaces
+            >>. choice [
+                followedBy (skipChar ']') >>. skipChar ']' >>% None
+                sepbycommas pexpr .>> skipChar ']' |>> Some]
+        
+        KEYNAME .>>. (opt pBracket |> ws)
+        |>> fun (name, brak) ->
+            let str, offset =
+                match brak with
+                // Scalar lhs (eg. x := ...)
+                | None -> name, None
+                // Array assignment (eg. x[] := ...)
+                | Some None -> $"{name}[]", None
+                // Array element assignment (eg. x[expr] := ...)
+                | Some (Some o) -> name, Some o
+            {Var=str; Offset=offset; OfAgent=None}
+    
+    let pWalrus =
+        let tWalrus = ":="
+        followedByString tWalrus
+        >>. ws (skipString tWalrus)
+        >>. choice [
+            pPick
+            pCheck
+            pCount
+            (ws pexpr |> sepbycommas) |>> fun exprs -> Location.Local, exprs
         ]
-    tuple3 
-        (ws (simpleRef pexpr) |> sepbycommas)
-        (ws parseArrow) 
-        (ws pexpr |> sepbycommas)
-    >>= (fun (refs, action, exprs) -> 
-        try {ActionType=action; Updates=List.zip refs exprs} |> preturn with
+    tuple2 
+        (ws pSingleLhs |> sepbycommas)
+        ((ws parseArrow) <|> pWalrus) 
+    >>= (fun (refs, (loc, exprs)) ->
+        try {ActionType=loc; Updates=List.zip refs exprs} |> preturn with
         | :? System.ArgumentException -> 
             fail "A multiple assignment should contain the same number of variables and expressions.")
 
@@ -29,23 +87,31 @@ let paction =
 // (see pGuarded and pParen)
 let pproc, pprocRef = createParserForwardedToRef()
 
-do pprocRef :=
+do pprocRef.Value <-
     let doBase (pos, stmt) = {Def=stmt; Pos=pos; Source=""; Name=string stmt} |> BaseProcess
     let compose a b = Comp(a, b)
 
+    let pGUARDORFATGUARD = choice [
+        followedBy (skipChar '-') >>. GUARD >>% Guard
+        followedBy (skipChar '=') >>. FATGUARD >>% FatGuard
+    ]
+    
     let pGuarded = 
-        let pguard = makeBExprParser pexpr
-        followedBy ((ws pguard) >>. (ws GUARD))
-        >>. pipe3
-            getPosition (ws pguard) ((ws GUARD) >>. pproc)
-            (fun pos g p -> Guard({Pos=pos; Name=""; Source=""; Def=(g,p)}))
+        followedBy ((ws pguard) >>. (ws pGUARDORFATGUARD))
+        >>. pipe4
+            getPosition (ws pguard) (ws pGUARDORFATGUARD) pproc
+            (fun pos g typ p -> typ({Pos=pos; Name=""; Source=""; Def=(g,p)}))
         <!> "Guard"
     let pBase =
         let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase
         let pSkip = getPosition .>>. safeStrReturn tSKIP Skip |>> doBase
         let pParen = followedBy (skipChar '(') >>. (betweenParen pproc)
-        
+        let pBlock =
+            sepBy1 (ws paction) (ws SEQ) |> betweenBracesPos
+            |>> fun (pos, stmts) -> doBase (pos, Block stmts)
+                    
         choice [
+             pBlock
              attempt pGuarded <!> "Guarded"
              attempt pNil <!> "Nil"
              attempt pSkip <!> "Skip"

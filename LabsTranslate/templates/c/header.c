@@ -1,6 +1,8 @@
 {%-if simulation-%}
+_Bool __sim_spurious = 0;
 char* format;
 #define __sim_assert(COND, LBL) if (!(COND)) format = ("(SIMULATION) Violation: " LBL)
+#define __sim_satisfied(COND, LBL) if (COND) format = ("(SIMULATION) Satisfied: " LBL)
 
 {%-endif-%}
 const char undef_value = -128;
@@ -22,13 +24,16 @@ TYPEOFVALUES __abs(TYPEOFVALUES x) {
 
 TYPEOFVALUES __max(TYPEOFVALUES x, TYPEOFVALUES y) { return (x > y) ? x : y; }
 TYPEOFVALUES __min(TYPEOFVALUES x, TYPEOFVALUES y) { return (x < y) ? x : y; }
+TYPEOFVALUES __round_div(TYPEOFVALUES num, TYPEOFVALUES den) {
+    return (num*den>=0) ? (num + (den/2)) / den : -((-num + (den/2)) / den) ;
+}
 
 TYPEOFVALUES mod(TYPEOFVALUES n, TYPEOFVALUES m) {
   return n >= 0 ? n % m : m + (n % m);
 }
 
 TYPEOFVALUES nondetInRange(TYPEOFVALUES minValue, TYPEOFVALUES bound) {
-  TYPEOFVALUES x = __CPROVER_nondet();
+  TYPEOFVALUES x;
   __CPROVER_assume((x >= minValue) & (x < bound));
   return x;
 

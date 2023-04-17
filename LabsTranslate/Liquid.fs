@@ -18,6 +18,9 @@ and LiquidVal =
 let fs = FileSystems.LocalFileSystem("")
 
 let private internalRender strfun (template:Template) values =
+
+
+
     let rec hashval = function
         | Int i -> box i
         | Bool b -> box b
@@ -31,9 +34,10 @@ let private internalRender strfun (template:Template) values =
     let render = template.Render (hashdict values)
     if template.Errors.Count = 0 then 
         zero (strfun render)
-    else 
+    else
         template.Errors
-        |> Seq.map (fun x -> {What=Codegen x.Message; Where=[]})
+        |> Seq.map (fun x ->
+            {What=Codegen x.Message; Where=[Position(x.Source,-1,-1,-1)]})
         |> (Seq.toList >> wrap (strfun "") [])
 
 /// Renders a given template to standard output
@@ -47,8 +51,11 @@ let parse path =
         Diagnostics.Process.GetCurrentProcess().MainModule.FileName 
         |> Path.GetDirectoryName
     Template.FileSystem <- fs
-    File.ReadAllText path
-    |> Template.Parse
+    try
+        File.ReadAllText path
+        |> Template.Parse
+    with
+    | ex -> failwith $"Parsing failed: {path}: {ex.Message}"
 
 ///<summary>Opens a template file and renders it using the specified local variables.</summary>
 let renderFile path (vals:LiquidDict) =

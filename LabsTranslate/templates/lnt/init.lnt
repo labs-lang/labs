@@ -1,21 +1,24 @@
-function CheckAssumes (agents:Agents) is
-    {%- if assumes.size == 0 %} null
+(*
+function CheckAssumes (agents:Agents): Bool is
+    {%- if assumes.size == 0 %} return true
     {%- else -%}
     {%- for p in assumes -%}
     -- {{ p.name }}
     if not({{ p.value }}) then return false end if;
     {%- endfor -%}
     return true
+    {%- endif -%}
 end function
+*)
 
-process INITAGENT[attrGate, l: any] (in out a:Agent{%-if hasStigmergy-%}, in out m:Matrix{%-endif-%}) is
+process INITAGENT[attrGate, l: any] (in out agent:Agent{%-if hasStigmergy-%}, in out m:Matrix{%-endif-%}) is
     var I:Iface, x: Int, p:PC{%-if hasStigmergy-%}, L:Lstig{%- endif %} in
-        I := a.I;
-        {% if hasStigmergy %}L := a.L;{%- endif %}
-        p := a.pc;
+        I := agent.I;
+        {% if hasStigmergy %}L := agent.L;{%- endif %}
+        p := agent.pc;
 
         {%- for agent in agents -%}
-        {% unless forloop.first %}els{% endunless %}if (Nat(a.id) >= {{agent.start}}) and (Nat(a.id) < {{agent.end}}) then
+        {% unless forloop.first %}els{% endunless %}if (Nat(agent.id) >= {{agent.start}}) and (Nat(agent.id) < {{agent.end}}) then
 
         {%- for p in agent.pcs -%}
         {%- if p.value.size == 1 -%}
@@ -30,17 +33,17 @@ process INITAGENT[attrGate, l: any] (in out a:Agent{%-if hasStigmergy-%}, in out
         x := any Int where {{ item.bexpr }};
         {%- if hasStigmergy and item.loc == "L" -%}
         L[{{ item.index }}] := x;
-        l(Nat(a.id), {{item.index}} of Nat , x);
-        eval refresh(!?m, {{item.index}}, Nat(a.Id)){%- else -%}
+        l(Nat(agent.id), {{item.index}} of Nat , x);
+        eval refresh(!?m, {{item.index}}, Nat(agent.Id)){%- else -%}
         {{item.loc}}[{{ item.index }}] := x;
-        attrGate(Nat(a.id), {{item.index}} of Nat , x){%- endif -%}
+        attrGate(Nat(agent.id), {{item.index}} of Nat , x){%- endif -%}
         {%- unless forloop.last-%};{%- endunless -%}
         {%- endfor -%}
         {%- endfor -%}
         
         end if;
 
-        a := a.{I -> I{%-if hasStigmergy-%}, L -> L{%- endif -%}, pc -> p}
+        agent := agent.{I -> I{%-if hasStigmergy-%}, L -> L{%- endif -%}, pc -> p}
     end var 
 end process
 

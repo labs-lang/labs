@@ -2,12 +2,20 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net5</TargetFramework>
+        <TargetFramework>net6</TargetFramework>
         <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
         
         <UseAppHost>true</UseAppHost> <!--See https://github.com/dotnet/runtime/issues/3704 -->
 
     </PropertyGroup>
+
+    <PropertyGroup>
+      <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+    <PropertyGroup>
+      <PublishSingleFile>true</PublishSingleFile>
+    </PropertyGroup>
+
 
     <ItemGroup>
         <Compile Include="Liquid.fs" />
@@ -15,6 +23,9 @@
         <Compile Include="Encode.fs" />
         <Compile Include="ArgParse.fs" />
         <Compile Include="Program.fs" />
+        <Content Include="templates\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>

@@ -11,16 +11,16 @@
   </PropertyGroup>
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
+    <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
     <Compile Include="Types.fs" />
     <Compile Include="Common.fs" />
     <Compile Include="Expressions.fs" />
     <Compile Include="Init.fs" />
+    <Compile Include="Stigmergies.fs" />
     <Compile Include="Processes.fs" />
-    <PackageReference Include="FParsec" Version="1.1.1" />
-    <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
     <Compile Include="Component.fs" />
     <Compile Include="Properties.fs" />
-    <Compile Include="Stigmergies.fs" />
     <Compile Include="System.fs" />
     <Compile Include="Parser.fs" />
   </ItemGroup>

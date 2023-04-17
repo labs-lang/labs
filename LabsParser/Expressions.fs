@@ -1,13 +1,19 @@
 ﻿module internal Expressions
 
 open LabsCore.Tokens
-open LabsCore.Expr
+open LabsCore.ExprTypes
 open LabsCore.BExpr
 open FParsec
 
-let simpleRef p = 
-    KEYNAME .>>. (opt (betweenBrackets p))
-    |>> fun (str, offset) -> {Var=str; Offset=offset}
+let simpleRef p =
+    tuple3
+        KEYNAME
+        (opt (betweenBrackets (sepbycommas p)) |> ws)
+        (choice [
+            ((followedBy OF) >>. ws OF >>. p |>> Some)
+            ((notFollowedBy OF) >>% None)
+        ])
+    |>> fun (str, offset, ofAgent) -> {Var=str; Offset=offset; OfAgent=ofAgent}
 
 type ParseBExpr<'a, 'b> = 
     | E of Expr<'a, 'b>
@@ -17,10 +23,10 @@ module ParseBExpr =
     let getB p =
         match p with
         | B b -> preturn (simplify b)
-        | E e -> fail $"{e} is not a boolean expression"
+        | E e -> Compare(e, Neq, Leaf <| Const 0) |> preturn
     let getE p =
         match p with
-        | B b -> fail $"{b} is not an expression"
+        | B b -> fail $"{b} is not an arithmetic expression"
         | E e -> preturn e
     let compare op p1 p2 = 
         match p1, p2 with 
@@ -68,7 +74,7 @@ let makeBExprParser pexpr =
     
     opp.AddOperator(InfixOperator("<", notInArrow, 2, Associativity.Left, ParseBExpr.compare Less))
     opp.AddOperator(InfixOperator(">", wsUnit, 2, Associativity.Left, ParseBExpr.compare Greater))
-    opp.AddOperator(InfixOperator("=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Equal))
+    opp.AddOperator(InfixOperator("=", ws <| notFollowedBy (skipChar '>'), 2, Associativity.Left, ParseBExpr.compare Equal))
     opp.AddOperator(InfixOperator("!=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Neq))
     opp.AddOperator(InfixOperator("<=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Leq))
     opp.AddOperator(InfixOperator(">=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Geq))
@@ -77,7 +83,7 @@ let makeBExprParser pexpr =
 
     expr >>= ParseBExpr.getB
 
-let makeExprParser pref pid : Parser<_> =
+let makeExprParser pref pid pbexpr : Parser<_> =
     let opp = OperatorPrecedenceParser<Expr<'a,'b>,unit,unit>()
     let expr = opp.ExpressionParser
     let arithm op x y = Arithm(x, op, y)
@@ -94,39 +100,45 @@ let makeExprParser pref pid : Parser<_> =
             followedBy pint32 >>. pint32 |>> Const |>> Leaf <!> "const"
             followedBy pid >>. pid |>> Id |>> Leaf <!> "id"
             followedBy RAWPREFIX >>. prawcall |>> RawCall <!> "rawCall"  
+            followedBy (skipChar '[') >>. betweenBrackets (pipe3 getPosition expr (skipString ".." >>. expr) (fun p e1 e2 -> Nondet(e1, e2, p))) <!> "nondet"
             attempt (ws (pref expr)) |>> Ref <!> "ref"
         ]
     
     let pprefixbinary tok op =
-        followedBy (skipString tok)
-        >>.(ws (skipString tok))
+        followedBy (safeSkip tok)
+        >>.(ws (safeSkip tok))
         >>. betweenParen ( pipe2 expr ((ws COMMA) >>. expr) (arithm op))
     let pmax = pprefixbinary tMAX Max
     let pmin = pprefixbinary tMIN Min
+    
+    let pcond =
+        followedBy (safeSkip tIF)
+        >>. tuple3
+                (ws (safeSkip tIF) >>. pbexpr) 
+                (ws (safeSkip tTHEN) >>. expr)
+                (ws (safeSkip tELSE) >>. expr)
+        |>> IfElse <!> "if-then-else"
+    
     opp.TermParser <- [
             term
             pmax
             pmin
+            pcond
             (betweenParen expr) <!> "paren"
         ]
         |> List.map ws
         |> choice
-
-    
 
     // Same precedence rules as in C
     opp.AddOperator(InfixOperator(tPLUS, notFollowedBy (skipChar '+') |> ws, 1, Associativity.Left, arithm Plus))
     opp.AddOperator(InfixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 1, Associativity.Left, arithm Minus))
 
     opp.AddOperator(InfixOperator(tMUL, wsUnit, 2, Associativity.Left, arithm Times))   
-    opp.AddOperator(InfixOperator(tDIV, wsUnit, 2, Associativity.Left, arithm Div))   
+    opp.AddOperator(InfixOperator(tDIV, wsUnit, 2, Associativity.Left, arithm Div))
+    opp.AddOperator(InfixOperator(tROUNDDIV, notFollowedBy (skipChar '=') |> ws, 2, Associativity.Left, arithm RoundDiv))
     opp.AddOperator(InfixOperator(tMOD, wsUnit, 2, Associativity.Left, arithm Mod))   
     
     opp.AddOperator(PrefixOperator(tABS, followedBy (skipChar '('), 3, false, fun x -> Unary(Abs, x)))
     opp.AddOperator(PrefixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 3, false, fun x -> Unary(UnaryMinus, x)))
 
-    choice [
-        betweenBrackets (pipe3 getPosition expr (skipString ".." >>. expr) (fun p e1 e2 -> Nondet(e1, e2, p)))
-        expr
-    ]
-
+    expr

@@ -1,28 +1,36 @@
 ﻿module LabsCore.Tokens
 
-let tPLUS = "+"
-let tMINUS = "-"
-let tMUL = "*"
-let tDIV = "/"
-let tMOD = "%"
-let tUNDEF = "undef"
-let tABS = "abs"
-let tID = "id"
-let tMIN = "min"
-let tMAX = "max"
+// Operators
+let tCHOICE = "++"
 let tCOMMENT = "#"
-
-let tRAW = "$"
-
-let tTRUE = "true"
-let tFALSE = "false"
+let tDIV = "/"
+let tGUARD = "->"
+let tFATGUARD = "=>"
+let tMINUS = "-"
+let tMOD = "%"
+let tMUL = "*"
 let tNEG = "!"
+let tPAR = "||"
+let tPLUS = "+"
+let tRAW = "$"
+let tROUNDDIV = ":"
+let tSEQ = ";"
+
+// Keywords
+
+let tABS = "abs"
 let tCONJ = "and"
 let tDISJ = "or"
-
+let tELSE = "else"
+let tFALSE = "false"
+let tID = "id"
+let tIF = "if"
+let tMAX = "max"
+let tMIN = "min"
+let tOF = "of"
+let tPICK = "pick"
 let tSKIP = "Skip"
-
-let tSEQ = ";"
-let tCHOICE = "++"
-let tPAR = "||"
-let tGUARD = "->"
+let tTHEN = "then"
+let tTRUE = "true"
+let tUNDEF = "undef"
+let tWHERE = "where"

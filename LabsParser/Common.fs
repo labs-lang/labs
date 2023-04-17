@@ -3,6 +3,7 @@ module internal Common
 open FParsec
 
 open LabsCore.Tokens
+open LabsCore.ExprTypes
 
 type Parser<'t> = Parser<'t, unit>
 
@@ -11,10 +12,11 @@ type Parser<'t> = Parser<'t, unit>
 let COMMENT : Parser<_> =       (skipString tCOMMENT)
 let COLON : Parser<_> =         (skipChar ':')
 let COMMA : Parser<_> =         (skipChar ',')
-let EQ : Parser<_> =            (skipChar '=')
+let EQ : Parser<_> =            (skipChar '=') .>> notFollowedBy (skipChar '>')
 let RANGE : Parser<_> =         (skipString "..")
-let OF : Parser<_> =            (skipString "of")
+let OF : Parser<_> =            (skipString tOF)
 let GUARD : Parser<_> =         (skipString tGUARD)
+let FATGUARD : Parser<_> =      (skipString tFATGUARD)
 let NEG : Parser<_> =           (skipString tNEG)
 let SEQ : Parser<_> =           (skipString tSEQ)
 let CHOICE : Parser<_> =        (skipString tCHOICE)
@@ -30,34 +32,33 @@ let ws p = p .>> spaces .>> skipMany (spaces1 <|> lineComment)
 /// Parses whitespace immediately
 let wsUnit = ws (preturn ())
 
-let isAlphanum x = isAsciiLetter x || isDigit x
-let notInIdentifier : Parser<_> = notFollowedBy (satisfy isAlphanum)
-
-// Parses reserved keyword so they are not parsed as identifiers or names
-let private reserved : Parser<_> = 
-    [tTRUE; tFALSE; tCONJ; tDISJ; tABS; tID; tMIN; tMAX]
-    |> List.map pstring 
-    |> choice
-    .>> notInIdentifier
+let isIdentifierChar x = isAsciiLetter x || isDigit x || x = '_'
+let notInIdentifier : Parser<_> = notFollowedBy (satisfy isIdentifierChar)
 
 let safeSkip str = skipString str .>> notInIdentifier
 let safeStrReturn str ret = safeSkip str >>% ret
 
 let safeIdentifier options =
-    (notFollowedBy reserved >>. identifier options)
-    <|> (followedBy reserved >>. reserved >>= (fail << (sprintf "Unexpected keyword '%s'")))
-    
+    let reserved = [
+        tABS; tCONJ; tDISJ; tELSE; tFALSE;
+        tID; tIF; tMAX; tMIN; tOF; tPICK
+        tSKIP; tTHEN; tTRUE; tUNDEF; tWHERE
+        "forall"; "exists"; "count"
+    ]
+    identifier options
+    >>= fun x ->
+        if List.contains x reserved
+        then fail $"Unexpected keyword '{x}'"
+        else preturn x
+
 let KEYNAME : Parser<_> =
-    IdentifierOptions(
-        isAsciiIdStart=isAsciiLower,
-        isAsciiIdContinue=isAlphanum)
+    IdentifierOptions(isAsciiIdStart=isAsciiLower)
     |> safeIdentifier
 
 let IDENTIFIER : Parser<_> = 
-    IdentifierOptions(
-        isAsciiIdStart=isAsciiUpper,
-        isAsciiIdContinue=isAlphanum)
+    IdentifierOptions(isAsciiIdStart=isAsciiUpper)
     |> safeIdentifier
+
 
 /// Helper function, returns string with elements of x separated by commas
 let private toCommaSepString x = x |> Seq.map (sprintf "%O") |> String.concat ", "
@@ -67,6 +68,7 @@ let private enclose startc endc = between (ws (skipChar startc)) (skipChar endc)
 
 let betweenBrackets p = enclose '[' ']' p
 let betweenBraces p = enclose '{' '}' p
+let betweenBracesPos p = getPosition .>>. betweenBraces p
 let betweenParen p = enclose '(' ')' p
 let betweenAng p = enclose '<' '>' p
 let sepbycommas p = sepBy1 p (ws COMMA)
@@ -118,3 +120,13 @@ let pstringEq str p =
     
 /// Parses an external parameter name
 let pextern : Parser<_> = ((skipChar '_') >>. KEYNAME)
+
+let pquantifier =
+    pipe3
+        (ws <| choice [
+            stringReturn "forall" All;
+            stringReturn "exists" Exists
+        ])
+        (ws IDENTIFIER)
+        (ws KEYNAME)
+        (fun a b c -> c, (b, a))

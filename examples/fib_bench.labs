@@ -1,0 +1,22 @@
+# Adapted from 
+# https://github.com/sosy-lab/sv-benchmarks/blob/master/c/pthread/fib_bench-1.c
+
+system {
+    environment = i: 1; j: 1
+    spawn = Proc: 2
+}
+
+agent Proc {
+    interface = k: 5
+    Behavior =  
+        (k > 0 -> {
+            i <-- if id > 0 then i + j else i;
+            j <-- if id > 0 then j else i + j;
+            k <- k - 1
+        }; Behavior)
+}
+
+check {
+    #SafeProp = always i <= 144 and j <= 144
+    UnsafeProp = always i < 144 and j < 144
+}

@@ -1,9 +1,9 @@
 ﻿module LabsTranslate.Encode
 
 open Frontend
-open LabsCore.Expr
 open LabsCore.Grammar
 open Frontend.STS
+open LabsCore.ExprTypes
 open LabsCore.BExpr
 open LabsCore.Tokens
 open FSharpPlus
@@ -13,7 +13,7 @@ open TranslationKit
 open Liquid
 
 /// Supported target languages.
-type EncodeTo = | C | Lnt | Lnt_Monitor
+type EncodeTo = | C | Lnt | Lnt_Monitor | Lnt_Parallel
 
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, int*int> =
@@ -115,11 +115,11 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
 
-    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E"
+    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "Local" | Pick _ -> "Pick"
     let agents =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
-            table.Agents.[name].Variables
+            table.Agents.[name].Attributes
             |> List.append (table.Agents.[name].LstigVariables table |> List.ofSeq)
             |> List.map (fun v tid ->
                 trKit.InitTr (v, snd table.M.[v.Name]) tid
@@ -160,10 +160,21 @@ let private funcName t =
 let private guards table t =
     table.Guards.TryFind t.Action |> Option.defaultValue Set.empty
 
-let private encodeAgent trKit goto sync table (a:AgentTable) =
+let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
         let guards = guards table t
         let assignments = t.Action.Def |> (function Act a -> Some a | _ -> None)
+        
+        // LStig Variables that are being updated
+        // and therefore should not be queried  
+        let LStigVarsAssignedTo =
+            assignments
+            |>> (fun a -> List.map fst a.Updates)
+            |>> (fun x -> List.map (fun r -> r.Var) x)
+            |>> (List.filter (fst >> isLstigVar))
+            |>> Set.ofList
+            |> Option.defaultValue Set.empty
+            
         
         /// Set of keys that the agent will have to confirm
         /// TODO maybe move to Frontend?
@@ -176,16 +187,38 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             |>> Set.unionMany
             |> Option.orElse (Some Set.empty)
             |>> Set.union (guards |> Set.map getLstigVarsBExpr |> Set.unionMany)
+            |>> fun s -> Set.difference s LStigVarsAssignedTo 
             |>> Seq.map (Int << snd)
             |> Option.defaultValue Seq.empty
             |> Lst
         
         let liquidAssignment (k:Ref<Var<int>*int, unit>, expr) =
-            let size = match (fst k.Var).Vartype with Array s -> s | _ -> 0
+            let v = fst k.Var
+            let dims = match v.Vartype with Array s -> s | _ -> []
+            let size = match v.Vartype with Array s -> List.reduce (*) s | _ -> 0
+            let loc =
+                v.Location
+                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "Local" | Pick _ -> "Pick" 
+
             Dict [
+                "name", Str v.Name
+                "loc", Str loc    
                 "key",  Int (snd k.Var)
                 "offset",
-                    k.Offset |>> (trKit.AgentExprTr >> Str) |> Option.defaultValue (Int 0)
+                    match k.Offset with
+                    | None -> Int 0
+                    | Some off ->
+                        let offsets =
+                            [0..dims.Length-1]
+                            |> List.map (fun i -> List.reduce (*) (1::List.rev(dims)).[..i])
+                            |> List.rev |> List.map string
+                        let indexes = List.map (trKit.AgentExprTr) off
+                        if offsets.Length <> indexes.Length then
+                            failwith $"Cannot zip {offsets} and {indexes} (in EncodeAgent)" 
+                        List.zip offsets indexes
+                        |> List.map (fun (off, i) -> $"({off} * {i})")
+                        |> String.concat " + "
+                        |> Str    
                 "size", Int size
                 "expr", trKit.AgentExprTr expr |> Str
             ]
@@ -199,27 +232,20 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
             |> Seq.map (fun (a, b, c) -> Lst [ Str a; Str b; Str c ])
             |> Lst
             
-        
         [
             "aux", auxs
-            "hasStigmergy", Bool (table.M.NextL > 0)
-            "hasEnvironment", Bool (table.M.NextE > 0)
             "label", funcName t |> Str
             "last", t.Last |> Bool
             "siblings", t.Siblings |> Seq.map Int |> Lst
             "entrycond", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
             "exitcond", liquidPcs t.Exit
             "guards", guards |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
+            "ifCond",t.If |> Option.map (fst >> trKit.AgentGuardTr) |> Option.defaultValue "" |> Str
+            "ifExit",t.If |> Option.map (snd >> liquidPcs) |> Option.defaultValue (Str "")
             "labs",
                 // TODO do sth smart here
                 string t.Action.Def
-                |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
-                |> Str
-            "loc",
-                assignments
-                |>> fun a -> a.ActionType
-                |>> function | I -> "attr" | L _ -> "lstig" | E -> "env"
-                |> Option.defaultValue ""
+                |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD))  
                 |> Str
             "qrykeys", qrykeys
             "sync", sync |> Bool
@@ -229,10 +255,59 @@ let private encodeAgent trKit goto sync table (a:AgentTable) =
                 |> Option.defaultValue Seq.empty
                 |> Lst         
         ]
-        |> render goto
+        |> List.append baseDict
     
-    Set.map encodeTransition a.Sts
-    |> Seq.reduce (<??>)
+    let encoder (t:Transition) =
+        match t.Action.Def with
+        | Block stmts ->
+            let encodes =
+                List.map (fun a -> {t with Action={t.Action with Def=Act a}} |> encodeTransition |> Map.ofList) stmts
+            let hd = encodes.Head
+            let locals =
+                let liquidVar v =
+                    let isPick = match v.Location with Pick _ -> true | _ -> false
+                    let pickFrom, pickTo =
+                        match v.Location with
+                        | Pick (_, Some typ, _) -> SymbolTable.findAgent table typ t.Action.Pos |> fun (a, b, _) -> a, b
+                        | _ -> 0, table.Spawn |> Map.values |> Seq.map snd |> Seq.max
+                    if isPick && not(v.Name.Contains "[]") then
+                        failwith $"'pick' requires an array assignment (maybe you meant '{v.Name}[] := pick ...'?\nat line {t.Action.Pos.Line})"
+                    else
+                    Dict [
+                    "name", v.Name.Replace("[]", "") |> Str
+                    "loc", string v.Location |> Str 
+                    "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> List.reduce (*) s
+                    "pickFrom", Int pickFrom
+                    "pickTo", Int pickTo
+                    "where",
+                        match v.Location with
+                        | Pick (_, _, Some w) -> w |> table.TranslateBExpr |> trKit.LinkTr
+                        | _ -> ""
+                        |> Str
+                ]
+                stmts
+                |> Seq.map (fun a -> List.map (fst >> fun r -> fst r.Var) a.Updates)
+                |> Seq.concat
+                |> Seq.filter (fun v -> match v.Location with Local | Pick _ -> true | _ -> false)
+                |> Seq.distinctBy (fun v -> v.Name)
+                |> Seq.map liquidVar
+                |> Lst
+
+            [
+                "guards", guards table t |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
+                "locals", locals 
+                "assignments", seq { for e in encodes -> e.["assignments"] } |> Lst
+                "labs", seq { for e in encodes -> e.["labs"] } |> Lst
+                "qrykeys",  seq { for e in encodes -> e.["qrykeys"] } |> Lst
+            ]
+            |> List.append baseDict
+            |> Map.ofList
+            |> fun d -> Map.union d hd
+            |> Map.toList
+            |> render block
+        | _ -> encodeTransition t |> render goto
+    
+    a.Sts |> Set.map encoder |> Seq.reduce (<??>)
 
 let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
     let scheduleTransition t =
@@ -242,8 +317,9 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
             "entry", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
             "guards", guards table t |> Seq.map (Str << trKit.MainGuardTr) |> Lst
         ]
-    let alwaysP, finallyP =
-        let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
+    
+    let toLiquid props = makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) props)
+    let filterPropsByModality modality =
         let maybeFilter m =
             match prop with
             | Some p ->
@@ -251,18 +327,50 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
                 if m'.IsEmpty then failwith $"Property {p} not found." else ()
                 m'
             | None -> m
-        if noprops
-        then (toLiquid [], toLiquid [])
-        else
-            // CAVEAT "fairly" and "fairly_inf" properties are
-            // not passed to templates at the moment.
-            let m1, m2 =
-                table.Properties
-                |> maybeFilter
-                |> Map.partition (fun _ n -> n.Def.Modality = Always) 
-            let _finally = Map.filter (fun _ n -> n.Def.Modality = Finally) m2
-            m1 |> Map.values |> toLiquid, _finally |> Map.values |> toLiquid
+        table.Properties
+        |> maybeFilter
+        |> Map.filter (fun _ n -> n.Def.Modality = modality)
+        |> Map.values
     
+    let doOtherProps =
+        let doScope =
+            function
+            | Between (o, c) -> Dict [
+                "type", "between" |> Str
+                "open", trKit.QPredTr table o |> Str
+                "close", trKit.QPredTr table c |> Str]
+            | FromUntil (o, c) -> Dict [
+                "type", "fromUntil" |> Str
+                "open", trKit.QPredTr table o |> Str
+                "close", trKit.QPredTr table c |> Str]
+        
+        let doProp name prop =
+            let commonFields scope = [
+                "modality", prop.Modality.Name |> Str
+                "name", name |> Str
+                "scope", doScope scope
+                "predicate", trKit.QPredTr table prop.QuantPredicate |> Str
+            ]
+            
+            match prop.Modality with
+            | Always | Eventually | Fairly | FairlyInf | Finally -> None
+            | ThereIs scope | Globally scope -> Dict (commonFields scope) |> Some
+            | Precedes (scope, prec) ->
+                commonFields scope
+                |> Seq.append ["prec", trKit.QPredTr table prec |> Str]
+                |> Dict |> Some
+                
+        table.Properties
+        |> Map.map (fun name v -> doProp name v.Def)
+        |> Map.values |> Seq.choose id
+        
+        
+    let alwaysP = (if noprops then Seq.empty else filterPropsByModality Always) |> toLiquid
+    let eventuallyP = (if noprops then Seq.empty else filterPropsByModality Eventually) |> toLiquid
+    let finallyP = (if noprops then Seq.empty else filterPropsByModality Finally) |> toLiquid
+    
+    
+       
     [
         "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair
@@ -274,19 +382,29 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
             |> Lst
         "alwaysasserts", alwaysP
         "finallyasserts", finallyP
+        "otherproperties", doOtherProps |> Lst
+        
+        "eventuallypredicates", eventuallyP
         "agentscount", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
     ]
     |> List.append baseDict
     |> render (parse (trKit.TemplateInfo.Get "main"))
 
 let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
-    let trKit = makeTranslationKit <| match encodeTo with | C -> C.wrapper | Lnt -> Lnt.wrapper | Lnt_Monitor -> Lnt.wrapperMonitor
+    let trKit = makeTranslationKit <|
+                match encodeTo with
+                | C -> C.wrapper
+                | Lnt -> Lnt.wrapper
+                | Lnt_Monitor -> Lnt.wrapperMonitor
+                | Lnt_Parallel -> Lnt.wrapperParallel
     let goto = parse (trKit.TemplateInfo.Get "goto")
+    let block = parse (trKit.TemplateInfo.Get "block")
     
     let baseDict = [
         "bound", Int bound
         "hasStigmergy", Bool (table.M.NextL > 0)
         "hasEnvironment", Bool (table.M.NextE > 0)
+        "MAXCOMPONENTS", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
         "simulation", Bool sim
     ]
     
@@ -295,7 +413,7 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
     <?> (encodeInit trKit baseDict)
     <?> (fun x -> 
             (Map.values x.Agents)
-            |> Seq.map (encodeAgent trKit goto sync x)
+            |> Seq.map (encodeAgent trKit baseDict goto block sync x)
             |> Seq.reduce (<??>))
     <?> (encodeMain trKit baseDict fair noprops prop)
     <~~> zero () 

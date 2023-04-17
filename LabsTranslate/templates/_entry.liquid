@@ -5,7 +5,7 @@
 {%- endif -%});
 {%- endif -%}
 
-{%- if loc == "" and hasStigmergy -%}
+{%- if hasStigmergy and assignments -%}
     __CPROVER_assume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
 {%- endif -%}
 {%- for guard in guards %}

@@ -10,89 +10,124 @@ zip_linux: platform = linux-x64
 
 sources = $(wildcard **/*.fs)
 sliver_sources = $(wildcard sliver/**/*.py) 
+labs_examples = $(wildcard labs-examples/*.labs) 
 templates = $(wildcard LabsTranslate/templates/**/*)
 
-VERSION := $(strip $(shell grep version sliver/__about__.py | grep = | sed 's/"//g' | awk 'NF{print $$NF}'))
+VERSION := $(strip $(shell grep version sliver/sliver/app/__about__.py | grep = | sed 's/"//g' | awk 'NF{print $$NF}'))
 RELEASENAME = sliver-v$(VERSION)_$(strip $(subst -,_, ${platform}))
+BUILD_DIR = build/$(platform)
+SLIVER_DIR = $(BUILD_DIR)/sliver
 
 # Always force to re-make py files and templates
 rmsentinels :
-	@rm -f build/${platform}/sliver.py
-	@rm -f build/${platform}/backends/cseq/cseq.py
-	@rm -f build/${platform}/labs/templates/main.c
+	@rm -f $(BUILD_DIR)/requirements.txt
+	@rm -f $(BUILD_DIR)/sliver.py
+	@rm -f $(SLIVER_DIR)/click/core.py
+	@rm -f $(SLIVER_DIR)/absentee/absentee.py
+	@rm -f $(BUILD_DIR)/pyparsing.py
+	@rm -f $(SLIVER_DIR)/labs/templates/c/main.c
 
-build/%/labs/templates/main.c : $(templates)
+build/%/sliver/labs/templates/c/main.c : $(templates)
 	@echo Copying templates...
-	@cp -r LabsTranslate/templates build/$(platform)/labs;
+	@cp -r LabsTranslate/templates/ $(SLIVER_DIR)/labs/templates/;
 
-build/%/labs/LabsTranslate : $(sources)
-	@mkdir -p build/$(platform)
+build/%/sliver/labs/LabsTranslate : $(sources)
+	@mkdir -p $(BUILD_DIR)
 	@echo Building LabsTranslate...
-	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o build/$(platform)/labs -p:PublishSingleFile=true -p:PublishTrimmed=true ;
-	@rm build/${platform}/labs/*.pdb ;
+	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o $(SLIVER_DIR)/labs -p:PublishSingleFile=true -p:PublishTrimmed=true ;
+	@rm $(SLIVER_DIR)/labs/*.pdb ;
+
+build/%/requirements.txt : sliver/requirements.txt
+	@cp sliver/requirements.txt $(dir $@) ;
 
 build/%/sliver.py : $(sliver_sources)  build/%/pyparsing.py
-	@mkdir -p build/$(platform)
+	@mkdir -p $(BUILD_DIR)
 	@echo Copying SLiVER...
-	@cp -r sliver/ build/$(platform)/ ;
-	@rm build/${platform}/HISTORY-dev ;
-	@rm -rf build/${platform}/doc ;
+	@cp -r sliver/sliver $(dir $@)/ ;
+	@cp -r sliver/sliver.py $@ ;
+	@cp -r sliver/HISTORY $(dir $@)/ ;
+	@cp -r sliver/LICENSE $(dir $@)/ ;
+	@cp -r sliver/README.* $(dir $@)/ ;
+
 	@rm -rf build/${platform}/..?* ;
 	@rm -rf build/${platform}/.[!.]* ;
-	
 
 build/%/pyparsing.py :
 	@mkdir -p build/$(platform)
 	@echo Copying pyparsing.py...
-	@cp -r pyparsing.py build/$(platform)/pyparsing.py ;
+	@cp -r pyparsing.py $@ ;
 
-build/%/click :
+build/%/sliver/absentee/absentee.py :
+	@mkdir -p build/$(platf:orm)
+	@echo Copying absentee...
+	@cp -r absentee/absentee/ $(dir $@) ;
+	@cp -r absentee/LICENSE $(dir $@) ;
+	@cp -r absentee/README.md $(dir $@) ;
+
+build/%/sliver/click/core.py :
 	@mkdir -p build/$(platform)
 	@echo Copying click...
-	@cp -r click/src/click build/$(platform)/click ;
-	@cp -r click/LICENSE.rst build/$(platform)/click/ ;
-	@cp -r click/README.rst build/$(platform)/click/ ;
+	@cp -r click/src/click/ $(dir $@) ;
+	@cp -r click/LICENSE.rst $(dir $@) ;
+	@cp -r click/README.rst $(dir $@) ;
 
-build/%/backends/cseq/cseq.py :
-	@mkdir -p build/$(platform)/backends
+build/%/sliver/cseq/cseq.py :
 	@echo Copying CSeq...
-	@cp -r cseq/ build/$(platform)/backends/cseq/ ;
-	@cp -r sliver/info.py build/$(platform)/backends/cseq/info.py ;
-	@cp -r cseq-modules/* build/$(platform)/backends/cseq/modules ;
+	@cp -r cseq/ $(dir $@) ;
+	@cp -r sliver/sliver/app/info.py $(dir $@)/info.py ;
+	@cp -r cseq-modules/* $(dir $@)/modules ;
 
-build/%/examples :
+build/%/examples : $(labs_examples)
 	@mkdir -p build/$(platform)
 	@echo Copying examples...
-	@mkdir -p build/$(platform)/examples ;
-	@cp labs-examples/*.labs build/$(platform)/examples/;
+	@mkdir -p $@ ;
+	@cp labs-examples/*.labs $@ ;
 
-build/%/backends/cbmc-simulator :
-	@mkdir -p build/$(platform)/backends
-	@echo Copying backends...
-	@cp -r linux/* build/$(platform)/backends/ ;
+build/%/sliver/cbmc/cbmc-simulator :
+	@echo Copying cbmc...
+	@cp -rf linux/cbmc $(SLIVER_DIR)/ ;
+
+build/%/sliver/esbmc/esbmc :
+	@echo Copying esbmc...
+	@cp -rf linux/esbmc $(SLIVER_DIR)/ ;
+
+build/linux-x64/sliver/minisat/minisat :
+	@echo Copying minisat...
+	@cp -rf linux/minisat $(SLIVER_DIR)/ ;
+
+build/osx.10.12-x64/sliver/minisat/minisat :
+	@echo Copying minisat...
+	@cp -rf osx/minisat $(SLIVER_DIR)/ ;
 
 osx : rmsentinels \
-	build/osx.10.12-x64/labs/LabsTranslate \
-	build/osx.10.12-x64/labs/templates/main.c \
+	build/osx.10.12-x64/sliver/labs/LabsTranslate \
+	build/osx.10.12-x64/sliver/labs/templates/c/main.c \
 	build/osx.10.12-x64/pyparsing.py \
-	build/osx.10.12-x64/click \
+	build/osx.10.12-x64/sliver/click/core.py \
+	build/osx.10.12-x64/sliver/absentee/absentee.py \
 	build/osx.10.12-x64/sliver.py \
-	build/osx.10.12-x64/examples
+	build/osx.10.12-x64/requirements.txt \
+	build/osx.10.12-x64/examples \
+	build/osx.10.12-x64/sliver/minisat/minisat
 
 linux : rmsentinels \
-	build/linux-x64/labs/LabsTranslate \
-	build/linux-x64/labs/templates/main.c \
+	build/linux-x64/sliver/labs/LabsTranslate \
+	build/linux-x64/sliver/labs/templates/c/main.c \
 	build/linux-x64/pyparsing.py \
-	build/linux-x64/click \
+	build/linux-x64/sliver/click/core.py \
+	build/linux-x64/sliver/absentee/absentee.py \
 	build/linux-x64/sliver.py \
+	build/linux-x64/requirements.txt \
 	build/linux-x64/examples \
-	build/linux-x64/backends/cbmc-simulator
+	build/linux-x64/sliver/cbmc/cbmc-simulator \
+	build/linux-x64/sliver/esbmc/esbmc \
+	build/linux-x64/sliver/minisat/minisat
 
 osx_cseq: rmsentinels osx \
-	build/osx.10.12-x64/backends/cseq/cseq.py
+	build/osx.10.12-x64/sliver/cseq/cseq.py
 
 linux_cseq: rmsentinels linux \
-	build/linux-x64/backends/cseq/cseq.py
+	build/linux-x64/sliver/cseq/cseq.py
 
 zip_linux : linux_cseq
 	@rm -rf build/$(RELEASENAME);

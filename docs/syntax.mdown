@@ -1,0 +1,335 @@
+# The LAbS modelling language: syntax reference
+
+## Preliminary definitions
+
+The key words
+"MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT",
+"RECOMMENDED", "MAY", and "OPTIONAL" in this document
+are to be interpreted as described in [RFC 2119](https://www.ietf.org/rfc/rfc2119.txt).  
+
+Line comments are introduced by a `#` sign.
+
+A `Name` is formed by an *uppercase* letter
+followed by alphanumerical characters
+(e.g., `Foo`, `FooBar01`, `Foo2Bar`).
+
+A `VarName` is formed by a *lowercase* letter
+followed by alphanumerical characters
+(e.g., `foo`, `fooBar01`, `foo2Bar`).
+
+`NAT` and `INT` denote natural and integer numerals, respectively.
+
+`SepBy(P, S)` denotes either `P`,
+or multiple occurrences of `P` separated by `S`.
+For instance, both `"0"` and `"1, 2, 40"` are valid
+words for `SepBy(NAT, ",")`.
+
+`Group(P1, P2, ...)` denotes the concatenation of `P1`, `P2`, etc.,
+without any whitespace between them.
+For instance, `foo()` is a valid word for `Group(VarName, "()")`,
+but `foo ()` is not.
+
+```ebnf
+(* Low-level definitions *)
+digit = ? '[0-9]' ? ;
+lowercase-letter = ? '[a-z]' ? ;
+uppercase-letter = ? '[A-Z]' ? ;
+letter = lowercase-letter | uppercase-letter ;
+alphanum = letter | digit ;
+(* --------------------- *)
+
+Name = uppercase-letter, { alphanum } ;
+VarName = lowercase-letter, {alphanum} ;
+
+ExternName = "_", VarName ;
+
+SepBy(P, S) = P { S, SepBy(P, S) } ;
+```
+
+
+The following literals are either language *keywords*
+or names of *built-in functions*,
+and cannot be used in places where one of
+`VarName` or `Name` is expected.
+
+```txt
+abs
+and
+else
+exists
+false
+forall
+id
+if
+max
+min
+Nil
+of
+or
+pick
+Skip
+then
+true
+where
+```
+
+**Note.**
+The `id` keyword may be used in *some* places where a `varName` is expected,
+but not in others: 
+for instance, it may be referred to within an expression,
+but cannot be declared, nor appear in the left-hand side of an assignment.
+
+## Structure of a LAbS specification
+
+A specification is made of separate **sections**,
+introduced by a **title** (e.g., `system`) and
+wrapped in curly brackets.
+Some sections (namely, `agent` and `stigmergy`)
+may appear multiple times,
+and therefore each occurrence must have its own `Name`
+(e.g., `agent Foo { ... }`, `stigmergy Bar { ... }`).
+
+### Informal structure
+
+```labs
+# One system definition
+system {
+  extern = ...      # Optional
+  environment = ... # Optional
+  spawn = ...       # Mandatory
+
+  # Zero or more process definitions
+}
+
+# Zero or more stigmergy definitions
+stigmergy <Name> {
+  link = ...        # Mandatory
+
+  # One or more stigmergic variable definitions
+}
+
+# Zero or more agent definitions
+agent <Name> {
+  interface = ...   # Optional
+  stigmergies = ... # Optional
+
+  # One or more process definitions;
+  # a definition named Behavior is mandatory
+}
+
+# At most one assume section
+assume {
+  ...
+}
+
+# One check section (may be empty)
+check {
+  ...
+}
+```
+
+### EBNF
+
+```ebnf
+Spec = System, { (Agent | Stigmergy) }, [Assume], Check ;
+
+System =
+  "system", "{",
+    [ "extern:", SepBy(ExternName, ","), "\n" ]
+    [ "environment:", SepBy(VarDecl, ";"), "\n" ]
+    "spawn:", SepBy(Spawn, ",")
+    { "\n", ProcDef }
+  "}" ;
+Spawn = Group(Name, ":"), ConstExpr ;
+
+Agent =
+  "agent", Name, "{",
+    [ "interface:", SepBy(VarDecl, ";"), "\n" ]
+    [ "stigmergies:", SepBy(Name, ","), "\n" ]
+
+    ProcDef, { "\n", ProcDef }
+  "}" ;
+
+Stigmergy =
+  "stigmergy", Name, "{",
+    "link:", Link, "\n"
+
+    ( VarDecl | Tupledecl ), { "\n", ( VarDecl | Tupledecl ) }
+  "}" ;
+
+TupleDecl = SepBy(VarName, ","), ":", SepBy(Init, ",") ;
+
+Assume = "assume", "{", { Name, "=", Pred }, "}" ;
+```
+
+## Variables
+
+In LAbS, all variables have integer values.
+Each variable belongs to one of four *sorts*
+depending on where it has been declared.
+
+* **Shared** variables are declared in the `environment` field of `system`.
+* **Stigmergic** variables are declared within a `stigmergy`.
+* **Attributes** are declared in the `interface` field of an `agent`.
+* **Local** variables are (implicitly) declared
+  in an **atomic block**
+  within a process definition (see below).
+
+Every variable must have a distinct `VarName`.
+Non-local variables are initialized
+(possibly nondeterministically)
+at the time of declaration,
+by means of an initializer expression `Init`.
+
+```ebnf
+VarDecl = Varname ["[", NAT, "]"], ":", Init ;
+Init 
+  = INT
+  | "undef" (* deprecated? *)
+  | "[", SepBy(INT, ","),"]"
+  | Group(INT, "..", INT) ;
+```
+
+## Expressions (`Expr`, `BExpr`)
+
+An expression `Expr` is an arithmetic
+computation over variables.
+
+```ebnf
+Expr  
+  = INT
+  | SharedVarRef
+  | VarRef
+  | Expr, ArithmOp, Expr
+  | "(", Expr, ")"
+  (* Unary minus *)
+  | "-", Expr
+  (* Ternary operator *)
+  | "if", BExpr, "then", Expr, "else", Expr
+  (* Call to built-in function *)
+  | BuiltIn, "(", SepBy(Expr, ","), ")"
+  (* Call to external function *)
+  | Group("$", (Name | VarName)), "(", SepBy(Expr, ","), ")" ;
+VarRef = VarName ["[", Expr "]"] ["of", Expr] ;
+(* In SharedVarRef, VarName is the name of a shared variable *)
+SharedVarRef = VarName ["[", Expr "]"] ;
+ArithmOp = "+" | "-" | "*" | "/" | ":" | "%" ;
+BuiltIn = "max" | "min" | "abs" ;
+```
+
+A `BExpr` is either a comparison between two expressions,
+or a logical operation between two Boolean sub-expressions.
+
+```ebnf
+BExpr 
+  = "true"
+  | "false"
+  | "!", BExpr
+  | "(", Expr, ")"
+  | Expr, cmp, Expr
+  | BExpr, LogicOp, BExpr ;
+Cmp = "=" | "!=" | "<" | "<=" | ">" | ">=" ;
+LogicOp = "and" | "or" ;
+```
+
+## Predicates (`Link`, `Pred`)
+
+A *link predicate* is used to express a condition that two agents
+(`1` and `2`) must satisfy.
+
+It is like a `BExpr`, except that
+all references to non-shared variables must be decorated
+with either `of 1` or `of 2`.
+
+```ebnf
+LExpr 
+  = INT | NAT
+  | SharedVarRef 
+  | VarRef, "of", "1" | VarRef, "of", "2" 
+  | (* etc., same as Expr *) ;
+Link = LExpr, LogicOp, LExpr
+```
+
+A *quantified predicate* expresses properties
+that some/all agents must satisfy.
+In a quantified predicate,
+It is like a `BExpr`, except that
+all variable references to non-shared variables must be decorated
+with `of x` where `x` is a defined quantified variable.
+
+```ebnf
+PExpr
+  = INT | NAT
+  | SharedVarRef 
+  | VarRef, "of", VarName 
+  | (* etc., same as Expr *) ;
+Quant = "forall", Name, VarName | "exists", Name, VarName ;
+Pred = [ SepBy(Quant, ","), "," ], PExpr ;
+```
+
+## Actions (`Act`)
+
+An action is an assignment to one or more variables.
+
+```ebnf
+Act = Lhs, AsgnOp, Rhs ;
+AsgnOp = "<-" | "<~" | "<--" ;
+Lhs = SepBy(VarName, ",") ;
+Rhs = SepBy(ExprOrPred, ",") ;
+ExprOrPred = Expr | Pred ;
+Block-Action 
+  = Act
+  | Lhs, ":=", Rhs
+  | Group(VarName, "[]"), ":=", Pick ;
+
+Pick = "pick", NAT, [Name], ["where", Link] ;
+```
+
+## Processes (`P`)
+
+Processes describe the behaviour of agents.
+
+```ebnf
+P = "Nil" 
+  | "Skip"
+  | Act
+  | P, ";", P
+  | P, "++", P
+  | P "||" P
+  | BExpr, "->", P
+  | "{", SepBy(Block-Action, ";"), "}"
+  | Name ;
+ProcDef = Name, "=", P
+```
+
+## Assumptions and properties
+
+```ebnf
+AssumptionDecl = Name, "=", Pred ;
+Modality 
+  = "after", NAT
+  | "always" 
+  | "eventually" 
+  | "fairly"
+  | "fairly_inf" ;
+PropertyDecl = Name, "=", Modality, Pred
+```
+
+## Appendix. About this document
+
+### Versions and change log
+
+* **v0.2** (2022-07-05)
+  * Added RFC 2119 reference 
+  * Added EBNF for specifications
+  * Changed formatting of the "Versions and change log" section
+
+* **v0.1** (2022-07-05) 
+  * First draft (partial)
+
+### Meta-specifications
+
+The source for this document shall use [semantic line breaks](https://sembr.org/).
+
+The source for this document should be linted using [markdownlint](https://github.com/DavidAnson/markdownlint).
+
