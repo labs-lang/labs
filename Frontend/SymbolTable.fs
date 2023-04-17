@@ -19,9 +19,9 @@ type Mapping = {
 }
 with
     static member empty = {Map=Map.empty; NextI=0; NextE=0; NextL=0}
-    member this.Item with get(key:string) = this.Map.[key]
+    member this.Item with get(key:string) = this.Map[key]
     member this.TryFind key = this.Map.TryFind key
-    member this.IndexOf (var:Var<_>) = snd this.[var.Name]
+    member this.IndexOf (var:Var<_>) = snd this[var.Name]
     member this.RangeOf (var:Var<_>) =
         this.IndexOf var, this.IndexOf var + (match var.Vartype with Scalar -> 0 | Array s -> List.reduce (*) s) 
     member this.Mapvar (var:Var<_>) = 
@@ -123,7 +123,7 @@ module SymbolTable =
     let rec public findString locals table (k: string) =
         if Map.containsKey k locals
         then
-            let _, loc = locals.[k]
+            let _, loc = locals[k]
             let vtype = match loc with Pick (n, _, _) -> Array [n] | _ -> Scalar
             {Name=k; Vartype=vtype; Location=loc; Init=Undef}, 0
         elif Map.containsKey $"{k}[]" locals
@@ -176,8 +176,8 @@ module SymbolTable =
             if not qs.IsEmpty then
                 let nextId = Map.pick (fun k _ -> Some k) qs
                 
-                let agent, quantifier = qs.[nextId]
-                let amin, amax = table.Spawn.[agent]
+                let agent, quantifier = qs[nextId]
+                let amin, amax = table.Spawn[agent]
                 let addToSubs i = Map.add nextId (Leaf (Const i)) subs
                 let translateWithSubs s =
                     trProp s (qs.Remove nextId) pr 
@@ -281,10 +281,10 @@ module SymbolTable =
         <~> fun p ->
             let allProcesses = Map.union p table.Processes
             let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") allProcesses)
-            let (lts, acc), initCond = makeTransitions state p'.["Behavior"]
+            let (lts, acc), initCond = makeTransitions state p'["Behavior"]
             let lts' = removeNames p' lts
-            let guards = Map.union table.Guards (setGuards p'.["Behavior"])
-            let agent = {table.Agents.[a.Name] with Processes=p'; Sts=lts'; InitCond=initCond; Lstig=a.Def.Lstig |> Set.ofList}
+            let guards = Map.union table.Guards (setGuards p'["Behavior"])
+            let agent = {table.Agents[a.Name] with Processes=p'; Sts=lts'; InitCond=initCond; Lstig=a.Def.Lstig |> Set.ofList}
             zero ({table with Agents = table.Agents.Add(a.Name, agent); Guards=guards}, (Set.empty, acc))        
     
     let internal makeSpawnRanges externs spawn table =
@@ -337,7 +337,7 @@ module SymbolTable =
     
     let lstigVariablesOf table name =
         table.Variables
-        |> Map.filter (fun _ v -> match v.Location with | L (s, _) when table.Agents.[name].Lstig.Contains s -> true | _ -> false)
+        |> Map.filter (fun _ v -> match v.Location with | L (s, _) when table.Agents[name].Lstig.Contains s -> true | _ -> false)
         |> Map.values
         |> Seq.sortBy table.M.IndexOf
     
@@ -358,14 +358,14 @@ module SymbolTable =
         let dumpVar v =
             match v.Vartype with
             | Scalar -> $"%i{table.M.IndexOf v}={v.Name}={v.Init}"
-            | Array s -> $"%i{snd table.M.[v.Name]}={v.Name}[%i{List.reduce (*) s}]={v.Init}"
+            | Array s -> $"%i{snd table.M[v.Name]}={v.Name}[%i{List.reduce (*) s}]={v.Init}"
         let dumpSpawn agentName (_start, _end) =
-            let iface = table.Agents.[agentName].Variables |> List.map dumpVar |> String.concat ";"
-            let lstig = table.Agents.[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"
+            let iface = table.Agents[agentName].Variables |> List.map dumpVar |> String.concat ";"
+            let lstig = table.Agents[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"
             printfn $"{agentName} %i{_start},%i{_end}\n{iface}\n{lstig}"
         
         let dumpPicks agentName =
-            let picks = table.Agents.[agentName].Processes.["Behavior"] |> Process.collectPicks |> String.concat ","
+            let picks = table.Agents[agentName].Processes["Behavior"] |> Process.collectPicks |> String.concat ","
             printf $"{agentName} {picks};"
         
         

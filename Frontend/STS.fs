@@ -80,7 +80,7 @@ let rec removeNames (procs: Map<string, Process<_>>) lts =
         let inits =
             (*Find initial actions and tag them*)
             let initials =
-                Process.initial procs.[name]
+                Process.initial procs[name]
                 |> Set.map (
                     if name = "Behavior" then
                         id
@@ -142,12 +142,12 @@ let rec removeNames (procs: Map<string, Process<_>>) lts =
             l
             |> Set.remove tr
             |> Set.partition (fun t -> tr.Entry |- t.Exit && (t.Siblings.IsEmpty || t.Last))
-        
+
         let tmpResult =
             affected
             |> Set.map (fun t -> { t with Exit = (ExitCond.remove tr.Entry t.Exit) >>. exit })
             |> Set.union others
-        
+
         let affectedAtIf, othersAtIt =
             tmpResult
             |> Set.remove tr
@@ -156,14 +156,15 @@ let rec removeNames (procs: Map<string, Process<_>>) lts =
                 |> Option.map (fun cond -> tr.Entry |- (snd cond))
                 |> Option.defaultValue false
                 |> (&&) (t.Siblings.IsEmpty || t.Last))
-        
+
         affectedAtIf
-        |> Set.map (fun t -> {
-            t with If =
-                t.If
-                |> Option.map (fun (ifcond, ifexit) -> ifcond, (ExitCond.remove tr.Entry ifexit) >>. exit)})
+        |> Set.map (fun t ->
+            { t with
+                If =
+                    t.If
+                    |> Option.map (fun (ifcond, ifexit) -> ifcond, (ExitCond.remove tr.Entry ifexit) >>. exit) })
         |> Set.union othersAtIt
-    
+
     lts
     |> Set.filter (fun t ->
         match t.Action.Def with
@@ -192,7 +193,7 @@ let makeTransitions (state: Accumulator) proc =
                      ExitCond.ofEntryConds [ entry ]
                  else
                      Map.empty
-        
+
         let lts' =
             (Set.add
                 { Entry = entry
@@ -204,18 +205,24 @@ let makeTransitions (state: Accumulator) proc =
                 lts
 
         lts', (setl _2 v' acc)
-    
+
     let fatguardFn recurse (lts, acc) def =
         let _, _, _, exit = acc
         let bexpr, body = def
         let inits = Process.initial body
         //let finals = Process.final bot
         let lts', acc' = recurse (Set.empty, acc) body
-        let lts'' = lts' |> Set.map (fun tr ->
-            if inits.Contains tr.Action then {tr with If = Some (bexpr, exit)}
-            else tr)
+
+        let lts'' =
+            lts'
+            |> Set.map (fun tr ->
+                if inits.Contains tr.Action then
+                    { tr with If = Some(bexpr, exit) }
+                else
+                    tr)
+
         (Set.union lts lts'', acc')
-    
+
     let rec compFn typ recurse (lts, acc) l =
         match typ with
         | Seq ->

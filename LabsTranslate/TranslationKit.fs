@@ -110,8 +110,8 @@ let private translateQPred trExpr trBExpr trLocation name (table:SymbolTable) qp
         let trQuantifier = function | All -> Conj | Exists -> Disj
         if not prop.Quantifiers.IsEmpty then
             let nextId = Map.pick (fun k _ -> Some k) prop.Quantifiers
-            let agent, quantifier = prop.Quantifiers.[nextId]
-            let amin, amax = table.Spawn.[agent]
+            let agent, quantifier = prop.Quantifiers[nextId]
+            let amin, amax = table.Spawn[agent]
 
             let addToSubs i = Map.add nextId i subs
             let translateWithSubs s =
@@ -243,7 +243,7 @@ module internal C =
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "__abs(%s)"
-        let nondetFn e1 e2 _ = sprintf $"nondetInRange({e1}, {e2})"
+        let nondetFn e1 e2 _ = $"nondetInRange({e1}, {e2})"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
         let ifFn cond ift iff =
             if ift = "1" && iff = "0"
