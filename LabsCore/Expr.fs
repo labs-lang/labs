@@ -14,7 +14,8 @@ let rec internal foldB foldExpr acc bexpr =
 let rec fold fleaf fref acc expr = 
     let recurse = fold fleaf fref
     match expr with
-    | QB (_, p) -> foldB recurse acc p 
+    | QB (_, p)
+    | Count (_, _, p) -> foldB recurse acc p
     | Leaf l -> fleaf acc l
     | Nondet(e1, e2, _)
     | Arithm(e1, _, e2) ->
@@ -26,19 +27,21 @@ let rec fold fleaf fref acc expr =
     | Ref r ->
         let newacc = fref acc r
         r.Offset 
-        |> Option.map (recurse newacc)
+        |> Option.map (List.fold recurse newacc)
         |> Option.defaultValue newacc
 
 let rec cata fleaf farithm funary fnondet fref fraw fif expr = 
     let recurse = cata fleaf farithm funary fnondet fref fraw fif
     
     match expr with
-    | QB _ -> failwith $"Unexpected call to cata on QB" 
+    | QB _
+    | Count _ -> failwith $"Unexpected call to Expr.cata on {expr}"
     | Leaf l -> fleaf l
     | Arithm(e1, op, e2) -> farithm op (recurse e1) (recurse e2)
     | Unary(op, e) -> funary op (recurse e)
     | Nondet(e1, e2, pos) -> fnondet (recurse e1) (recurse e2) pos
-    | Ref r -> fref r.Var (Option.map recurse r.Offset) (Option.map recurse r.OfAgent)
+    | Ref r ->  
+        fref r.Var (Option.map (List.map recurse) r.Offset) (Option.map recurse r.OfAgent)
     | RawCall(n, args) -> fraw n (List.map recurse args)
     | IfElse (cond, iftrue, iffalse) -> fif cond (recurse iftrue) (recurse iffalse)
 
@@ -53,11 +56,12 @@ let rec map_ fleaf fref fcond expr =
     
     match expr with
     | QB (q, p) -> QB(q, mapP p)
+    | Count (typ, name, bexpr) -> Count (typ, name, mapP bexpr) 
     | Leaf l -> Leaf(fleaf l)
     | Nondet(e1, e2, pos) -> Nondet(recurse e1, recurse e2, pos)
     | Arithm(e1, op, e2) -> Arithm(recurse e1, op, recurse e2)
     | Ref r -> 
-        let newOffset = r.Offset |> Option.map recurse
+        let newOffset = r.Offset |> Option.map (List.map recurse)
         let newOf = r.OfAgent |> Option.map recurse
         Ref(fref r newOffset newOf)
     | RawCall (n, args) -> RawCall(n, List.map recurse args)

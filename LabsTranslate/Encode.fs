@@ -194,7 +194,8 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
         
         let liquidAssignment (k:Ref<Var<int>*int, unit>, expr) =
             let v = fst k.Var
-            let size = match v.Vartype with Array s -> s | _ -> 0
+            let dims = match v.Vartype with Array s -> s | _ -> []
+            let size = match v.Vartype with Array s -> List.reduce (*) s | _ -> 0
             let loc =
                 v.Location
                 |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "Local" | Pick _ -> "Pick" 
@@ -203,7 +204,21 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                 "name", Str v.Name
                 "loc", Str loc    
                 "key",  Int (snd k.Var)
-                "offset", k.Offset |>> (trKit.AgentExprTr >> Str) |> Option.defaultValue (Int 0)
+                "offset",
+                    match k.Offset with
+                    | None -> Int 0
+                    | Some off ->
+                        let offsets =
+                            [0..dims.Length-1]
+                            |> List.map (fun i -> List.reduce (*) (1::List.rev(dims)).[..i])
+                            |> List.rev |> List.map string
+                        let indexes = List.map (trKit.AgentExprTr) off
+                        if offsets.Length <> indexes.Length then
+                            failwith $"Cannot zip {offsets} and {indexes} (in EncodeAgent)" 
+                        List.zip offsets indexes
+                        |> List.map (fun (off, i) -> $"({off} * {i})")
+                        |> String.concat " + "
+                        |> Str    
                 "size", Int size
                 "expr", trKit.AgentExprTr expr |> Str
             ]
@@ -225,10 +240,12 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
             "entrycond", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
             "exitcond", liquidPcs t.Exit
             "guards", guards |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
+            "ifCond",t.If |> Option.map (fst >> trKit.AgentGuardTr) |> Option.defaultValue "" |> Str
+            "ifExit",t.If |> Option.map (snd >> liquidPcs) |> Option.defaultValue (Str "")
             "labs",
                 // TODO do sth smart here
                 string t.Action.Def
-                |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD)) 
+                |> (+) (if guards.IsEmpty then "" else ((guards |> Set.map string |> String.concat " and ") + tGUARD))  
                 |> Str
             "qrykeys", qrykeys
             "sync", sync |> Bool
@@ -259,7 +276,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                     Dict [
                     "name", v.Name.Replace("[]", "") |> Str
                     "loc", string v.Location |> Str 
-                    "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> s
+                    "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> List.reduce (*) s
                     "pickFrom", Int pickFrom
                     "pickTo", Int pickTo
                     "where",

@@ -59,6 +59,7 @@ type LeafExpr<'b> =
         | Extern s -> "_" + s
 type Expr<'a, 'b> =
     | QB of Map<string, string*Quantifier> * BExpr<'a, 'b>
+    | Count of string * string * BExpr<'a, 'b>
     | Leaf of LeafExpr<'b>
     | Nondet of Expr<'a, 'b> * Expr<'a, 'b> * Position
     | Ref of Ref<'a, 'b>
@@ -71,6 +72,7 @@ type Expr<'a, 'b> =
         | QB (quants, pred) ->
             let qs = quants |> Map.values |> Seq.map string |> String.concat ", "
             $"{qs}, {string pred}"
+        | Count (typ, name, bexpr) -> $"count {typ} {name}, {bexpr}"
         | Leaf l -> string l
         | Nondet (start, bound, _) -> $"[{start}..{bound}]"
         | Ref r -> string r
@@ -83,10 +85,11 @@ type Expr<'a, 'b> =
             | Min | Max -> $"{op}({e1}, {e2})" 
             | _ -> $"{e1} {op} {e2}"
 and Ref<'a, 'b> = 
-    {Var:'a; Offset: Expr<'a, 'b> option; OfAgent: Expr<'a, 'b> option}
+    {Var:'a; Offset: Expr<'a, 'b> list option; OfAgent: Expr<'a, 'b> option}
     override this.ToString() =
+        let COMMA = ", "
         let ofAgent = match this.OfAgent with None -> "" | Some e -> $" of {e}"
-        let offset = match this.Offset with None -> "" | Some e -> $"[{e}]" 
+        let offset = match this.Offset with None -> "" | Some e -> $"[{List.map string e |> String.concat COMMA}]" 
         $"%O{this.Var}{offset}{ofAgent}"
 
 
@@ -117,7 +120,13 @@ let rec equal e1 e2 =
     | Unary(o1, e1_), Unary(o2, e2_) when o1 = o2 -> equal e1_ e2_
     | Ref r1, Ref r2 when r1.Var = r2.Var ->
         match r1.Offset, r2.Offset, r1.OfAgent, r2.OfAgent with
-        | Some o1, Some o2, Some of1, Some of2 -> (equal o1 o2) && (equal of1 of2) 
+        | Some o1, Some o2, Some of1, Some of2 ->
+            if o1.Length <> o2.Length then false
+            else
+                List.zip o1 o2
+                |> List.map (fun (x, y) -> equal x y) 
+                |> List.reduce (&&) 
+                |> fun x -> x && (equal of1 of2) 
         | None, None, None, None -> true
         | _ -> false
     | RawCall(n1, a1), RawCall(n2, a2) ->

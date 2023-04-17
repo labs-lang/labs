@@ -56,7 +56,7 @@ type Action<'a> = {
         override this.ToString() =
             (match this.ActionType with
             | Pick _->
-                let pick = (string this.ActionType).[1 ..] |> sprintf "p%s"
+                let pick = (string this.ActionType)[1 ..] |> sprintf "p%s"
                 fun v _ -> $"{v} := {pick}"
             | Local _ -> sprintf "%s := %s"
             | I -> sprintf "%s <- %s"
@@ -118,11 +118,12 @@ type Composition =
 type Process<'a> =
     | BaseProcess of Node<Stmt<'a>>
     | Guard of Node<BExpr<'a, unit> * Process<'a>>
+    | FatGuard of Node<BExpr<'a, unit> * Process<'a>>
     | Comp of Composition * Process<'a> list
 
 type VarType<'a> = 
     | Scalar
-    | Array of size:'a
+    | Array of size:'a list
 
 type Var<'a> = {
         Name: string

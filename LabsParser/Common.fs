@@ -12,10 +12,11 @@ type Parser<'t> = Parser<'t, unit>
 let COMMENT : Parser<_> =       (skipString tCOMMENT)
 let COLON : Parser<_> =         (skipChar ':')
 let COMMA : Parser<_> =         (skipChar ',')
-let EQ : Parser<_> =            (skipChar '=')
+let EQ : Parser<_> =            (skipChar '=') .>> notFollowedBy (skipChar '>')
 let RANGE : Parser<_> =         (skipString "..")
 let OF : Parser<_> =            (skipString tOF)
 let GUARD : Parser<_> =         (skipString tGUARD)
+let FATGUARD : Parser<_> =      (skipString tFATGUARD)
 let NEG : Parser<_> =           (skipString tNEG)
 let SEQ : Parser<_> =           (skipString tSEQ)
 let CHOICE : Parser<_> =        (skipString tCHOICE)
@@ -42,7 +43,7 @@ let safeIdentifier options =
         tABS; tCONJ; tDISJ; tELSE; tFALSE;
         tID; tIF; tMAX; tMIN; tOF; tPICK
         tSKIP; tTHEN; tTRUE; tUNDEF; tWHERE
-        "forall"; "exists"
+        "forall"; "exists"; "count"
     ]
     identifier options
     >>= fun x ->

@@ -33,8 +33,14 @@ let paction =
          followedBy (ws (skipString "forall" <|> skipString "exists"))
          >>. ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
          .>>. pguard
-         |>> fun (quants, pred) ->
-             Location.Local, [QB (quants, pred)]
+         |>> fun (quants, pred) -> Location.Local, [QB (quants, pred)]
+    
+    let pCount =
+        let countToken =  (ws <| skipString "count")
+        followedBy countToken
+        >>. pipe3
+                (countToken >>. ws IDENTIFIER) (ws KEYNAME .>> (ws COMMA)) pguard
+                (fun typ name bexpr -> Location.Local, [Count(typ, name, bexpr)])
     
     let pSingleLhs =
         let pBracket =
@@ -44,7 +50,7 @@ let paction =
             >>. spaces
             >>. choice [
                 followedBy (skipChar ']') >>. skipChar ']' >>% None
-                pexpr .>> skipChar ']' |>> Some]
+                sepbycommas pexpr .>> skipChar ']' |>> Some]
         
         KEYNAME .>>. (opt pBracket |> ws)
         |>> fun (name, brak) ->
@@ -55,7 +61,7 @@ let paction =
                 // Array assignment (eg. x[] := ...)
                 | Some None -> $"{name}[]", None
                 // Array element assignment (eg. x[expr] := ...)
-                | Some o -> name, o
+                | Some (Some o) -> name, Some o
             {Var=str; Offset=offset; OfAgent=None}
     
     let pWalrus =
@@ -65,6 +71,7 @@ let paction =
         >>. choice [
             pPick
             pCheck
+            pCount
             (ws pexpr |> sepbycommas) |>> fun exprs -> Location.Local, exprs
         ]
     tuple2 
@@ -84,11 +91,16 @@ do pprocRef.Value <-
     let doBase (pos, stmt) = {Def=stmt; Pos=pos; Source=""; Name=string stmt} |> BaseProcess
     let compose a b = Comp(a, b)
 
+    let pGUARDORFATGUARD = choice [
+        followedBy (skipChar '-') >>. GUARD >>% Guard
+        followedBy (skipChar '=') >>. FATGUARD >>% FatGuard
+    ]
+    
     let pGuarded = 
-        followedBy ((ws pguard) >>. (ws GUARD))
-        >>. pipe3
-            getPosition (ws pguard) ((ws GUARD) >>. pproc)
-            (fun pos g p -> Guard({Pos=pos; Name=""; Source=""; Def=(g,p)}))
+        followedBy ((ws pguard) >>. (ws pGUARDORFATGUARD))
+        >>. pipe4
+            getPosition (ws pguard) (ws pGUARDORFATGUARD) pproc
+            (fun pos g typ p -> typ({Pos=pos; Name=""; Source=""; Def=(g,p)}))
         <!> "Guard"
     let pBase =
         let pNil = getPosition .>>. safeStrReturn "Nil" Nil |>> doBase

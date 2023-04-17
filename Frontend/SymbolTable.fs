@@ -23,12 +23,12 @@ with
     member this.TryFind key = this.Map.TryFind key
     member this.IndexOf (var:Var<_>) = snd this.[var.Name]
     member this.RangeOf (var:Var<_>) =
-        this.IndexOf var, this.IndexOf var + (match var.Vartype with Scalar -> 0 | Array i -> i) 
+        this.IndexOf var, this.IndexOf var + (match var.Vartype with Scalar -> 0 | Array s -> List.reduce (*) s) 
     member this.Mapvar (var:Var<_>) = 
         if this.Map.ContainsKey var.Name then this
         else
             let updateMap index = Map.add var.Name (var, index) this.Map
-            let updateNext = (+) (match var.Vartype with | Scalar -> 1 | Array n -> n)
+            let updateNext = (+) (match var.Vartype with | Scalar -> 1 | Array n -> List.reduce (*) n)
             match var.Location with
             | I -> {this with Map= updateMap this.NextI; NextI = updateNext this.NextI} 
             | E -> {this with Map= updateMap this.NextE; NextE = updateNext this.NextE}            
@@ -98,7 +98,10 @@ module SymbolTable =
             {
                 Location=var.Location;
                 Name=var.Name;
-                Vartype=match var.Vartype with Scalar -> Scalar | Array e -> Array (evalCexprNoId e);
+                Vartype=
+                    match var.Vartype with
+                    | Scalar -> Scalar
+                    | Array e -> Array (List.map evalCexprNoId e);
                 Init=var.Init
             }
         
@@ -106,7 +109,7 @@ module SymbolTable =
         |> map toVarInt
         |> fun x ->
             match x.Def.Vartype with
-            | Array s when s <= 0 -> 
+            | Array s when List.reduce (*) s <= 0 -> 
                 raise (LabsException {What=NonPositiveArraySize vardef.Name; Where=[vardef.Pos]})
             | _ -> x
             
@@ -121,7 +124,7 @@ module SymbolTable =
         if Map.containsKey k locals
         then
             let _, loc = locals.[k]
-            let vtype = match loc with Pick (n, _, _) -> Array n | _ -> Scalar
+            let vtype = match loc with Pick (n, _, _) -> Array [n] | _ -> Scalar
             {Name=k; Vartype=vtype; Location=loc; Init=Undef}, 0
         elif Map.containsKey $"{k}[]" locals
         then
@@ -141,34 +144,33 @@ module SymbolTable =
     let internal toVarBExpr f b =
         BExpr.map BLeaf (toVarExpr f) b
     
+            
+    let private translateSub (sub:Map<_,_>) =
+        let propId name =
+            match sub.TryFind name with
+            | Some e -> e
+            | None -> failwithf $"Undefined agent {name}"
+        
+        let rec doExpr =
+            function
+            | Leaf f -> Leaf f
+            | Ref r when sub.ContainsKey (string r.Var) ->
+                propId (string r.Var)
+            | Ref r ->
+                Ref {r with
+                        Offset = Option.map (List.map doExpr) r.Offset
+                        OfAgent = Option.map doExpr r.OfAgent
+                }
+            | Arithm (e1, op, e2) -> Arithm(doExpr e1, op, doExpr e2)
+            | Unary (op, e) -> Unary(op, doExpr e)
+            | Nondet (e1, e2, p) -> Nondet (doExpr e1, doExpr e2, p)
+            | IfElse (c, tt, ff) -> IfElse (c, doExpr tt, doExpr ff)
+            | RawCall (n, args) -> RawCall (n, List.map doExpr args)
+            | QB _ -> failwith "Unexpected: nested QB"
+            | Count _ -> failwith "Unexpected: nested Count"
+        
+        BExpr.map BLeaf doExpr 
     let private QBToIfElse table quants pred =
-        
-        let translateSub (sub:Map<_,_>) =
-            let propId name =
-                match sub.TryFind name with
-                | Some e -> e
-                | None -> failwithf $"Undefined agent {name}"
-            
-            let rec doExpr =
-                function
-                | Leaf f -> Leaf f
-                | Ref r when sub.ContainsKey (string r.Var) ->
-                    propId (string r.Var)
-                | Ref r ->
-                    Ref {r with
-                            Offset = Option.map doExpr r.Offset
-                            OfAgent = Option.map doExpr r.OfAgent
-                    }
-                | Arithm (e1, op, e2) -> Arithm(doExpr e1, op, doExpr e2)
-                | Unary (op, e) -> Unary(op, doExpr e)
-                | Nondet (e1, e2, p) -> Nondet (doExpr e1, doExpr e2, p)
-                | IfElse (c, tt, ff) -> IfElse (c, doExpr tt, doExpr ff)
-                | RawCall (n, args) -> RawCall (n, List.map doExpr args)
-                | QB _ -> failwith "Unexpected: nested QB"
-            
-            BExpr.map BLeaf doExpr
-            
-        
         let rec trProp subs (qs:Map<_,_>) pr =
             let trQuantifier = function | All -> Conj | Exists -> Disj
             if not qs.IsEmpty then
@@ -188,7 +190,17 @@ module SymbolTable =
                 (translateSub subs) pr
         trProp Map.empty quants pred
         |> fun b -> IfElse(b, Leaf (Const 1), Leaf( Const 0))
+ 
     
+    let private CountToSum table typ name bexpr =
+        let spawn = match table.Spawn.TryFind typ with Some x -> x | _ -> failwith $"Undefined agent {typ}"
+        [fst spawn .. (snd spawn)-1]
+        |> List.map (fun id -> translateSub (Map.add name (Leaf <| Const id) Map.empty) bexpr)
+        |> List.map (fun e -> QBToIfElse table Map.empty e)
+        |> function
+            | [] -> (Const 0 |> Leaf)
+            | l -> List.reduce(fun e1 e2 -> Arithm(e1, Plus, e2)) l
+
     let private toVarProcess table proc =
         let toVarBase f b =
             let toVarAct locals a =
@@ -198,8 +210,9 @@ module SymbolTable =
                         let e1 =
                             match e with
                             | QB (qs, p) -> QBToIfElse table qs p
+                            | Count (typ, name, expr) -> CountToSum table typ name expr
                             | _ -> e
-                        toVarRef (f locals) r (Option.map (toVarExpr (f locals)) r.Offset) (Option.map (toVarExpr (f locals)) r.OfAgent),
+                        toVarRef (f locals) r (Option.map (List.map (toVarExpr (f locals))) r.Offset) (Option.map (toVarExpr (f locals)) r.OfAgent),
                         toVarExpr (f locals) e1)
                 {ActionType=a.ActionType; Updates=newupdates}
             match b.Def with 
@@ -246,7 +259,7 @@ module SymbolTable =
             | _ ->
                 Seq.map (recurse (guards, acc)) l
                 |> Seq.reduce(fun (_, a1) (_, a2) -> Set.empty, Map.union a2 a1)
-        Process.fold baseFn guardFn compFn (Set.empty, Map.empty) proc                    
+        Process.fold baseFn guardFn (fun _ acc _ -> acc) compFn (Set.empty, Map.empty) proc                    
         |> snd
     
     let internal tryAddProcess externs (p: Node<Process<_>>) table =
@@ -345,7 +358,7 @@ module SymbolTable =
         let dumpVar v =
             match v.Vartype with
             | Scalar -> $"%i{table.M.IndexOf v}={v.Name}={v.Init}"
-            | Array s -> $"%i{snd table.M.[v.Name]}={v.Name}[%i{s}]={v.Init}"
+            | Array s -> $"%i{snd table.M.[v.Name]}={v.Name}[%i{List.reduce (*) s}]={v.Init}"
         let dumpSpawn agentName (_start, _end) =
             let iface = table.Agents.[agentName].Variables |> List.map dumpVar |> String.concat ";"
             let lstig = table.Agents.[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"

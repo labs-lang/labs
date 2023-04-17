@@ -1,6 +1,5 @@
-# Flawed mutual exclusion algorithm
-# Adapted from:
-# https://www.cse.chalmers.se/edu/course/TDA384_LP1/files/lectures/Lecture03-models_algorithms.pdf
+# Adapted from 
+# https://github.com/sosy-lab/sv-benchmarks/blob/master/c/pthread/fib_bench-1.c
 
 system {
     environment = i: 1; j: 1

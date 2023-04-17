@@ -76,7 +76,17 @@ let initBExprs idfn (v:Var<_>, i: int) =
         let r = {Var=(v, i); Offset = None; OfAgent = None}
         match v.Vartype with
         | Scalar -> [r]
-        | Array s -> List.map (fun i -> {r with Offset = Some (Leaf (Const i))}) [0 .. s-1]
+        | Array s ->
+            let indexes = [for i in 0..s.Length-1 -> [0..s[i]-1] ]
+            // Kudos to https://stackoverflow.com/a/3334871c for this cartesian product function
+            let rec cart1 LL = 
+                match LL with
+                | [] -> Seq.singleton []
+                | hd::Ls -> seq {for x in hd do for xs in cart1 Ls -> x::xs}
+            let allIndexes = cart1 indexes |> Seq.toList |> List.map (List.map (Leaf << Const))
+            let makeOneRef ind = {r with Offset = Some ind}
+            List.map makeOneRef allIndexes 
+            
     match v.Init with
     | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Extern "undef_value"))) refs
     | Choose l ->

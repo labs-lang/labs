@@ -31,7 +31,7 @@ module VarExterns =
             | Undef -> Undef
         let vartype' =
             match v.Vartype with
-            | Array e -> Array (replace e)
+            | Array e -> Array (List.map replace e)
             | Scalar -> Scalar
         {v with Init=init'; Vartype=vartype'}
 
@@ -40,7 +40,7 @@ module ProcessExterns =
     let replaceExterns externs =
         let baseFn b =
             let doUpdate (r, expr) =
-                {r with Offset=Option.map (ExprExterns.replaceExterns externs) r.Offset}, ExprExterns.replaceExterns externs expr
+                {r with Offset=Option.map (List.map (ExprExterns.replaceExterns externs)) r.Offset}, ExprExterns.replaceExterns externs expr
             let doAction a = {a with Updates = List.map doUpdate a.Updates}
             match b.Def with
             | Act a ->

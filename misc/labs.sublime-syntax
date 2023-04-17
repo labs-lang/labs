@@ -170,7 +170,7 @@ contexts:
           pop: true
 
   specials:
-    - match: \b_\S+\b
+    - match: \b_\w+\b
       scope: string.labs
     - match: \btrue\b|\bfalse\b
       scope: constant.other.labs

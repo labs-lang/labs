@@ -8,7 +8,7 @@ open FParsec
 let simpleRef p =
     tuple3
         KEYNAME
-        (opt (betweenBrackets p) |> ws)
+        (opt (betweenBrackets (sepbycommas p)) |> ws)
         (choice [
             ((followedBy OF) >>. ws OF >>. p |>> Some)
             ((notFollowedBy OF) >>% None)
@@ -74,7 +74,7 @@ let makeBExprParser pexpr =
     
     opp.AddOperator(InfixOperator("<", notInArrow, 2, Associativity.Left, ParseBExpr.compare Less))
     opp.AddOperator(InfixOperator(">", wsUnit, 2, Associativity.Left, ParseBExpr.compare Greater))
-    opp.AddOperator(InfixOperator("=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Equal))
+    opp.AddOperator(InfixOperator("=", ws <| notFollowedBy (skipChar '>'), 2, Associativity.Left, ParseBExpr.compare Equal))
     opp.AddOperator(InfixOperator("!=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Neq))
     opp.AddOperator(InfixOperator("<=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Leq))
     opp.AddOperator(InfixOperator(">=", wsUnit, 2, Associativity.Left, ParseBExpr.compare Geq))
@@ -100,6 +100,7 @@ let makeExprParser pref pid pbexpr : Parser<_> =
             followedBy pint32 >>. pint32 |>> Const |>> Leaf <!> "const"
             followedBy pid >>. pid |>> Id |>> Leaf <!> "id"
             followedBy RAWPREFIX >>. prawcall |>> RawCall <!> "rawCall"  
+            followedBy (skipChar '[') >>. betweenBrackets (pipe3 getPosition expr (skipString ".." >>. expr) (fun p e1 e2 -> Nondet(e1, e2, p))) <!> "nondet"
             attempt (ws (pref expr)) |>> Ref <!> "ref"
         ]
     
@@ -140,8 +141,4 @@ let makeExprParser pref pid pbexpr : Parser<_> =
     opp.AddOperator(PrefixOperator(tABS, followedBy (skipChar '('), 3, false, fun x -> Unary(Abs, x)))
     opp.AddOperator(PrefixOperator(tMINUS, notFollowedBy (skipChar '>') |> ws, 3, false, fun x -> Unary(UnaryMinus, x)))
 
-    choice [
-        betweenBrackets (pipe3 getPosition expr (skipString ".." >>. expr) (fun p e1 e2 -> Nondet(e1, e2, p)))
-        expr
-    ]
-
+    expr

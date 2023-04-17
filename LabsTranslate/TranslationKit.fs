@@ -29,11 +29,26 @@ let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
     let index =
         match offset with
         | None -> string i
-        | Some off -> $"%i{i} + {off}"
+        | Some indexes ->
+            let dims = match v.Vartype with Array s -> s | _ -> []
+            let offsets =   
+                [0..dims.Length-1]
+                |> List.map (fun i -> List.reduce (*) (1::List.rev(dims)).[..i])
+                |> List.rev |> List.map string
+            if offsets.Length <> List.length indexes then
+                failwith $"Cannot zip {offsets} and {indexes} (in trref)"
+            List.zip offsets indexes
+            |> List.map (fun (off, i) -> $"({off} * {i})")
+            |> String.concat " + "
+            |> fun linearOffset -> $"%i{i} + {linearOffset}"
     match v.Location with
     | Local -> v.Name
     | Pick _ ->
-        let off = match offset with None -> "" | Some off -> $"[{off}]"
+        let off =
+            match offset with
+            | None -> ""
+            | Some [off] -> $"[{off}]"
+            | Some o -> failwith $"Illegal pick offset '{o}'" 
         $"""{v.Name.Replace("[]", "")}{off}"""  
     | _ -> trLocation v.Location agent index
 
@@ -144,7 +159,7 @@ type TranslationKit = {
     CollectAuxVars : Expr<Var<int> * int, unit> -> Set<string * string * string>
 }
 
-type RefTranslator<'a> = 'a -> string option -> string option -> string
+type RefTranslator<'a> = 'a -> string list option -> string option -> string
 
 type ITranslateConfig =
     abstract member InitId : int -> LeafExpr<'b>
@@ -326,13 +341,13 @@ module internal Lnt =
     let rec collectAux trExpr expr =
         let recurse = collectAux trExpr
         match expr with
-        | QB _ -> Set.empty
+        | QB _ | Count _ -> Set.empty
         | Nondet(e1, e2, pos) ->
             recurse e1 |> Set.union (recurse e2) |> Set.add ($"nondet_{pos.Line}_{pos.Column}", trExpr e1, trExpr e2)
         | IfElse (_, e1, e2) // TODO collect auxs in condition too
         | Arithm (e1, _, e2) -> recurse e1 |> Set.union (recurse e2)
         | Unary(_, e) -> recurse e
-        | Ref r -> r.Offset |> Option.map recurse |> Option.defaultValue Set.empty
+        | Ref r -> r.Offset |> Option.map (Set.unionMany << List.map recurse) |> Option.defaultValue Set.empty
         | Leaf _ -> Set.empty
         | RawCall (_, args) -> Seq.map recurse args |> Set.unionMany
     
