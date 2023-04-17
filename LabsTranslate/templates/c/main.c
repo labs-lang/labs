@@ -79,7 +79,7 @@ void finally(void) {
 {%- endif -%}
 
 
-void loopAssumptions(void) { return; }
+void __invariants(void) { }
 
 int main(void) {
     init();
@@ -98,7 +98,6 @@ int main(void) {
     {%- else -%}
     while(1) {        
     {%- endif -%}
-        loopAssumptions();
         
         {%- if hasStigmergy -%}{%- if bound > 0 -%}
         if (sys_or_not[__LABS_step]) {
