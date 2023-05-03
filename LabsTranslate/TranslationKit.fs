@@ -86,7 +86,7 @@ let private translateQPred trExpr trBExpr trLocation name (table:SymbolTable) qp
             match c, ref_ofAgent with
             | None, None ->
                 // no "of"
-                if v.Location <> E then failwithf $"{v.Name} is not an environment variable"
+                if v.Location <> E then failwithf $"{v.Name} is not an environment variable ({v.Location})"
                 {Var=((v, i), c); Offset=offset; OfAgent=None}
             | None, _ ->
                 // "x of (numeric constant)"
@@ -102,10 +102,6 @@ let private translateQPred trExpr trBExpr trLocation name (table:SymbolTable) qp
         
         map BLeaf (Expr.map trLeaf (fun r -> propRef1 r.Var r.OfAgent))
         
-    if (ex && fa) then
-        if name <> "" then $"Property {name}: " else ""
-        |> fun n -> failwith $"{n}alternating quantifiers are currently not supported"
-
     let rec trProp subs prop =
         let trQuantifier = function | All -> Conj | Exists -> Disj
         if not prop.Quantifiers.IsEmpty then
@@ -120,7 +116,6 @@ let private translateQPred trExpr trBExpr trLocation name (table:SymbolTable) qp
             [amin..amax-1]
             |> List.map (addToSubs >> translateWithSubs)
             |> fun l -> Compound(trQuantifier quantifier, l)
-            |> simplify
         else
             (translateSub subs) prop.Predicate
     
@@ -267,7 +262,7 @@ module internal C =
             member _.AgentName = "tid"
             member _.InitId n = Const n
             member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
-            member _.TrBExpr filter trExpr b = trBExprC filter trExpr b
+            member _.TrBExpr filter trExpr b = trBExprC filter trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateLocation loc x y
@@ -369,7 +364,7 @@ module internal Lnt =
             member _.AgentName = "NatToInt(Nat(agent.id))"
             member _.InitId _ = Extern "NatToInt(Nat(agent.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
-            member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
+            member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y

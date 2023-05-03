@@ -30,10 +30,29 @@ let rec cata fleaf fneg fcompare fcompound bexpr =
 
 /// Turns a Boolean expression into a simpler, equivalent one.
 let rec simplify bexpr =
+    let equalConsts e1 e2 =
+        match e1, e2 with
+        | Leaf (Const x), Leaf (Const y) -> x = y
+        | Leaf (Id x), Leaf (Id y) -> x = y
+        | _ -> false
     let compareFn op e1 e2 =
-        match op with  
-        | Equal when (equal e1 e2) -> BLeaf true
-        | Neq when (equal e1 e2) -> BLeaf false
+        match op, e1, e2 with
+        | Equal, Leaf (Const _), Leaf (Const _)
+        | Equal, Leaf (Id _), Leaf (Id _) ->
+            let x = (equalConsts e1 e2)
+            eprintfn $">>> {Compare(e1, op, e2)} --> {x}"
+            BLeaf x
+        | Neq, Leaf (Const _), Leaf (Const _)
+        | Neq, Leaf (Id _), Leaf (Id _) ->
+            let x = not (equalConsts e1 e2)
+            eprintfn $">>> {Compare(e1, op, e2)} --> {x}"
+            BLeaf x
+        | Equal, _, _ when (equal e1 e2) ->
+            eprintfn $">>> {Compare(e1, op, e2)} --> true"
+            BLeaf true
+        | Neq, _, _ when (equal e1 e2) ->
+            eprintfn $">>> {Compare(e1, op, e2)} --> false"
+            BLeaf false
         | _ -> Compare(e1, op, e2)
     let compoundFn op ls =
         let lsSimpl = List.map simplify ls

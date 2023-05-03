@@ -54,7 +54,7 @@ type LeafExpr<'b> =
     | Extern of string
     override this.ToString() = 
         match this with
-        | Id _ -> tID
+        | Id x -> if string x <> "" then $"{tID} of {x}" else tID
         | Const v -> string v 
         | Extern s -> "_" + s
 type Expr<'a, 'b> =

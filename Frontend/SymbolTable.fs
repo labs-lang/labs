@@ -185,7 +185,6 @@ module SymbolTable =
                 [amin..amax-1]
                 |> List.map (addToSubs >> translateWithSubs)
                 |> fun l -> Compound(trQuantifier quantifier, l)
-                |> BExpr.simplify
             else
                 (translateSub subs) pr
         trProp Map.empty quants pred

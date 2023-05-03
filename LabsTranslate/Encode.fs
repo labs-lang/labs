@@ -141,7 +141,7 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
         |> Seq.concat
     
     let assumes =
-        makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) (Map.values table.Assumes))
+        makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, (trKit.PropTr) table n) (Map.values table.Assumes))
     
     [
         "assumes", assumes

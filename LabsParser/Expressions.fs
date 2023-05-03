@@ -22,7 +22,7 @@ type ParseBExpr<'a, 'b> =
 module ParseBExpr =
     let getB p =
         match p with
-        | B b -> preturn (simplify b)
+        | B b -> preturn b
         | E e -> Compare(e, Neq, Leaf <| Const 0) |> preturn
     let getE p =
         match p with
