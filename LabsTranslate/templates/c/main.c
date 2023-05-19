@@ -110,7 +110,7 @@ int main(void) {
             {%-unless fair-%}
             // ___symbolic-scheduler___
             scheduled = __CPROVER_nondet();
-            scheduled = scheduled < MAXCOMPONENTS ? scheduled : 0;
+            scheduled = ((scheduled >= 0) & (scheduled < MAXCOMPONENTS)) ? scheduled : 0;
             // ___end symbolic-scheduler___
             {%-endunless-%}
 
