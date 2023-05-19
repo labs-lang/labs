@@ -368,12 +368,20 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
     let alwaysP = (if noprops then Seq.empty else filterPropsByModality Always) |> toLiquid
     let eventuallyP = (if noprops then Seq.empty else filterPropsByModality Eventually) |> toLiquid
     let finallyP = (if noprops then Seq.empty else filterPropsByModality Finally) |> toLiquid
+    let pcmap =
+        table.Agents
+        |> Map.map (fun _ a ->
+            a.Pcs
+            |> Map.map (fun idx vals -> String.concat " || " (Set.map (fun v -> $"pc[$tid$][{idx}]=={v}") vals))
+            |> Map.values |> Seq.toList)
+        |> Map.map (fun name cond -> List.map (fun c -> $"//PC//{name}={c}") cond |> String.concat "\n")
+        |> Map.values |> String.concat "\n"
+        //BIRD=pc[%tid%][0]==
     
-    
-       
     [
         "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
         "fair", Bool fair
+        "pcmap", Str pcmap
         "schedule",
             table.Agents
             |> Map.mapValues (fun a -> Seq.map scheduleTransition a.Sts)

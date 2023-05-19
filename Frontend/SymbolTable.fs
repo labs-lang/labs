@@ -55,6 +55,13 @@ with
     member this.Attributes =
         this.Variables
         |> List.filter (fun v -> match v.Location with I -> true | _ -> false)
+    
+    member this.Pcs =
+        this.Sts
+        |> Set.map (fun t -> t.Entry)
+        |> Set.map (Map.mapValues List.singleton)
+        |> Set.fold (Map.unionWith (fun _ -> List.append)) Map.empty
+        |> Map.mapValues Set.ofList
         
     member this.LstigVariables (table:SymbolTable) =
         table.Variables
