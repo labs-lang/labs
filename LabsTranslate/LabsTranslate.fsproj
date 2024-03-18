@@ -2,10 +2,12 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6</TargetFramework>
+        <TargetFramework>net8</TargetFramework>
         <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
         
         <UseAppHost>true</UseAppHost> <!--See https://github.com/dotnet/runtime/issues/3704 -->
+        <TrimMode>partial</TrimMode>
+        <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
 
     </PropertyGroup>
 
