@@ -58,7 +58,7 @@ type Action<'a> = {
             | Pick _->
                 let pick = (string this.ActionType)[1 ..] |> sprintf "p%s"
                 fun v _ -> $"{v} := {pick}"
-            | Local _ -> sprintf "%s := %s"
+            | Local -> sprintf "%s := %s"
             | I -> sprintf "%s <- %s"
             | L _ -> sprintf "%O <~ %O"
             | E -> sprintf "%O <-- %O")

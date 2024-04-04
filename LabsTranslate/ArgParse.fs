@@ -19,12 +19,12 @@ type Arguments =
         member s.Usage =
             match s with
             | File _ -> "specify a file."
-            | Info _ -> "do not translate, only gather information on the system"
-            | No_Bitvector _ -> "disable bitvector optimizations"
+            | Info -> "do not translate, only gather information on the system"
+            | No_Bitvector -> "disable bitvector optimizations"
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
-            | Sync _ -> "force synchronous sending of stigmergic messages"
-            | Simulation _ -> "encode in simulation mode (default: verification mode)."
+            | Sync -> "force synchronous sending of stigmergic messages"
+            | Simulation -> "encode in simulation mode (default: verification mode)."
             | Fair -> "enforce fair interleaving of components."
             | Enc _ -> "specify the target encoding."
             | Property _ -> "specify the property to consider, others will be ignored."

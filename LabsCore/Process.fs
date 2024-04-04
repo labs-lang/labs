@@ -144,8 +144,8 @@ module Process =
             | Act a -> doAction a |> Set.union acc
             | Block b -> List.map doAction b |> Set.unionMany |> Set.union acc
             | Name _
-            | Skip _
-            | Nil _ -> acc
+            | Skip
+            | Nil -> acc
             
         let fcomp _ recurse acc procs =
             List.map (recurse Set.empty) procs
