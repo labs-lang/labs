@@ -2,8 +2,8 @@
 
 all: linux osx
 
-osx: platform = osx.10.12-x64
-osx_cseq: platform = osx.10.12-x64
+osx: platform = osx-x64
+osx_cseq: platform = osx-x64
 linux: platform = linux-x64
 linux_cseq: platform = linux-x64
 zip_linux: platform = linux-x64
@@ -95,20 +95,20 @@ build/linux-x64/sliver/minisat/minisat :
 	@echo Copying minisat...
 	@cp -rf linux/minisat $(SLIVER_DIR)/ ;
 
-build/osx.10.12-x64/sliver/minisat/minisat :
+build/osx-x64/sliver/minisat/minisat :
 	@echo Copying minisat...
 	@cp -rf osx/minisat $(SLIVER_DIR)/ ;
 
 osx : rmsentinels \
-	build/osx.10.12-x64/sliver/labs/LabsTranslate \
-	build/osx.10.12-x64/sliver/labs/templates/c/main.c \
-	build/osx.10.12-x64/pyparsing.py \
-	build/osx.10.12-x64/sliver/click/core.py \
-	build/osx.10.12-x64/sliver/absentee/absentee.py \
-	build/osx.10.12-x64/sliver.py \
-	build/osx.10.12-x64/requirements.txt \
-	build/osx.10.12-x64/examples \
-	build/osx.10.12-x64/sliver/minisat/minisat
+	build/osx-x64/sliver/labs/LabsTranslate \
+	build/osx-x64/sliver/labs/templates/c/main.c \
+	build/osx-x64/pyparsing.py \
+	build/osx-x64/sliver/click/core.py \
+	build/osx-x64/sliver/absentee/absentee.py \
+	build/osx-x64/sliver.py \
+	build/osx-x64/requirements.txt \
+	build/osx-x64/examples \
+	build/osx-x64/sliver/minisat/minisat
 
 linux : rmsentinels \
 	build/linux-x64/sliver/labs/LabsTranslate \
@@ -124,7 +124,7 @@ linux : rmsentinels \
 	build/linux-x64/sliver/minisat/minisat
 
 osx_cseq: rmsentinels osx \
-	build/osx.10.12-x64/sliver/cseq/cseq.py
+	build/osx-x64/sliver/cseq/cseq.py
 
 linux_cseq: rmsentinels linux \
 	build/linux-x64/sliver/cseq/cseq.py
