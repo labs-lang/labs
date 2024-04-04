@@ -383,3 +383,70 @@ module internal Lnt =
                 member _.TrInitLoc loc x y = translateInitLocation loc x y
                 member _.CollectAuxVars tr e = collectAux tr e
         }
+
+/// Provides the translation kit configuration for NuXmv.
+module internal NuXmv = 
+    let private translateLocation loc n e =
+        let name =
+            match n with
+            | "firstAgent" -> "tid"
+            | _ -> n 
+        match loc with
+        | I -> sprintf "i[%s][%O]"
+        | L _ -> sprintf "lvalue[%s][%O]"
+        | E -> (fun _ -> sprintf "e[%O]")
+        | Local | Pick _ -> fun _ _ -> ""
+        |> fun f -> f name e
+    
+    
+    let private translate trRef trId trBExpr expr =
+        let leafFn = function
+            | Id i -> trId i
+            | Const i -> string i
+            | Extern s -> s 
+        
+        let roundDiv num den =
+            $"( (floor(({num}/1.0)/{den}) = floor(({num}/1.0)/{den}) + 0.5) ? ({num}/{den}) : (({num}/{den})+1) )"
+        
+        let arithmFn = function
+            | Plus -> sprintf "(%s) + (%s)"
+            | Minus -> sprintf "(%s) - (%s)"
+            | Times -> sprintf "(%s) * (%s)"
+            | Div -> sprintf "(%s) / (%s)"
+            | RoundDiv -> roundDiv
+            | Mod -> sprintf "(%s) mod (%s)"
+            | Max -> sprintf "max(%s, %s)"
+            | Min -> sprintf "min(%s, %s)"
+        let unaryFn = function
+            | UnaryMinus -> sprintf "-(%s)"
+            | Abs -> sprintf "abs(%s)"
+        let nondetFn e1 e2 _ = $"nondetInRange({e1}, {e2})"
+        let rawFn name args = $"""{name}({String.concat ", " args})"""
+        let ifFn cond ift iff =
+            if ift = "1" && iff = "0"
+            then $"({trBExpr cond})"
+            else $"(%s{trBExpr cond}) ? ({ift}) : ({iff})"
+        
+        Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
+
+    let rec private trBExprC filter trExpr bexpr =
+        let bleafFn b = if b then "1" else "0"
+        let negFn = sprintf "!(%s)"
+        let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))" //TODO
+        let compoundFn = function
+            | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
+            | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
+        translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
+
+    let wrapper = { 
+        new ITranslateConfig with
+            member _.TemplateInfo = {BaseDir = "templates/nuxmv"; Extension = "smv"}
+            member _.AgentName = "tid"
+            member _.InitId n = Const n
+            member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
+            member _.TrBExpr filter trExpr b = trBExprC filter trExpr (simplify b)
+            member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
+            member _.TrLoc loc x y = translateLocation loc x y
+            member _.TrInitLoc loc x y = translateLocation loc x y
+            member _.CollectAuxVars _ _ = Set.empty
+        }

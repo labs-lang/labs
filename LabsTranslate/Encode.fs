@@ -13,7 +13,7 @@ open TranslationKit
 open Liquid
 
 /// Supported target languages.
-type EncodeTo = | C | Lnt | Lnt_Monitor | Lnt_Parallel
+type EncodeTo = | C | Lnt | Lnt_Monitor | Lnt_Parallel | NuXmv
 
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, int*int> =
@@ -82,7 +82,7 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     
     let values =
         [
-            "MAXCOMPONENTS", maxcomponents            
+            "MAXCOMPONENTS", maxcomponents
             "MAXPC", maxpc + 1
             "MAXTUPLE", maxTuple
         ]
@@ -91,9 +91,6 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
         
     [
         "typeofBOUND", getTypedef bound true |> Str
-        "MAXKEYE", Int maxkeyE
-        "MAXKEYI", Int maxkeyI
-        "MAXKEYL", Int maxkeyL
         "typedefs", makeDict Str Str typedefs
         "links", Lst links
         "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
@@ -192,7 +189,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
             |> Option.defaultValue Seq.empty
             |> Lst
         
-        let liquidAssignment (k:Ref<Var<int>*int, unit>, expr) =
+        let handleAssignment (k:Ref<Var<int>*int, unit>, expr) =
             let v = fst k.Var
             let dims = match v.Vartype with Array s -> s | _ -> []
             let size = match v.Vartype with Array s -> List.reduce (*) s | _ -> 0
@@ -200,7 +197,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                 v.Location
                 |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "Local" | Pick _ -> "Pick" 
 
-            Dict [
+            [
                 "name", Str v.Name
                 "loc", Str loc    
                 "key",  Int (snd k.Var)
@@ -222,6 +219,9 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                 "size", Int size
                 "expr", trKit.AgentExprTr expr |> Str
             ]
+                
+        let liquidAssignment (k:Ref<Var<int>*int, unit>, expr) =
+            Dict <| handleAssignment (k, expr) 
         
         let auxs =
             assignments
@@ -250,7 +250,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
             "qrykeys", qrykeys
             "sync", sync |> Bool
             "assignments", assignments
-                |>> fun a -> a.Updates
+                |>> _.Updates
                 |>> Seq.map liquidAssignment
                 |> Option.defaultValue Seq.empty
                 |> Lst         
@@ -405,12 +405,19 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
                 | Lnt -> Lnt.wrapper
                 | Lnt_Monitor -> Lnt.wrapperMonitor
                 | Lnt_Parallel -> Lnt.wrapperParallel
+                | NuXmv -> NuXmv.wrapper
     let goto = parse (trKit.TemplateInfo.Get "goto")
     let block = parse (trKit.TemplateInfo.Get "block")
-    
+    let maxkeyE = max table.M.NextE 1
+    let maxkeyI = max table.M.NextI 1
+    let maxkeyL = max table.M.NextL 1
+
     let baseDict = [
         "bound", Int bound
         "hasStigmergy", Bool (table.M.NextL > 0)
+        "MAXKEYE", Int maxkeyE
+        "MAXKEYI", Int maxkeyI
+        "MAXKEYL", Int maxkeyL
         "hasEnvironment", Bool (table.M.NextE > 0)
         "MAXCOMPONENTS", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
         "simulation", Bool sim
