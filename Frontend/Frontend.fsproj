@@ -16,6 +16,6 @@
     <Compile Include="Library.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FSharpPlus" Version="1.1.7" />
+    <PackageReference Include="FSharpPlus" Version="1.6.1" />
   </ItemGroup>
 </Project>
