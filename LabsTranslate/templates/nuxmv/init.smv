@@ -1,0 +1,18 @@
+INIT 
+    tid = __MAXTID 
+    & __turn = sched
+    ---------------------------------------------------------------------------
+    {% for item in initenv -%}& {{ item.bexpr  | replace: "==", "=" }}
+    {% endfor -%}
+    ---------------------------------------------------------------------------
+    {%- for agent in agents -%}
+    {%- for p in agent.pcs -%}{%- assign range = (agent.start..agent.end) -%}
+    {%- for i in range -%}{%- unless forloop.last-%}
+    & pc[{{i}}][{{ p.name }}] in { {% for val in p.value -%}{{ val }}{% unless forloop.last %}, {% endunless %}{%- endfor %} }
+    {%-endunless-%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
+    ---------------------------------------------------------------------------
+    {%- for agent in agents -%}
+    {%- for item in agent.initvars -%}
+    & {{ item.bexpr | replace: "==", "=" }}
+    {%- endfor -%}{%- endfor -%}
+;

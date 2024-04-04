@@ -1,0 +1,65 @@
+{%- for a in assignments -%}{% for l in a %}{%- if l.loc == "Local" -%}
+DEFINE {{l.name}} := toint({{l.expr | replace: "==", "="}});
+{%-endif-%}{%- endfor -%}{%- endfor -%}
+
+{% assign needInvar = 0%}
+{%- for l in locals -%}{%- if l.loc contains "Pick" -%}{% assign needInvar = 1%}
+VAR {{l.name}} : array 0..{{l.size | minus: 1}} of 0..{{MAXCOMPONENTS | minus: 1}};
+{%-endif-%}{%- endfor -%}
+
+
+{%- if needInvar == 1 -%}
+TRANS case (
+    next(__turn) = step
+    {%- for item in entrycond -%}
+    {% for val in item.value -%}& (pc[next(tid)][{{ item.name }}] = {{ val }})
+    {%- endfor -%}{%- endfor -%}
+) : (
+    TRUE
+    {%- for l in locals -%}{%- if l.loc contains "Pick" -%}
+    {% for i in (1..l.size) -%}& next({{l.name}}[{{i | minus: 1}}]) != next(tid){%- endfor -%}
+    {%- if l.size > 1 -%}
+    {% for i in (1..l.size) -%}{%-for j in (1..i)-%}& next({{l.name}}[{{i | minus: 1}}]) != next({{l.name}})[{{j | minus: 1}}]{%- endfor -%}{%- endfor -%}
+    {%-endif-%}
+    {%- if l.where != "" -%}
+    {% for i in (0..l.size) -%}{%- unless forloop.last -%}
+    {%- capture l2 -%}next({{l.name}}[{{i}}]){%- endcapture %}
+    & {{l.where | replace: "__LABS_link1", "next(tid)" | replace: "__LABS_link2", l2}}{% endunless %}
+    {% endfor -%}{%-endif-%}{%-endif-%}{%- endfor %}
+);
+TRUE : next(p) = CONSTARRAY(typeof(p), 0);
+esac;
+{%- endif -%}
+
+TRANS (
+    __turn = step
+    {%- for item in entrycond -%}
+    {% for val in item.value -%}& (pc[tid][{{ item.name }}] = {{ val }})
+    {%- endfor -%}{%- endfor -%}
+    {% for g in guards -%}& {{ g | replace: "==", "=" }}
+    {%- endfor -%}
+) -> (
+    TRUE
+    -- TODO assign
+    {%- for a in assignments -%}
+    {%- for item in a -%}{%- if item.loc == "Local" -%}{%-continue-%}{%- elsif item.loc contains "Pick" -%}{%-continue-%}{%-else-%}
+    & next({% if item.loc == "env" -%}e{%- elsif item.loc == "attr"-%}i[tid]{%- endif -%}[{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
+    {%-endif-%}{%- endfor -%}{%- endfor -%}
+    {%- if hasEnvironment -%}
+    -- hold unchanged environment values
+    {%- assign erange = (0..MAXKEYE) -%}
+    {%- for i in erange -%}{%- unless forloop.last -%}
+    {% unless forloop.last -%}& {%endunless%}((TRUE {%- for a in assignments -%}{%- for item in a -%}{%- if item.loc == "env" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}{%- endfor -%}) -> next(e[{{i}}]) = e[{{i}}])
+    {%- endunless -%}{%- endfor -%}
+    {%- endif -%}
+    -- hold unchanged attribute values
+    {%- assign irange = (0..MAXKEYI) -%}
+    {%- for i in irange -%}{%- unless forloop.last -%}
+    {% unless forloop.last -%}& {%endunless%}((TRUE {%- for a in assignments -%}{%- for item in a -%}{%- if item.loc == "attr" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}{%- endfor -%}) -> next(i[tid][{{i}}]) = i[tid][{{i}}])
+    {%- endunless -%}{%- endfor -%}
+
+    -- exitcond
+    {%- for item in exitcond -%}
+    & next(pc[tid][{{item.name}}]) in { {% for val in item.value -%}{{val}}{%-unless forloop.last -%},{%- endunless -%}{%- endfor %} }
+    {%- endfor -%}
+);

@@ -1,0 +1,27 @@
+MODULE main
+VAR
+    deadlocked: boolean;
+    __turn: {sched, step};
+    tid: 0..{{MAXCOMPONENTS | minus: 1}};
+    i: array 0..{{MAXCOMPONENTS | minus: 1}} of array 0..{{MAXKEYI | minus: 1}} of integer;
+    pc: array 0..{{MAXCOMPONENTS | minus: 1}} of array 0..{{MAXPC | minus: 1}} of integer;
+    {%- if hasEnvironment -%}
+    e: array 0..{{MAXKEYE | minus: 1}} of integer;
+    {%- endif -%}
+
+DEFINE
+    __AGENTS := {{ MAXCOMPONENTS }};
+    __MAXTID := __AGENTS - 1;
+    __MAXPC := {{ MAXPC }};
+    __MAXKEYI := {{ MAXKEYI }};
+    undef_value := -65536;
+
+
+-- keep values of idle agents
+TRANS
+    TRUE
+    {%- assign range = (0..MAXCOMPONENTS) -%}
+    {%- for i in range -%}
+    {%unless forloop.last%}& (tid != {{i}} -> next(i[{{i}}]) = i[{{i}}] & next(pc[{{i}}]) = pc[{{i}}])
+    {%- endunless -%}{%- endfor -%}
+    ;
