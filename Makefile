@@ -34,7 +34,7 @@ build/%/sliver/labs/templates/c/main.c : $(templates)
 build/%/sliver/labs/LabsTranslate : $(sources)
 	@mkdir -p $(BUILD_DIR)
 	@echo Building LabsTranslate...
-	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o $(SLIVER_DIR)/labs -p:PublishSingleFile=true -p:PublishTrimmed=true ;
+	dotnet publish LabsTranslate/LabsTranslate.fsproj -r $(platform) -c Release --self-contained -o $(SLIVER_DIR)/labs -p:PublishSingleFile=true ;
 	@rm $(SLIVER_DIR)/labs/*.pdb ;
 
 build/%/requirements.txt : sliver/requirements.txt
