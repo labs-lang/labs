@@ -23,12 +23,12 @@ with
     member this.TryFind key = this.Map.TryFind key
     member this.IndexOf (var:Var<_>) = snd this[var.Name]
     member this.RangeOf (var:Var<_>) =
-        this.IndexOf var, this.IndexOf var + (match var.Vartype with Scalar -> 0 | Array s -> List.reduce (*) s) 
+        this.IndexOf var, this.IndexOf var + (match var.Vartype with Array s -> List.reduce (*) s | _ -> 0) 
     member this.Mapvar (var:Var<_>) = 
         if this.Map.ContainsKey var.Name then this
         else
             let updateMap index = Map.add var.Name (var, index) this.Map
-            let updateNext = (+) (match var.Vartype with | Scalar -> 1 | Array n -> List.reduce (*) n)
+            let updateNext = (+) (match var.Vartype with Array n -> List.reduce (*) n | _ -> 1)
             match var.Location with
             | I -> {this with Map= updateMap this.NextI; NextI = updateNext this.NextI} 
             | E -> {this with Map= updateMap this.NextE; NextE = updateNext this.NextE}            
@@ -106,9 +106,9 @@ module SymbolTable =
                 Location=var.Location;
                 Name=var.Name;
                 Vartype=
-                    match var.Vartype with
-                    | Scalar -> Scalar
-                    | Array e -> Array (List.map evalCexprNoId e);
+                    match var.Vartype with 
+                    | Array e -> Array (List.map evalCexprNoId e)
+                    | Scalar -> Scalar | C1Ref -> C1Ref | C2Ref -> C2Ref
                 Init=var.Init
             }
         
@@ -128,7 +128,11 @@ module SymbolTable =
     
     /// Basic function to retrieve the mapping of variable named k
     let rec public findString locals table (k: string) =
-        if Map.containsKey k locals
+        if k = "c1" || k = "c2"
+        then
+            let typ = match k with "c1" -> C1Ref | _ -> C2Ref
+            {Name=k; Vartype=typ; Location=Local; Init=Undef}, 0
+        elif Map.containsKey k locals
         then
             let _, loc = locals[k]
             let vtype = match loc with Pick (n, _, _) -> Array [n] | _ -> Scalar
@@ -364,6 +368,7 @@ module SymbolTable =
         let dumpVar v =
             match v.Vartype with
             | Scalar -> $"%i{table.M.IndexOf v}={v.Name}={v.Init}"
+            | C1Ref -> "c1" | C2Ref -> "c2"
             | Array s -> $"%i{snd table.M[v.Name]}={v.Name}[%i{List.reduce (*) s}]={v.Init}"
         let dumpSpawn agentName (_start, _end) =
             let iface = table.Agents[agentName].Variables |> List.map dumpVar |> String.concat ";"

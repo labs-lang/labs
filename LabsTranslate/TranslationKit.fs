@@ -14,6 +14,7 @@ let private refTypeCheck v (offset:'a option) =
     let test, msg = 
         match v.Vartype with
         | Scalar -> offset.IsSome, (sprintf "Scalar %s treated as Array")
+        | C1Ref | C2Ref -> offset.IsSome, (sprintf "Constant %s treated as Array")
         | Array _ -> offset.IsNone, (sprintf "Array %s treated as Scalar")
     if test then failwith (msg v.Name) else ()
 
@@ -23,9 +24,9 @@ let getLstigVars expr =
     |> Set.filter (fun (v, _) -> isLstigVar v)
 
 /// Translates a variable reference.
-let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
+let private trref trLocation trLinkId name (v:Var<int>, i:int) offset ofAgent =
     do refTypeCheck v offset //TODO move
-    let agent = match ofAgent with None -> name | Some a -> a
+    let agent = match ofAgent with None -> name | Some a -> a   
     let index =
         match offset with
         | None -> string i
@@ -42,7 +43,7 @@ let private trref trLocation name (v:Var<int>, i:int) offset ofAgent =
             |> String.concat " + "
             |> fun linearOffset -> $"%i{i} + {linearOffset}"
     match v.Location with
-    | Local -> v.Name
+    | Local -> match v.Vartype with C1Ref -> trLinkId C1 | C2Ref -> trLinkId C2 | _ -> v.Name
     | Pick _ ->
         let off =
             match offset with
@@ -71,7 +72,7 @@ let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =
         |> fun s -> Compound(Conj, s |> Set.toList)
     |> cata bleafFn negFn compareFn compoundFn
     
-let private translateQPred trExpr trBExpr trLocation name (table:SymbolTable) qp =
+let private translateQPred trExpr trBExpr trLocation trLinkId name (table:SymbolTable) qp =
     let ex = Map.exists (fun _ (_, q)-> q = Exists) qp.Quantifiers
     let fa = Map.exists (fun _ (_, q)-> q = All) qp.Quantifiers
     
@@ -121,16 +122,16 @@ let private translateQPred trExpr trBExpr trLocation name (table:SymbolTable) qp
     
     let propRef ((v:Var<_>, i), c) offset =
         match c with
-        | None -> trref trLocation "" (v, i) offset
-        | Some c -> (trref trLocation c (v, i) offset)
+        | None -> trref trLocation trLinkId "" (v, i) offset
+        | Some c -> (trref trLocation trLinkId c (v, i) offset)
 
     let rec trb bexpr = trBExpr tre bexpr 
     and tre = trExpr propRef id trb
     
     trProp Map.empty qp |> trb
 
-let private translateProp trExpr trBExpr trLocation (table:SymbolTable) (p:Node<Property<_>>) =
-    translateQPred trExpr trBExpr trLocation p.Name table p.Def.QuantPredicate
+let private translateProp trExpr trBExpr trLocation trLinkId (table:SymbolTable) (p:Node<Property<_>>) =
+    translateQPred trExpr trBExpr trLocation trLinkId p.Name table p.Def.QuantPredicate
 
 type TemplateInfo = {
     BaseDir: string
@@ -147,7 +148,7 @@ type TranslationKit = {
     AgentGuardTr: BExpr<Var<int> * int, unit> -> string
     MainGuardTr: BExpr<Var<int> * int, unit> -> string
     InitTr: Var<int> * int -> int -> string list
-    LinkTr: BExpr<(Var<int> * int) * LinkComponent, LinkComponent> -> string
+    LinkTr: BExpr<(Var<int> * int) * LinkComponent option, LinkComponent> -> string
     PropTr: SymbolTable -> Node<Property<Var<int> * int>> -> string
     QPredTr: SymbolTable -> QuantPredicate<Var<int> * int> -> string
     TemplateInfo : TemplateInfo
@@ -174,16 +175,23 @@ let makeTranslationKit (conf:ITranslateConfig) =
     let guardTr exprTranslate bexpr = conf.TrBExpr None exprTranslate bexpr 
     
     let rec mainGuardTr bexpr =
-        let tr = conf.TrExpr (trref conf.TrLoc "firstAgent") (fun () -> conf.AgentName) mainGuardTr
+        let tr = conf.TrExpr (trref conf.TrLoc conf.TrLinkId "firstAgent") (fun () -> conf.AgentName) mainGuardTr
         guardTr tr bexpr
     
     // TODO check that ids are translated correctly
     let rec agentExprTr expr =
-        conf.TrExpr (trref conf.TrLoc conf.AgentName)  (fun () -> conf.AgentName) (guardTr agentExprTr) expr
+        conf.TrExpr (trref conf.TrLoc conf.TrLinkId conf.AgentName)  (fun () -> conf.AgentName) (guardTr agentExprTr) expr
     let agentGuardTr = conf.TrBExpr (Some <| fun r -> (fst r.Var).Init = Undef) agentExprTr
     
     let rec linkTr bexpr =
-        let trLinkExpr = conf.TrExpr (fun (v, cmp) -> trref conf.TrLoc (conf.TrLinkId cmp) v) conf.TrLinkId linkTr
+        let handleOptionalCmp (v, cmp) =
+            match cmp with
+            | None ->
+                // TODO check if v CAN be referenced like that 
+                trref conf.TrLoc conf.TrLinkId "" v
+            | Some c ->  trref conf.TrLoc conf.TrLinkId (conf.TrLinkId c) v
+        
+        let trLinkExpr = conf.TrExpr handleOptionalCmp conf.TrLinkId linkTr
         conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef) trLinkExpr bexpr
     
     let initTr (v, i) tid =
@@ -191,15 +199,15 @@ let makeTranslationKit (conf:ITranslateConfig) =
         let rec trBExpr b =
             conf.TrBExpr
                 None
-                (conf.TrExpr (trref conf.TrInitLoc (string tid)) (fun () -> (string tid)) trBExpr)
+                (conf.TrExpr (trref conf.TrInitLoc conf.TrLinkId (string tid)) (fun () -> (string tid)) trBExpr)
                 b
         List.map trBExpr bexprs
 
     
     let propTr =
-        translateProp conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc
+        translateProp conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc conf.TrLinkId
     let qpredTr =
-        translateQPred conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc ""
+        translateQPred conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc conf.TrLinkId ""
     
     {
         AgentExprTr = agentExprTr
@@ -283,7 +291,7 @@ module internal Lnt =
         | I -> sprintf "%s.I[IntToNat(%O)]" 
         | L _ -> sprintf "%s.L[IntToNat(%O)]"
         | E -> fun _ -> sprintf "E[IntToNat(%O)]"
-        | Local | Pick _  -> fun _ _ -> n
+        | Local | Pick _ -> fun _ _ -> n
         |> fun f -> f name e
 
     let private translateLocationParallel loc n e =

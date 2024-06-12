@@ -32,7 +32,7 @@ module VarExterns =
         let vartype' =
             match v.Vartype with
             | Array e -> Array (List.map replace e)
-            | Scalar -> Scalar
+            | Scalar -> Scalar | C1Ref -> C1Ref | C2Ref -> C2Ref
         {v with Init=init'; Vartype=vartype'}
 
 module ProcessExterns =

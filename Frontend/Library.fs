@@ -86,7 +86,7 @@ let initBExprs idfn (v:Var<_>, i: int) =
             let allIndexes = cart1 indexes |> Seq.toList |> List.map (List.map (Leaf << Const))
             let makeOneRef ind = {r with Offset = Some ind}
             List.map makeOneRef allIndexes 
-            
+        | _ -> []    
     match v.Init with
     | Undef -> List.map (fun r -> Compare(Ref r, Equal, Leaf(Extern "undef_value"))) refs
     | Choose l ->

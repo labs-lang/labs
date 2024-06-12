@@ -112,7 +112,8 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
                 |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
             )
 
-    let loc v = match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "Local" | Pick _ -> "Pick"
+    let loc v =
+        match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "Local" | Pick _ -> "Pick"
     let agents =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
@@ -195,7 +196,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
             let size = match v.Vartype with Array s -> List.reduce (*) s | _ -> 0
             let loc =
                 v.Location
-                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "Local" | Pick _ -> "Pick" 
+                |> function | I -> "attr" | L _ -> "lstig" | E -> "env" | Local -> "Local" | Pick _ -> "Pick"
 
             [
                 "name", Str v.Name
@@ -276,7 +277,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                     Dict [
                     "name", v.Name.Replace("[]", "") |> Str
                     "loc", string v.Location |> Str 
-                    "size", Int <| match v.Vartype with Scalar -> 0 | Array s -> List.reduce (*) s
+                    "size", Int <| match v.Vartype with Array s -> List.reduce (*) s | _ -> 0
                     "pickFrom", Int pickFrom
                     "pickTo", Int pickTo
                     "where",

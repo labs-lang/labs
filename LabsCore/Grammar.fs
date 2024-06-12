@@ -30,7 +30,7 @@ let inline byName v = (^T : (member Name : string) v)
 
 type LinkComponent = | C1 | C2
 
-type Link<'a> = BExpr<'a * LinkComponent, LinkComponent>
+type Link<'a> = BExpr<'a * LinkComponent option, LinkComponent>
 
 type Location =
     | I 
@@ -64,7 +64,6 @@ type Action<'a> = {
             | E -> sprintf "%O <-- %O")
                 (this.Updates |> List.map (string << fst) |> String.concat ",")
                 (this.Updates  |> List.map (string << snd) |> String.concat ",")
-
 
 /// Initialization values
 type Init =
@@ -123,6 +122,7 @@ type Process<'a> =
 
 type VarType<'a> = 
     | Scalar
+    | C1Ref | C2Ref
     | Array of size:'a list
 
 type Var<'a> = {
