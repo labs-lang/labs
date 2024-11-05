@@ -199,7 +199,7 @@ module SymbolTable =
             else
                 (translateSub subs) pr
         trProp Map.empty quants pred
-        |> fun b -> IfElse(b, Leaf (Const 1), Leaf( Const 0))
+        |> fun b -> IfElse(b, Leaf (Const 1), Leaf (Const 0))
  
     
     let private CountToSum table typ name bexpr =
