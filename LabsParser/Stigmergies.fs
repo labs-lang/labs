@@ -27,7 +27,7 @@ let plstig : Parser<_> =
                 (sepbycommas (pvar loc))
                 ((ws COLON) >>. sepbycommas pinit)
                 List.zip
-                |>> List.map (fun (v, i) -> {v with Def = {v.Def with Init=i}})
+                |>> List.map (fun (v, i) -> {v with Def.Init = i})
             >>= toSet byName byName
         with | :? System.ArgumentException ->
             fail "Tuples must contain the same numbers of variables and initializers."
