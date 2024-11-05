@@ -12,9 +12,6 @@ open Outcome
 open TranslationKit
 open Liquid
 
-/// Supported target languages.
-type EncodeTo = | C | Lnt | Lnt_Monitor | Lnt_Parallel | NuXmv
-
 let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     let stigmergyVarsFromTo groupBy : Map<'a, int*int> =
         table.Variables
@@ -226,11 +223,11 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
         
         let auxs =
             assignments
-            |>> fun a -> a.Updates
+            |>> _.Updates
             |>> Seq.map (snd >> trKit.CollectAuxVars)
             |>> Set.unionMany
             |> Option.defaultValue Set.empty
-            |> Seq.map (fun (a, b, c) -> Lst [ Str a; Str b; Str c ])
+            |> Seq.map (fun (a, b, c) -> Dict [ "name", Str a; "start", Str b; "bound", Str c ])
             |> Lst
             
         [

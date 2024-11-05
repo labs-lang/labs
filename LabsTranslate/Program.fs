@@ -4,6 +4,7 @@ open FParsec
 open Frontend
 open Frontend.Outcome
 open Frontend.Message
+open LabsTranslate.TranslationKit
 open LabsTranslate.Encode
 open LabsTranslate.ArgParse
 open Argu

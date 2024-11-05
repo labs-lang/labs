@@ -1,7 +1,7 @@
 ﻿module internal LabsTranslate.ArgParse
 open Argu
 open Frontend.Message
-open Encode
+open TranslationKit
 
 type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string

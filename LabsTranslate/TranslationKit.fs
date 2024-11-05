@@ -8,6 +8,10 @@ open LabsCore.BExpr
 open LabsCore.Grammar
 open System.IO
 
+
+/// Supported target languages.
+type EncodeTo = | C | Lnt | Lnt_Monitor | Lnt_Parallel | NuXmv
+
 /// Checks that a scalar is not treated as an array and vice versa.
 let private refTypeCheck v (offset:'a option) =
     // TODO move to frontend
@@ -22,6 +26,19 @@ let private refTypeCheck v (offset:'a option) =
 let getLstigVars expr =
     getVars expr
     |> Set.filter (fun (v, _) -> isLstigVar v)
+
+let rec collectAux trExpr expr =
+    let recurse = collectAux trExpr
+    match expr with
+    | QB _ | Count _ -> Set.empty
+    | Nondet(e1, e2, pos) ->
+        recurse e1 |> Set.union (recurse e2) |> Set.add ($"nondet_{pos.Line}_{pos.Column}", trExpr e1, trExpr e2)
+    | IfElse (_, e1, e2) // TODO collect auxs in condition too
+    | Arithm (e1, _, e2) -> recurse e1 |> Set.union (recurse e2)
+    | Unary(_, e) -> recurse e
+    | Ref r -> r.Offset |> Option.map (Set.unionMany << List.map recurse) |> Option.defaultValue Set.empty
+    | Leaf _ -> Set.empty
+    | RawCall (_, args) -> Seq.map recurse args |> Set.unionMany
 
 /// Translates a variable reference.
 let private trref trLocation trLinkId name (v:Var<int>, i:int) offset ofAgent =
@@ -73,8 +90,6 @@ let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =
     |> cata bleafFn negFn compareFn compoundFn
     
 let private translateQPred trExpr trBExpr trLocation trLinkId name (table:SymbolTable) qp =
-    let ex = Map.exists (fun _ (_, q)-> q = Exists) qp.Quantifiers
-    let fa = Map.exists (fun _ (_, q)-> q = All) qp.Quantifiers
     
     //TODO move checks to frontend
     let translateSub (sub:Map<_,_>) =
@@ -153,6 +168,7 @@ type TranslationKit = {
     QPredTr: SymbolTable -> QuantPredicate<Var<int> * int> -> string
     TemplateInfo : TemplateInfo
     CollectAuxVars : Expr<Var<int> * int, unit> -> Set<string * string * string>
+    Language : EncodeTo
 }
 
 type RefTranslator<'a> = 'a -> string list option -> string option -> string
@@ -168,6 +184,7 @@ type ITranslateConfig =
     abstract member TrBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
     abstract member CollectAuxVars : (Expr<'a, 'b> -> string) -> Expr<'a, 'b> -> Set<string * string * string>
 
+    abstract member Language : EncodeTo
 
 /// Creates a translation kit from the given configuration
 let makeTranslationKit (conf:ITranslateConfig) =
@@ -219,6 +236,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
         PropTr = propTr
         TemplateInfo = conf.TemplateInfo
         CollectAuxVars = conf.CollectAuxVars agentExprTr
+        Language = conf.Language
     }
  
 /// Provides the translation kit configuration for C.
@@ -275,6 +293,7 @@ module internal C =
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars _ _ = Set.empty
+            member _.Language = C
         }
 
 /// Provides the translation kit configuration for LNT.
@@ -341,19 +360,6 @@ module internal Lnt =
             
         translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
     
-    let rec collectAux trExpr expr =
-        let recurse = collectAux trExpr
-        match expr with
-        | QB _ | Count _ -> Set.empty
-        | Nondet(e1, e2, pos) ->
-            recurse e1 |> Set.union (recurse e2) |> Set.add ($"nondet_{pos.Line}_{pos.Column}", trExpr e1, trExpr e2)
-        | IfElse (_, e1, e2) // TODO collect auxs in condition too
-        | Arithm (e1, _, e2) -> recurse e1 |> Set.union (recurse e2)
-        | Unary(_, e) -> recurse e
-        | Ref r -> r.Offset |> Option.map (Set.unionMany << List.map recurse) |> Option.defaultValue Set.empty
-        | Leaf _ -> Set.empty
-        | RawCall (_, args) -> Seq.map recurse args |> Set.unionMany
-    
     let wrapper = { 
         new ITranslateConfig with
             member _.TemplateInfo = {BaseDir = "templates/lnt"; Extension = "lnt"}
@@ -365,6 +371,7 @@ module internal Lnt =
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
+            member _.Language = Lnt
     }
     let wrapperMonitor = {
         new ITranslateConfig with
@@ -377,6 +384,7 @@ module internal Lnt =
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateInitLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
+            member _.Language = Lnt
     }
     
     let wrapperParallel = {
@@ -390,6 +398,7 @@ module internal Lnt =
                 member _.TrLoc loc x y = translateLocationParallel loc x y
                 member _.TrInitLoc loc x y = translateInitLocation loc x y
                 member _.CollectAuxVars tr e = collectAux tr e
+                member _.Language = Lnt
         }
 
 /// Provides the translation kit configuration for NuXmv.
@@ -430,17 +439,15 @@ module internal NuXmv =
             | Abs -> sprintf "abs(%s)"
         let nondetFn e1 e2 _ = $"nondetInRange({e1}, {e2})"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
-        let ifFn cond ift iff =
-            if ift = "1" && iff = "0"
-            then $"({trBExpr cond})"
-            else $"(%s{trBExpr cond}) ? ({ift}) : ({iff})"
+        let ifFn cond ift iff = $"(%s{trBExpr cond}) ? ({ift}) : ({iff})"
         
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
-    let rec private trBExprC filter trExpr bexpr =
+    let rec private trBExprNuXmv filter trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
         let negFn = sprintf "!(%s)"
-        let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))" //TODO
+        let compareFn op e1 e2 =
+            let nuxmvOp = if op = Equal then "=" else $"{op}" in $"((%s{trExpr e1}) {nuxmvOp} (%s{trExpr e2}))"
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
@@ -452,9 +459,10 @@ module internal NuXmv =
             member _.AgentName = "tid"
             member _.InitId n = Const n
             member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
-            member _.TrBExpr filter trExpr b = trBExprC filter trExpr (simplify b)
+            member _.TrBExpr filter trExpr b = trBExprNuXmv filter trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.TrInitLoc loc x y = translateLocation loc x y
-            member _.CollectAuxVars _ _ = Set.empty
+            member _.CollectAuxVars tr e = collectAux tr e
+            member _.Language = NuXmv
         }
