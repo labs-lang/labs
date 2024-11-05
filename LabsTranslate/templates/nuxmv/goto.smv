@@ -1,3 +1,10 @@
+{%for a in aux%}
+VAR {{a.name}} : integer;
+INVAR {{a.name}} >= {{a.start}};
+INVAR {{a.name}} < {{a.bound}};
+{%endfor%}
+
+--{{labs}}
 TRANS (
     __turn = step
     {%- for item in entrycond -%}

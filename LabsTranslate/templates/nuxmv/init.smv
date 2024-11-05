@@ -16,3 +16,8 @@ INIT
     & {{ item.bexpr | replace: "==", "=" }}
     {%- endfor -%}{%- endfor -%}
 ;
+
+--assumes
+{%-for item in assumes-%}
+INIT ({{item.value}}); --{{item.name}}
+{%-endfor-%}

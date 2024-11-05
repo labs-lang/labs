@@ -1,3 +1,13 @@
+{%-if labs-%}
+--{%-for l in labs-%}{{l}}{%unless forloop.last%}; {%endunless%}{%-endfor-%}
+{%- endif -%}
+
+{%for a in aux%}
+VAR {{a.name}} : integer;
+INVAR {{a.name}} >= {{a.start}};
+INVAR {{a.name}} < {{a.bound}};
+{%endfor%}
+
 {%- for a in assignments -%}{% for l in a %}{%- if l.loc == "Local" -%}
 DEFINE {{l.name}} := toint({{l.expr | replace: "==", "="}});
 {%-endif-%}{%- endfor -%}{%- endfor -%}
@@ -6,7 +16,6 @@ DEFINE {{l.name}} := toint({{l.expr | replace: "==", "="}});
 {%- for l in locals -%}{%- if l.loc contains "Pick" -%}{% assign needInvar = 1%}
 VAR {{l.name}} : array 0..{{l.size | minus: 1}} of 0..{{MAXCOMPONENTS | minus: 1}};
 {%-endif-%}{%- endfor -%}
-
 
 {%- if needInvar == 1 -%}
 TRANS case (
@@ -40,7 +49,6 @@ TRANS (
     {%- endfor -%}
 ) -> (
     TRUE
-    -- TODO assign
     {%- for a in assignments -%}
     {%- for item in a -%}{%- if item.loc == "Local" -%}{%-continue-%}{%- elsif item.loc contains "Pick" -%}{%-continue-%}{%-else-%}
     & next({% if item.loc == "env" -%}e{%- elsif item.loc == "attr"-%}i[tid]{%- endif -%}[{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
