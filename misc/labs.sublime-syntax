@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
 # See http://www.sublimetext.com/docs/syntax.html
-# © 2018=2022 Luca Di Stefano, University of Gothenburg
+# © 2018-2024 Luca Di Stefano, TU Wien
 name: LAbS
 file_extensions:
   - labs
@@ -159,7 +159,7 @@ contexts:
         1: keyword.modality.labs
 
   quantifiers:
-    - match: \b(forall|exists)\b
+    - match: \b(forall|exists|count)\b
       captures:
         1: keyword.quantifier.labs
       push:
