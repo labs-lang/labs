@@ -12,14 +12,14 @@ open Stigmergies
 let rec private _pe () = makeExprParser simpleRef (skipString tID .>> notInIdentifier) _pb
 and _pb = makeBExprParser (_pe ())
 
-let pexpr = _pe () //makeExprParser simpleRef (skipString tID .>> notInIdentifier) (makeBExprParser pexpr)
+let pexpr = _pe ()
 let pguard = makeBExprParser pexpr
 
 /// Parses elementary processes ("actions")
 let paction =
     let parseArrow =
         (followedByString "<") >>. skipChar '<' >>. choice [
-            followedBy (skipString "--") >>. stringReturn "--" Location.E; 
+            followedBy (skipString "--") >>. stringReturn "--" Location.E;
             charReturn '-' I;
             charReturn '~' (L("",0))
         ] |> ws .>>. (ws pexpr |> sepbycommas)
@@ -34,14 +34,14 @@ let paction =
          >>. ((sepEndBy pquantifier (ws COMMA)) >>= toMap)
          .>>. pguard
          |>> fun (quants, pred) -> Location.Local, [QB (quants, pred)]
-    
+
     let pCount =
         let countToken =  (ws <| skipString "count")
         followedBy countToken
         >>. pipe3
                 (countToken >>. ws IDENTIFIER) (ws KEYNAME .>> (ws COMMA)) pguard
                 (fun typ name bexpr -> Location.Local, [Count(typ, name, bexpr)])
-    
+
     let pSingleLhs =
         let pBracket =
             followedBy (spaces >>. skipChar '[')
@@ -51,7 +51,7 @@ let paction =
             >>. choice [
                 followedBy (skipChar ']') >>. skipChar ']' >>% None
                 sepbycommas pexpr .>> skipChar ']' |>> Some]
-        
+
         KEYNAME .>>. (opt pBracket |> ws)
         |>> fun (name, brak) ->
             let str, offset =
@@ -63,7 +63,7 @@ let paction =
                 // Array element assignment (eg. x[expr] := ...)
                 | Some (Some o) -> name, Some o
             {Var=str; Offset=offset; OfAgent=None}
-    
+
     let pWalrus =
         let tWalrus = ":="
         followedByString tWalrus
@@ -74,12 +74,12 @@ let paction =
             pCount
             (ws pexpr |> sepbycommas) |>> fun exprs -> Location.Local, exprs
         ]
-    tuple2 
+    tuple2
         (ws pSingleLhs |> sepbycommas)
-        ((ws parseArrow) <|> pWalrus) 
+        ((ws parseArrow) <|> pWalrus)
     >>= (fun (refs, (loc, exprs)) ->
         try {ActionType=loc; Updates=List.zip refs exprs} |> preturn with
-        | :? System.ArgumentException -> 
+        | :? System.ArgumentException ->
             fail "A multiple assignment should contain the same number of variables and expressions.")
 
 
