@@ -162,7 +162,6 @@ type TranslationKit = {
     AgentExprTr: Expr<Var<int> * int, unit> -> string
     AgentGuardTr: BExpr<Var<int> * int, unit> -> string
     MainGuardTr: BExpr<Var<int> * int, unit> -> string
-    InitTr: Var<int> * int -> int -> string list
     LinkTr: BExpr<(Var<int> * int) * LinkComponent option, LinkComponent> -> string
     PropTr: SymbolTable -> Node<Property<Var<int> * int>> -> string
     QPredTr: SymbolTable -> QuantPredicate<Var<int> * int> -> string
@@ -178,7 +177,6 @@ type ITranslateConfig =
     abstract member AgentName : string
     abstract member TemplateInfo : TemplateInfo
     abstract member TrLoc<'a> : Location -> string -> 'a -> string
-    abstract member TrInitLoc<'a> : Location -> string -> 'a -> string
     abstract member TrLinkId : LinkComponent -> string
     abstract member TrExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> (BExpr<'a, 'b> -> string) -> Expr<'a, 'b> -> string
     abstract member TrBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
@@ -198,7 +196,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
     // TODO check that ids are translated correctly
     let rec agentExprTr expr =
         conf.TrExpr (trref conf.TrLoc conf.TrLinkId conf.AgentName)  (fun () -> conf.AgentName) (guardTr agentExprTr) expr
-    let agentGuardTr = conf.TrBExpr (Some <| fun r -> (fst r.Var).Init = Undef) agentExprTr
+    let agentGuardTr = conf.TrBExpr None agentExprTr
     
     let rec linkTr bexpr =
         let handleOptionalCmp (v, cmp) =
@@ -209,27 +207,16 @@ let makeTranslationKit (conf:ITranslateConfig) =
             | Some c ->  trref conf.TrLoc conf.TrLinkId (conf.TrLinkId c) v
         
         let trLinkExpr = conf.TrExpr handleOptionalCmp conf.TrLinkId linkTr
-        conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef) trLinkExpr bexpr
-    
-    let initTr (v, i) tid =
-        let bexprs = Frontend.initBExprs (conf.InitId tid) (v, i)
-        let rec trBExpr b =
-            conf.TrBExpr
-                None
-                (conf.TrExpr (trref conf.TrInitLoc conf.TrLinkId (string tid)) (fun () -> (string tid)) trBExpr)
-                b
-        List.map trBExpr bexprs
+        conf.TrBExpr None trLinkExpr bexpr
 
-    
     let propTr =
-        translateProp conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc conf.TrLinkId
+        translateProp conf.TrExpr (conf.TrBExpr None) conf.TrLoc conf.TrLinkId
     let qpredTr =
-        translateQPred conf.TrExpr (conf.TrBExpr (Some <| fun r -> ((fst << fst) r.Var).Init = Undef)) conf.TrLoc conf.TrLinkId ""
+        translateQPred conf.TrExpr (conf.TrBExpr None) conf.TrLoc conf.TrLinkId ""
     
     {
         AgentExprTr = agentExprTr
         AgentGuardTr = agentGuardTr
-        InitTr = initTr
         LinkTr = linkTr
         MainGuardTr = mainGuardTr
         QPredTr = qpredTr
@@ -291,7 +278,6 @@ module internal C =
             member _.TrBExpr filter trExpr b = trBExprC filter trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
-            member _.TrInitLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars _ _ = Set.empty
             member _.Language = C
         }
@@ -369,7 +355,6 @@ module internal Lnt =
             member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
             member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
-            member _.TrInitLoc loc x y = translateInitLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
             member _.Language = Lnt
     }
@@ -382,7 +367,6 @@ module internal Lnt =
             member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
-            member _.TrInitLoc loc x y = translateInitLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
             member _.Language = Lnt
     }
@@ -396,7 +380,6 @@ module internal Lnt =
                 member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
                 member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
                 member _.TrLoc loc x y = translateLocationParallel loc x y
-                member _.TrInitLoc loc x y = translateInitLocation loc x y
                 member _.CollectAuxVars tr e = collectAux tr e
                 member _.Language = Lnt
         }
@@ -462,7 +445,6 @@ module internal NuXmv =
             member _.TrBExpr filter trExpr b = trBExprNuXmv filter trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
-            member _.TrInitLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
             member _.Language = NuXmv
         }

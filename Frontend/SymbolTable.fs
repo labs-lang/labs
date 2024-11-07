@@ -109,7 +109,6 @@ module SymbolTable =
                     match var.Vartype with 
                     | Array e -> Array (List.map evalCexprNoId e)
                     | Scalar -> Scalar | C1Ref -> C1Ref | C2Ref -> C2Ref
-                Init=var.Init
             }
         
         map (VarExterns.replaceExterns externs) vardef
@@ -131,12 +130,12 @@ module SymbolTable =
         if k = "c1" || k = "c2"
         then
             let typ = match k with "c1" -> C1Ref | _ -> C2Ref
-            {Name=k; Vartype=typ; Location=Local; Init=Undef}, 0
+            {Name=k; Vartype=typ; Location=Local}, 0
         elif Map.containsKey k locals
         then
             let _, loc = locals[k]
             let vtype = match loc with Pick (n, _, _) -> Array [n] | _ -> Scalar
-            {Name=k; Vartype=vtype; Location=loc; Init=Undef}, 0
+            {Name=k; Vartype=vtype; Location=loc}, 0
         elif Map.containsKey $"{k}[]" locals
         then
             findString locals table $"{k}[]"
@@ -367,9 +366,9 @@ module SymbolTable =
         
         let dumpVar v =
             match v.Vartype with
-            | Scalar -> $"%i{table.M.IndexOf v}={v.Name}={v.Init}"
+            | Scalar -> $"%i{table.M.IndexOf v}={v.Name}"
             | C1Ref -> "c1" | C2Ref -> "c2"
-            | Array s -> $"%i{snd table.M[v.Name]}={v.Name}[%i{List.reduce (*) s}]={v.Init}"
+            | Array s -> $"%i{snd table.M[v.Name]}={v.Name}[%i{List.reduce (*) s}]"
         let dumpSpawn agentName (_start, _end) =
             let iface = table.Agents[agentName].Variables |> List.map dumpVar |> String.concat ";"
             let lstig = table.Agents[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"
@@ -395,9 +394,9 @@ module SymbolTable =
         |> printfn "%s"
         Map.map (fun k _ -> dumpPicks k) table.Spawn |> ignore
         
-        
 type SymbolTable with
     member this.Dump(prop) = SymbolTable.dump this prop
     member this.TranslateBExpr(bexpr) =
         (BExprExterns.replaceExterns this.Externs
         >> SymbolTable.toVarBExpr (fun (x,y) -> (SymbolTable.findString Map.empty) this x, y)) bexpr
+        

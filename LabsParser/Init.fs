@@ -16,7 +16,7 @@ let pconstexpr:Parser<Expr<unit,unit>> =
 let pvar loc = 
     pipe3 (followedBy KEYNAME >>. getPosition) KEYNAME (opt (betweenBrackets (sepbycommas pconstexpr)))
         (fun pos name -> 
-            let v = {Vartype=Scalar; Name=name; Location=loc; Init=Undef}
+            let v = {Vartype=Scalar; Name=name; Location=loc}
             function
             | Some e -> {Pos=pos; Name=name; Source=""; Def={v with Vartype=Array(e)}}
             | None -> {Pos=pos; Name=name; Source=""; Def=v})
@@ -32,11 +32,5 @@ let pinit =
     let UNDEF = stringReturn tUNDEF Undef
     choice [pChoose; pRange; pSingle; UNDEF] |> ws
 
-/// Parses a single init definition.
-let pinitdef loc =
-    (pvar loc) .>>. ((ws COLON) >>. pinit)
-    |>> fun (var, init) -> {var with Def={var.Def with Init=init}}
-
 let pkeys loc = 
-    ws (sepbysemis (ws (pinitdef loc)))
-//    >>= toSet byName byName 
+    ws (sepbysemis (ws (pvar loc)))

@@ -98,34 +98,6 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     |> render (parse (trKit.TemplateInfo.Get "header"))
 
 let private encodeInit trKit baseDict (table:SymbolTable) =
-    let env =
-        table.Variables
-        |> Map.filter (fun _ -> isEnvVar)
-        |> Map.values
-        |> Seq.sortBy table.M.IndexOf
-        |> Seq.collect (fun v ->
-                let info = table.M.[v.Name]
-                trKit.InitTr (v, snd table.M.[v.Name]) -1
-                |> List.mapi (fun i x -> Dict ["type", Str "E"; "index", Int ((snd info) + i); "bexpr", Str x])
-            )
-
-    let loc v =
-        match v.Location with I -> "I" | L _ -> "L" | E -> "E" | Local -> "Local" | Pick _ -> "Pick"
-    let agents =
-        table.Spawn
-        |> Map.map (fun name (_start, _end) ->
-            table.Agents.[name].Attributes
-            |> List.append (table.Agents.[name].LstigVariables table |> List.ofSeq)
-            |> List.map (fun v tid ->
-                trKit.InitTr (v, snd table.M.[v.Name]) tid
-                |> List.map (fun x -> Dict ["loc", Str (loc v); "index", Int (snd table.M.[v.Name]); "bexpr", Str x])
-                )
-            |> List.collect (fun f -> List.map f [_start.._end-1])
-            |> List.concat |> List.distinct
-            |> fun l -> Dict ["start", Int _start; "end", Int _end; "initvars", Lst l; "pcs", liquidPcs table.Agents.[name].InitCond]
-            )
-        |> Map.values
-        
     let tstamps =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
@@ -140,8 +112,8 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
     
     [
         "assumes", assumes
-        "initenv", Lst env
-        "agents", Lst agents
+        "initenv", Lst []
+        "agents", Lst []
         "tstamps", Lst tstamps  
     ]
     |> List.append baseDict

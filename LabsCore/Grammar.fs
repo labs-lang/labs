@@ -129,7 +129,6 @@ type Var<'a> = {
         Name: string
         Vartype: VarType<'a>
         Location: Location
-        Init: Init
     }
     with 
         override this.ToString() = this.Name
@@ -139,5 +138,5 @@ let inline isLstigVar v = match v.Location with L _ -> true | _ -> false
             
 let inline _vartype x =
     let getter v = v.Vartype
-    let setter v t' = {Vartype=t'; Name=v.Name; Location=v.Location; Init=v.Init}
+    let setter v t' = {Vartype=t'; Name=v.Name; Location=v.Location}
     lens getter setter x

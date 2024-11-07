@@ -24,16 +24,11 @@ module VarExterns =
     /// Replaces external parameters with their values.
     let replaceExterns externs v =
         let replace = ExprExterns.replaceExterns externs
-        let init' =
-            match v.Init with
-            | Range(e1, e2) -> Range(replace e1, replace e2)
-            | Choose(l) -> Choose(List.map replace l)
-            | Undef -> Undef
         let vartype' =
             match v.Vartype with
             | Array e -> Array (List.map replace e)
             | Scalar -> Scalar | C1Ref -> C1Ref | C2Ref -> C2Ref
-        {v with Init=init'; Vartype=vartype'}
+        {v with Vartype=vartype'}
 
 module ProcessExterns =
     /// Replaces external parameters with their values.

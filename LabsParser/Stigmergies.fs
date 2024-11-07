@@ -20,20 +20,11 @@ let plink =
     |>> (fun (pos, link) -> {Name="link"; Pos=pos; Def=link; Source=""})
 
 let plstig : Parser<_> =
-    let ptuple name =
-        let loc = L(name, 0)
-        try
-            pipe2
-                (sepbycommas (pvar loc))
-                ((ws COLON) >>. sepbycommas pinit)
-                List.zip
-                |>> List.map (fun (v, i) -> {v with Def.Init = i})
-            >>= toSet byName byName
-        with | :? System.ArgumentException ->
-            fail "Tuples must contain the same numbers of variables and initializers."
     let plstigkeys name =
-        (sepbysemis (ptuple name) |> ws)
-        |>> List.mapi (fun i -> Set.map (fun v ->{v with Def={v.Def with Location = L(name, i)}}))
+        let loc = L(name, 0)
+        (sepbysemis (sepbycommas (pvar loc)) |> ws)
+        |>> List.mapi (fun i -> List.map (fun v ->{v with Def.Location = L(name, i)}))
+        |>> List.map Set.ofList
 
     (ws (skipString "stigmergy"))
     >>. (followedBy IDENTIFIER >>. getPosition) .>>. (ws IDENTIFIER)
