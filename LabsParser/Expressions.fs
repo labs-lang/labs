@@ -53,14 +53,21 @@ let makeBExprParser pexpr =
 
     let opp = OperatorPrecedenceParser<_, _, _>()
     let expr = opp.ExpressionParser
-    
     let notInArrow = notFollowedBy (anyOf ['-'; '~']) |> ws
-         
+    
+    let pforeach =
+        tuple3
+            (ws (safeSkip tFOREACH) >>. ws pexpr)
+            (ws (safeSkip tIN) >>. ws pexpr)
+            (ws (skipChar ',') >>. (ws expr >>= ParseBExpr.getB))
+        |>> ForEach
+
     let term : Parser<_> = 
         choice [
             safeStrReturn tTRUE (BLeaf true |> B)
             safeStrReturn tFALSE (BLeaf false |> B)
             pexpr |>> E
+            pforeach |>> B
         ] <!> "bterm"
 
     opp.TermParser <- choice [

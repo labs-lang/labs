@@ -1,4 +1,5 @@
 module LabsCore.BExpr
+open FSharpPlus.Operators
 open ExprTypes
 
 
@@ -18,15 +19,16 @@ let rec map fleaf fexpr bexpr =
     | BLeaf b -> fleaf b
     | Neg b -> Neg(recurse b)
     | Compound(op, b) -> Compound(op, List.map recurse b)
-    | Compare(e1, op, e2) -> 
-        Compare(fexpr e1, op, fexpr e2)
-let rec cata fleaf fneg fcompare fcompound bexpr = 
-    let recurse = cata fleaf fneg fcompare fcompound
+    | Compare(e1, op, e2) -> Compare(fexpr e1, op, fexpr e2)
+    | ForEach(var, arr, b) -> ForEach(fexpr var, fexpr arr, recurse b)
+let rec cata fleaf fneg fcompare fcompound fforeach bexpr = 
+    let recurse = cata fleaf fneg fcompare fcompound fforeach
     match bexpr with
     | BLeaf b -> fleaf b 
     | Neg b -> fneg (recurse b)
     | Compare(e1, op, e2) -> fcompare e1 op e2
     | Compound(op, b) -> fcompound op (List.map recurse b)
+    | ForEach(var, arr, b) -> fforeach var arr (recurse b)
 
 /// Turns a Boolean expression into a simpler, equivalent one.
 let rec simplify bexpr =
@@ -88,8 +90,7 @@ let rec simplify bexpr =
                     // (true & bexpr) -> bexpr
                     List.filter (not << isTrue) ls 
                     |> fun l -> if l.IsEmpty then BLeaf true else Compound(Conj, l)
-        cata BLeaf Neg (fun op e1 e2 -> Compare(e1, op, e2)) compoundFn bexpr
-        
-    cata BLeaf Neg compareFn compoundFn bexpr
-    |> constPropagation
+        cata BLeaf Neg (curryN Compare) compoundFn (curryN ForEach) bexpr
+
+    bexpr |> cata BLeaf Neg compareFn compoundFn (curryN ForEach) |> constPropagation
 

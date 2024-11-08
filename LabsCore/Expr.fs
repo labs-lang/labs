@@ -8,7 +8,7 @@ let rec internal foldB foldExpr acc bexpr =
     | BLeaf _ -> acc
     | Compare (e1, _, e2) ->
         Seq.fold foldExpr acc [e1; e2]
-    | Neg b -> recurse acc b 
+    | Neg b | ForEach (_, _, b) -> recurse acc b
     | Compound (_, bexprs) -> Seq.fold recurse acc bexprs
 
 let rec fold fleaf fref acc expr = 
@@ -49,10 +49,10 @@ let rec map_ fleaf fref fcond expr =
     let recurse = map_ fleaf fref fcond
     let rec mapP = function
         | BLeaf b -> BLeaf b
-        | Compare (e1, op, e2) ->
-            Compare (recurse e1, op, recurse e2)
+        | Compare (e1, op, e2) -> Compare (recurse e1, op, recurse e2)
         | Neg b -> Neg (mapP b)
         | Compound (bop, bexprs) -> Compound (bop, List.map mapP bexprs)
+        | ForEach (var, arr, b) -> ForEach(recurse var, recurse arr, mapP b)
     
     match expr with
     | QB (q, p) -> QB(q, mapP p)

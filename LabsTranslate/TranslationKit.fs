@@ -2,6 +2,7 @@
 open Frontend
 open Frontend.Message
 open LabsCore
+open LabsCore.Tokens
 open LabsCore.ExprTypes
 open LabsCore.Expr
 open LabsCore.BExpr
@@ -72,7 +73,7 @@ let private trref trLocation trLinkId name (v:Var<int>, i:int) offset ofAgent =
 
 /// Translates a boolean expression.
 let translateBExpr bleafFn negFn compareFn compoundFn bexpr =
-    bexpr |> cata bleafFn negFn compareFn compoundFn
+    bexpr |> cata bleafFn negFn compareFn compoundFn (fun _ _ _ -> failwith $"Unexpected {tFOREACH}")
     
 let private translateQPred trExpr trBExpr trLocation trLinkId name (table:SymbolTable) qp =
     

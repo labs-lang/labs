@@ -1,8 +1,10 @@
 namespace Frontend
 open System.Text.RegularExpressions
+open FSharpPlus.Operators
 open FSharpPlus.Lens
 open Frontend
 open LabsCore
+open LabsCore.Tokens
 open LabsCore.Grammar
 open LabsCore.ExprTypes
 open LabsCore.Expr
@@ -318,8 +320,35 @@ module SymbolTable =
         wrap {table with SymbolTable.Spawn=makeRanges valid} (List.ofSeq warnings) (List.ofSeq errors)
 
     let private doBExpr externs table bexpr =
-        (BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
-        <| bexpr
+        let boundVar =
+            match bexpr with
+            | ForEach(var, _, _) ->
+                getRefs var
+                |> Set.map (fun v -> fst v.Var, (snd v.Var, Local))
+                |> Map.ofSeq
+            | _ -> Map.empty
+        let b = bexpr |> ((BExprExterns.replaceExterns externs) >> toVarBExpr (fun (x, y) -> (findString boundVar) table x, y))
+        match b with 
+            | ForEach(var, arr, bExpr) ->
+                let arrRef = match arr with Ref r -> r | _ -> failwith $"Unexpected var {arr} in {tFOREACH}"
+                let dims = match ((fst << fst) arrRef.Var).Vartype with Array l -> l | _ -> failwith $"Scalar {arr} used as Array"
+                let indexes = dims |> List.map(fun i -> [0..i-1] |> List.map (Const >> Leaf)) |> List.cartesian |> List.sort
+
+                let refFn newOffset v off ofa =
+                    let varRef = match var with Ref r -> (fst << fst) r.Var | _ -> failwith $"Unexpected var {var} in {tFOREACH}"
+                    let vref = (fst << fst) v
+                    if vref.Name = varRef.Name
+                    then Ref {Var=arrRef.Var; Offset = newOffset; OfAgent = ofa }
+                    else Ref {Var=v; Offset = off; OfAgent = ofa }
+                
+                let rec fexpr newOffset exp =
+                    cata
+                        Leaf (fun op e1 e2 -> Arithm(e1, op, e2)) (curry Unary) (curryN Nondet) (refFn newOffset)
+                        (curry RawCall) (fun c t f -> IfElse(fbexpr newOffset c,t,f)) exp
+                and fbexpr newOffset bexp = BExpr.map BLeaf (fexpr newOffset) bexp
+                
+                indexes |> List.map (fun i -> fbexpr (Some i) bExpr) |> fun clauses -> Compound(Conj, clauses)
+            | _ -> b
     
     let doProp fn p =
         let doModality =

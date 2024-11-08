@@ -99,12 +99,14 @@ and BExpr<'a, 'b> =
     | Compare of Expr<'a, 'b> * CmpOp * Expr<'a, 'b>
     | Neg of BExpr<'a, 'b>
     | Compound of Bop * BExpr<'a, 'b> list
+    | ForEach of Expr<'a, 'b> * Expr<'a, 'b> * BExpr<'a, 'b>
     override this.ToString() =
         match this with
         | BLeaf true -> tTRUE | BLeaf false -> tFALSE
         | Neg b -> $"%s{tNEG}({b})"
         | Compare(e1, op, e2) -> $"({e1}) {op} ({e2})"
         | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat $" {op} "
+        | ForEach(var, arr, b) -> $"({tFOREACH} {var} {tIN} {arr}, {b})"
 
 /// Syntactic equality check.
 let rec equal e1 e2 =
