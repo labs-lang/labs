@@ -72,7 +72,7 @@ type Expr<'a, 'b> =
         | QB (quants, pred) ->
             let qs = quants |> Map.values |> Seq.map string |> String.concat ", "
             $"{qs}, {string pred}"
-        | Count (typ, name, bexpr) -> $"count {typ} {name}, {bexpr}"
+        | Count (typ, name, bexpr) -> $"{tCOUNT} {typ} {name}, {bexpr}"
         | Leaf l -> string l
         | Nondet (start, bound, _) -> $"[{start}..{bound}]"
         | Ref r -> string r

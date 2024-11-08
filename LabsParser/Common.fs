@@ -40,10 +40,10 @@ let safeStrReturn str ret = safeSkip str >>% ret
 
 let safeIdentifier options =
     let reserved = [
-        tABS; tCONJ; tDISJ; tELSE; tFALSE;
+        tABS; tCONJ; tDISJ; tELSE; tFALSE
         tID; tIF; tMAX; tMIN; tOF; tPICK
         tSKIP; tTHEN; tTRUE; tUNDEF; tWHERE
-        "forall"; "exists"; "count"
+        "forall"; "exists"; tCOUNT
         tFOREACH; tIN
     ]
     identifier options

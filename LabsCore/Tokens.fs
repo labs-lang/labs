@@ -20,6 +20,7 @@ let tSEQ = ";"
 
 let tABS = "abs"
 let tCONJ = "and"
+let tCOUNT = "count"
 let tDISJ = "or"
 let tELSE = "else"
 let tFALSE = "false"

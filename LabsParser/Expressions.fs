@@ -2,7 +2,6 @@
 
 open LabsCore.Tokens
 open LabsCore.ExprTypes
-open LabsCore.BExpr
 open FParsec
 
 let simpleRef p =
