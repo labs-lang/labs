@@ -248,7 +248,7 @@ module internal C =
     let rec private trBExprC trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
         let negFn = sprintf "!(%s)"
-        let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))" //TODO
+        let compareFn e1 op e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))" //TODO
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
@@ -324,7 +324,7 @@ module internal Lnt =
     let rec private trBExprLnt trExpr bexpr =
         let bleafFn b = if b then "true" else "false"
         let negFn = sprintf "(not(%s))"
-        let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))"
+        let compareFn e1 op e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))"
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " and "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " or "
@@ -414,7 +414,7 @@ module internal NuXmv =
     let rec private trBExprNuXmv trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
         let negFn = sprintf "!(%s)"
-        let compareFn op e1 e2 =
+        let compareFn e1 op e2 =
             let nuxmvOp = if op = Equal then "=" else $"{op}" in $"((%s{trExpr e1}) {nuxmvOp} (%s{trExpr e2}))"
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " & "

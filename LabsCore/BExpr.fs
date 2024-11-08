@@ -25,7 +25,7 @@ let rec cata fleaf fneg fcompare fcompound bexpr =
     match bexpr with
     | BLeaf b -> fleaf b 
     | Neg b -> fneg (recurse b)
-    | Compare(e1, op, e2) -> fcompare op e1 e2
+    | Compare(e1, op, e2) -> fcompare e1 op e2
     | Compound(op, b) -> fcompound op (List.map recurse b)
 
 /// Turns a Boolean expression into a simpler, equivalent one.
@@ -35,7 +35,7 @@ let rec simplify bexpr =
         | Leaf (Const x), Leaf (Const y) -> x = y
         | Leaf (Id x), Leaf (Id y) -> x = y
         | _ -> false
-    let compareFn op e1 e2 =
+    let compareFn e1 op e2 =
         match op, e1, e2 with
         | Equal, Leaf (Const _), Leaf (Const _)
         | Equal, Leaf (Id _), Leaf (Id _) ->

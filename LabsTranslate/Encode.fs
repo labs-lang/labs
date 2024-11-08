@@ -154,7 +154,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
         /// TODO maybe move to Frontend?
         let qrykeys =
             let getLstigVarsBExpr =
-                let compareFn _ e1 e2 = Set.union (getLstigVars e1) (getLstigVars e2)
+                let compareFn e1 _ e2 = Set.union (getLstigVars e1) (getLstigVars e2)
                 cata (fun _ -> Set.empty) id compareFn (fun _ -> Set.unionMany)
             assignments
             |>> (fun a -> List.map (getLstigVars << snd) a.Updates)
