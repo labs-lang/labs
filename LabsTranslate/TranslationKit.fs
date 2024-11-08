@@ -71,23 +71,8 @@ let private trref trLocation trLinkId name (v:Var<int>, i:int) offset ofAgent =
     | _ -> trLocation v.Location agent index
 
 /// Translates a boolean expression.
-let translateBExpr bleafFn negFn compareFn compoundFn filter bexpr =
-    let undefs =
-        match filter with
-        | None -> Set.empty
-        | Some f ->
-            /// Checks that expr is "well-defined"
-            /// (i.e., referenced vars must not be equal to "undef_value")
-            let checkWellDef expr =
-                Set.filter f (getRefs expr)
-                |> Set.map (fun r -> Compare(Ref(r), Neq, Leaf(Extern "undef_value")))
-            cata (fun _ -> Set.empty) id (fun _ e1 e2 -> Set.union (checkWellDef e1) (checkWellDef e2)) (fun _ -> Set.unionMany) bexpr
-        
-    if undefs.IsEmpty then bexpr
-    else
-        Set.add bexpr undefs
-        |> fun s -> Compound(Conj, s |> Set.toList)
-    |> cata bleafFn negFn compareFn compoundFn
+let translateBExpr bleafFn negFn compareFn compoundFn bexpr =
+    bexpr |> cata bleafFn negFn compareFn compoundFn
     
 let private translateQPred trExpr trBExpr trLocation trLinkId name (table:SymbolTable) qp =
     
@@ -179,7 +164,7 @@ type ITranslateConfig =
     abstract member TrLoc<'a> : Location -> string -> 'a -> string
     abstract member TrLinkId : LinkComponent -> string
     abstract member TrExpr<'a, 'b> : RefTranslator<'a> -> ('b -> string) -> (BExpr<'a, 'b> -> string) -> Expr<'a, 'b> -> string
-    abstract member TrBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Ref<'a, 'b> -> bool) option -> (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
+    abstract member TrBExpr<'a, 'b when 'a:comparison and 'b:comparison> : (Expr<'a, 'b> -> string) -> BExpr<'a, 'b> -> string
     abstract member CollectAuxVars : (Expr<'a, 'b> -> string) -> Expr<'a, 'b> -> Set<string * string * string>
 
     abstract member Language : EncodeTo
@@ -187,7 +172,7 @@ type ITranslateConfig =
 /// Creates a translation kit from the given configuration
 let makeTranslationKit (conf:ITranslateConfig) =
     
-    let guardTr exprTranslate bexpr = conf.TrBExpr None exprTranslate bexpr 
+    let guardTr exprTranslate bexpr = conf.TrBExpr exprTranslate bexpr 
     
     let rec mainGuardTr bexpr =
         let tr = conf.TrExpr (trref conf.TrLoc conf.TrLinkId "firstAgent") (fun () -> conf.AgentName) mainGuardTr
@@ -196,7 +181,7 @@ let makeTranslationKit (conf:ITranslateConfig) =
     // TODO check that ids are translated correctly
     let rec agentExprTr expr =
         conf.TrExpr (trref conf.TrLoc conf.TrLinkId conf.AgentName)  (fun () -> conf.AgentName) (guardTr agentExprTr) expr
-    let agentGuardTr = conf.TrBExpr None agentExprTr
+    let agentGuardTr = conf.TrBExpr agentExprTr
     
     let rec linkTr bexpr =
         let handleOptionalCmp (v, cmp) =
@@ -207,12 +192,12 @@ let makeTranslationKit (conf:ITranslateConfig) =
             | Some c ->  trref conf.TrLoc conf.TrLinkId (conf.TrLinkId c) v
         
         let trLinkExpr = conf.TrExpr handleOptionalCmp conf.TrLinkId linkTr
-        conf.TrBExpr None trLinkExpr bexpr
+        conf.TrBExpr trLinkExpr bexpr
 
     let propTr =
-        translateProp conf.TrExpr (conf.TrBExpr None) conf.TrLoc conf.TrLinkId
+        translateProp conf.TrExpr conf.TrBExpr conf.TrLoc conf.TrLinkId
     let qpredTr =
-        translateQPred conf.TrExpr (conf.TrBExpr None) conf.TrLoc conf.TrLinkId ""
+        translateQPred conf.TrExpr conf.TrBExpr conf.TrLoc conf.TrLinkId ""
     
     {
         AgentExprTr = agentExprTr
@@ -260,14 +245,14 @@ module internal C =
         
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
-    let rec private trBExprC filter trExpr bexpr =
+    let rec private trBExprC trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
         let negFn = sprintf "!(%s)"
         let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))" //TODO
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
-        translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
+        translateBExpr bleafFn negFn compareFn compoundFn bexpr
 
     let wrapper = { 
         new ITranslateConfig with
@@ -275,7 +260,7 @@ module internal C =
             member _.AgentName = "tid"
             member _.InitId n = Const n
             member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
-            member _.TrBExpr filter trExpr b = trBExprC filter trExpr (simplify b)
+            member _.TrBExpr trExpr b = trBExprC trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars _ _ = Set.empty
@@ -336,7 +321,7 @@ module internal Lnt =
         let ifFn cond ift iff = $"ifelse({trBExpr cond}, {ift}, {iff})"
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
-    let rec private trBExprLnt filter trExpr bexpr =
+    let rec private trBExprLnt trExpr bexpr =
         let bleafFn b = if b then "true" else "false"
         let negFn = sprintf "(not(%s))"
         let compareFn op e1 e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))"
@@ -344,7 +329,7 @@ module internal Lnt =
             | Conj -> List.map (sprintf "(%s)") >> String.concat " and "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " or "
             
-        translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
+        translateBExpr bleafFn negFn compareFn compoundFn bexpr
     
     let wrapper = { 
         new ITranslateConfig with
@@ -352,7 +337,7 @@ module internal Lnt =
             member _.AgentName = "NatToInt(Nat(agent.id))"
             member _.InitId _ = Extern "NatToInt(Nat(agent.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
-            member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
+            member _.TrBExpr trExpr b = trBExprLnt trExpr b
             member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
@@ -364,7 +349,7 @@ module internal Lnt =
             member _.AgentName = "NatToInt(Nat(agent.id))"
             member _.InitId _ = Extern "NatToInt(Nat(agent.id))"
             member _.TrLinkId x = match x with | C1 -> "a1" | C2 -> "a2"
-            member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr (simplify b)
+            member _.TrBExpr trExpr b = trBExprLnt trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e
@@ -377,7 +362,7 @@ module internal Lnt =
                 member _.AgentName = "NatToInt(Nat(id))"
                 member _.InitId _ = Extern "NatToInt(Nat(id))"
                 member _.TrLinkId x = match x with | C1 -> "NatToInt(Nat(id1))" | C2 -> "NatToInt(Nat(id2))"
-                member _.TrBExpr filter trExpr b = trBExprLnt filter trExpr b
+                member _.TrBExpr trExpr b = trBExprLnt trExpr b
                 member _.TrExpr trRef trId trBExpr e = translateExpr trRef trId trBExpr e
                 member _.TrLoc loc x y = translateLocationParallel loc x y
                 member _.CollectAuxVars tr e = collectAux tr e
@@ -426,7 +411,7 @@ module internal NuXmv =
         
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
-    let rec private trBExprNuXmv filter trExpr bexpr =
+    let rec private trBExprNuXmv trExpr bexpr =
         let bleafFn b = if b then "1" else "0"
         let negFn = sprintf "!(%s)"
         let compareFn op e1 e2 =
@@ -434,7 +419,7 @@ module internal NuXmv =
         let compoundFn = function
             | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
             | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
-        translateBExpr bleafFn negFn compareFn compoundFn filter bexpr
+        translateBExpr bleafFn negFn compareFn compoundFn bexpr
 
     let wrapper = { 
         new ITranslateConfig with
@@ -442,7 +427,7 @@ module internal NuXmv =
             member _.AgentName = "tid"
             member _.InitId n = Const n
             member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
-            member _.TrBExpr filter trExpr b = trBExprNuXmv filter trExpr (simplify b)
+            member _.TrBExpr trExpr b = trBExprNuXmv trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars tr e = collectAux tr e

@@ -98,6 +98,13 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
     |> render (parse (trKit.TemplateInfo.Get "header"))
 
 let private encodeInit trKit baseDict (table:SymbolTable) =
+    let agents =
+        table.Spawn
+        |> Map.map (fun name (_start, _end) -> Dict [
+            "start", Int _start; "end", Int _end; "pcs", liquidPcs table.Agents.[name].InitCond
+        ])
+        |> Map.values
+        
     let tstamps =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
@@ -113,7 +120,7 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
     [
         "assumes", assumes
         "initenv", Lst []
-        "agents", Lst []
+        "agents", Lst agents
         "tstamps", Lst tstamps  
     ]
     |> List.append baseDict
