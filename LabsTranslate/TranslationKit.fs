@@ -17,10 +17,10 @@ let private refTypeCheck v (offset:'a option) =
     // TODO move to frontend
     let test, msg = 
         match v.Vartype with
-        | Scalar -> offset.IsSome, (sprintf "Scalar %s treated as Array")
-        | C1Ref | C2Ref -> offset.IsSome, (sprintf "Constant %s treated as Array")
-        | Array _ -> offset.IsNone, (sprintf "Array %s treated as Scalar")
-    if test then failwith (msg v.Name) else ()
+        | Scalar -> offset.IsSome, $"Scalar {v.Name} treated as Array (offset {offset})"
+        | C1Ref | C2Ref -> offset.IsSome, $"Constant {v.Vartype} treated as Array"
+        | Array _ -> offset.IsNone, $"Array {v.Name} treated as Scalar"
+    if test then failwith msg else ()
 
 /// Returns the set of all stigmergy variables accessed by the expression.
 let getLstigVars expr =
