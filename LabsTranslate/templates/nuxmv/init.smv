@@ -10,11 +10,6 @@ INIT
     {%- for i in range -%}{%- unless forloop.last-%}
     & pc[{{i}}][{{ p.name }}] in { {% for val in p.value -%}{{ val }}{% unless forloop.last %}, {% endunless %}{%- endfor %} }
     {%-endunless-%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
-    ---------------------------------------------------------------------------
-    {%- for agent in agents -%}
-    {%- for item in agent.initvars -%}
-    & {{ item.bexpr | replace: "==", "=" }}
-    {%- endfor -%}{%- endfor -%}
 ;
 
 --assumes

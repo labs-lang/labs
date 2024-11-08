@@ -1,19 +1,19 @@
 void init(void) {
-    {%- for item in initenv -%}
-        {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
-    E[{{item.index}}] = __CPROVER_nondet();
-    __CPROVER_assume({{ item.bexpr }});
-        {%- elsif item.bexpr contains "== (0)" -%}
-        {%- else -%}
-    {{ item.bexpr | replace: "==", "=" }};
-        {%- endif -%}
+    
+    {%-assign maxi = MAXKEYI | minus: 1-%}
+    {%-assign maxe = MAXKEYE | minus: 1-%}
+    {%-if hasEnvironment-%}
+    {%- for i in (0..maxe) -%}
+    E[{{ i }}] = nondetInit();
     {%- endfor -%}
+    {%- endif -%}
     {%-if hasStigmergy-%}unsigned char j = 0;{%-endif-%}
     {%- for agent in agents -%}
     {%- assign a = agent.end | minus: 1 -%}
     {%- for i in (agent.start..a) -%}
     {%- if hasStigmergy -%}
     for (j=0; j<MAXKEYL; j++) {
+        Lvalue[[{{i}}]][j] = nondetInit();
         Ltstamp[{{i}}][j] = 0;
         Hin[{{i}}][j] = 0;
         Hout[{{i}}][j] = 0;
@@ -26,7 +26,7 @@ void init(void) {
     {%- if p.value.size == 1 -%}
     pc[{{i}}][{{ p.name }}] = {{ p.value.first }};
     {%- else -%}
-    pc[{{i}}][{{ p.name }}] = __CPROVER_nondet();
+    pc[{{i}}][{{ p.name }}] = nondetInit();
     __CPROVER_assume({%- for val in p.value -%} (pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
     {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
 
@@ -35,15 +35,11 @@ void init(void) {
     
     // ___symbolic-init___
     {%- for agent in agents -%}
-    {%- for item in agent.initvars -%}
-        {%- if item.bexpr contains "&" or item.bexpr contains "|" or item.bexpr contains "<" or item.bexpr contains "!" or item.bexpr contains ">" -%}
-    {%-assign tid = item.bexpr | split: "["-%}
-    {%if item.loc == "L" %}Lvalue{%else%}I{%endif%}[{{ tid[1] | remove: "]" }}][{{item.index}}] = __CPROVER_nondet();
-    __CPROVER_assume({{ item.bexpr }});
-        {%- elsif item.bexpr contains "== (0)" -%}
-        {%- else -%}
-    {{ item.bexpr | replace: "==", "=" }};
-        {%- endif -%}
+    {%-assign end = agent.end | minus: 1-%}
+    {%- for i in (agent.start..end) -%}
+    {%- for j in (0..maxi) -%}
+    I[{{ i }}][{{ j }}] = nondetInit();
+    {%- endfor -%}
     {%- endfor -%}
     {%- endfor -%}
 
