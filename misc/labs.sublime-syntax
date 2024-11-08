@@ -40,7 +40,7 @@ contexts:
   operators:
     - match: \b(abs|pick|where)\b
       scope: entity.name.function.labs
-    - match: \b(and|or|not|of|if|then|else)\b|>(=?)|<(=?)|!=|=
+    - match: \b(and|or|not|of|if|then|else|foreach|in)\b|>(=?)|<(=?)|!=|=
       scope: keyword.operator.logical.labs
     - match: \+|-|\*|/|%|
       scope: keyword.operator.arithmetic.labs
