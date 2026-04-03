@@ -85,7 +85,7 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
         ]
         |> fun x -> x, List.map (fun (name, value) -> $"typeof%s{name}", getTypedef value true |> Str) x
         |> fun (x, y) -> List.append (List.map (fun (name, value) -> name, Int value) x) y
-        
+
     [
         "typeofBOUND", getTypedef bound true |> Str
         "typedefs", makeDict Str Str typedefs
@@ -238,7 +238,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
         match t.Action.Def with
         | Block stmts ->
             let encodes =
-                List.map (fun a -> {t with Action={t.Action with Def=Act a}} |> encodeTransition |> Map.ofList) stmts
+                List.map (fun a -> {t with Action.Def = Act a} |> encodeTransition |> Map.ofList) stmts
             let hd = encodes.Head
             let locals =
                 let liquidVar v =

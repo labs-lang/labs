@@ -68,7 +68,7 @@ module ExecPoint =
 
     let newpc n v =
         let maxpc = Map.keys v |> Seq.max
-        let newpcs = Set.ofSeq { maxpc + 1 .. maxpc + n }
+        let newpcs = seq { maxpc + 1 .. maxpc + n } |> Set.ofSeq
 
         newpcs
         |> Set.map (fun n -> n, 0)
