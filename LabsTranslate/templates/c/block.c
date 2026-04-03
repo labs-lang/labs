@@ -9,7 +9,7 @@ void {{label}}(int tid) {
         pc[tid][{{ item.name }}] = {{ item.value.first }};
         {%- else -%}
         TYPEOFPC pc{{item.name}};
-        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
         pc[tid][{{ item.name }}] = pc{{ item.name }};
         {%- endif -%}{%- endfor -%}
         return;
@@ -17,14 +17,14 @@ void {{label}}(int tid) {
     {%- endif -%}
 
     {%- if siblings.size > 0 %}    __CPROVER_assume({%- if last -%}
-    {%- for item in siblings -%}(pc[tid][{{ item }}] == 0){% unless forloop.last %} && {% endunless %}{%- endfor -%}
+    {%- for item in siblings -%}(pc[tid][{{ item }}] == 0){% unless forloop.last %} {{cAnd}} {% endunless %}{%- endfor -%}
     {%- else -%}
-    {%- for item in siblings -%}(pc[tid][{{ item }}] != 0){%- unless forloop.last -%} || {% endunless %}{%- endfor -%}
+    {%- for item in siblings -%}(pc[tid][{{ item }}] != 0){%- unless forloop.last -%} {{cOr}} {% endunless %}{%- endfor -%}
     {%- endif -%});
     {%- endif -%}
 
     {%-if hasStigmergy and assignments-%}
-    __CPROVER_assume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
+    __CPROVER_assume((HoutCnt[tid] == 0) {{cAnd}} (HinCnt[tid] == 0));
     {%-endif-%}
     {%-for guard in guards %}
     __CPROVER_assume({{ guard }});
@@ -35,11 +35,11 @@ void {{label}}(int tid) {
     TYPEOFVALUES {{l.name}}{%-if l.size > 0-%}[{{l.size}}]{%-endif-%}; /* {{l.loc}} */
     {%-if l.loc contains "Pick" and l.size > 0-%}
     {%-for i in (1..l.size)-%}
-    __CPROVER_assume(({{l.name}}[{{forloop.index0}}] >= {{l.pickFrom}}) & ({{l.name}}[{{forloop.index0}}] < {{l.pickTo}}) & ({{l.name}}[{{forloop.index0}}] != tid));
+    __CPROVER_assume(({{l.name}}[{{forloop.index0}}] >= {{l.pickFrom}}) {{cAnd}} ({{l.name}}[{{forloop.index0}}] < {{l.pickTo}}) {{cAnd}} ({{l.name}}[{{forloop.index0}}] != tid));
     {%-endfor-%}
     {%-capture allDifferent-%}
     {%-for i in (1..l.size)-%}{%- assign outer = forloop %}{%-for j in (1..i)-%}
-    {%-if i != j-%}({{l.name}}[{{i | minus : 1}}] != {{l.name}}[{{j | minus : 1}}]) & {% endif-%}
+    {%-if i != j-%}({{l.name}}[{{i | minus : 1}}] != {{l.name}}[{{j | minus : 1}}]) {{cAnd}} {% endif-%}
     {%-endfor-%}{%-endfor-%}
     {%-endcapture-%}
     {%-if allDifferent != "" -%}__CPROVER_assume({{allDifferent}} 1);{%-endif-%}
@@ -100,7 +100,7 @@ void {{label}}(int tid) {
     pc[tid][{{ item.name }}] = {{ item.value.first }};
     {%- else -%}
     TYPEOFPC pc{{item.name}};
-    __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
     pc[tid][{{ item.name }}] = pc{{ item.name }};
     {%- endif -%}{%- endfor -%}
 

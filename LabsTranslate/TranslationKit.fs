@@ -246,22 +246,25 @@ module internal C =
         
         Expr.cata leafFn arithmFn unaryFn nondetFn trRef rawFn ifFn expr
 
-    let rec private trBExprC trExpr bexpr =
+    let rec private trBExprC trExpr andOp orOp bexpr =
         let bleafFn b = if b then "1" else "0"
         let negFn = sprintf "!(%s)"
         let compareFn e1 op e2 = $"((%s{trExpr e1}) {op} (%s{trExpr e2}))" //TODO
         let compoundFn = function
-            | Conj -> List.map (sprintf "(%s)") >> String.concat " & "
-            | Disj -> List.map (sprintf "(%s)") >> String.concat " | "
+            | Conj -> List.map (sprintf "(%s)") >> String.concat andOp
+            | Disj -> List.map (sprintf "(%s)") >> String.concat orOp
         translateBExpr bleafFn negFn compareFn compoundFn bexpr
 
-    let wrapper = { 
+    let wrapper nobitwise = { 
         new ITranslateConfig with
             member _.TemplateInfo = {BaseDir = "templates/c"; Extension = "c"}
             member _.AgentName = "tid"
             member _.InitId n = Const n
             member _.TrLinkId x = match x with | C1 -> "__LABS_link1" | C2 -> "__LABS_link2"
-            member _.TrBExpr trExpr b = trBExprC trExpr (simplify b)
+            member _.TrBExpr trExpr b =
+                let andOp = if nobitwise then " && " else " & "
+                let orOp =  if nobitwise then " || " else " | "
+                trBExprC trExpr andOp orOp (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
             member _.TrLoc loc x y = translateLocation loc x y
             member _.CollectAuxVars _ _ = Set.empty

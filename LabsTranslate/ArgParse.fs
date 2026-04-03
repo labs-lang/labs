@@ -9,6 +9,7 @@ type Arguments =
     | Enc of EncodeTo
     | Fair
     | No_Bitvector
+    | No_Bitwise
     | Sync
     | Info
     | Simulation
@@ -21,6 +22,7 @@ type Arguments =
             | File _ -> "specify a file."
             | Info -> "do not translate, only gather information on the system"
             | No_Bitvector -> "disable bitvector optimizations"
+            | No_Bitwise -> "use logical and/or instead of bitwise. Implies --no-bitvector"
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
             | Sync -> "force synchronous sending of stigmergic messages"

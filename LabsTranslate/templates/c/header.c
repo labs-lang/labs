@@ -39,7 +39,7 @@ TYPEOFVALUES nondetInit(void) {
 
 TYPEOFVALUES nondetInRange(TYPEOFVALUES minValue, TYPEOFVALUES bound) {
   TYPEOFVALUES x;
-  __CPROVER_assume((x >= minValue) & (x < bound));
+  __CPROVER_assume((x >= minValue) {{cAnd}} (x < bound));
   return x;
 
 }
@@ -72,9 +72,9 @@ _Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID 
     _Bool __LABS_link = 0;
     {%- for l in links -%}
         {%- if forloop.first -%}
-    if ((key >= {{l.start}}) & (key <= {{l.end}})){
+    if ((key >= {{l.start}}) {{cAnd}} (key <= {{l.end}})){
         {%- else -%}
-    else if ((key >= {{l.start}}) & (key <= {{l.end}})){
+    else if ((key >= {{l.start}}) {{cAnd}} (key <= {{l.end}})){
         {%- endif -%}
         __LABS_link = {{l.link}};
     }
@@ -133,8 +133,8 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
 //
 void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, _Bool check) {
     {%- if hasStigmergy -%}
-    __CPROVER_assume((!check) | (HoutCnt[id] == 0));
-    __CPROVER_assume((!check) | (HinCnt[id] == 0));
+    __CPROVER_assume((!check) {{cOr}} (HoutCnt[id] == 0));
+    __CPROVER_assume((!check) {{cOr}} (HinCnt[id] == 0));
     {%- endif -%}
 
 
@@ -149,8 +149,8 @@ const TYPEOFKEYEID MAXKEYE = {{ MAXKEYE }};
 TYPEOFVALUES E[{{ MAXKEYE }}];
 void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
     {%- if hasStigmergy -%}
-    __CPROVER_assume((!check) | (HoutCnt[id] == 0));
-    __CPROVER_assume((!check) | (HinCnt[id] == 0));
+    __CPROVER_assume((!check) {{cOr}} (HoutCnt[id] == 0));
+    __CPROVER_assume((!check) {{cOr}} (HinCnt[id] == 0));
     {%- endif -%}
 
     E[key] = value;
@@ -168,8 +168,8 @@ void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
 //  Rule LSTIG
 //
 void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, _Bool check) {
-    __CPROVER_assume((!check) | (HoutCnt[id] == 0));
-    __CPROVER_assume((!check) | (HinCnt[id] == 0));
+    __CPROVER_assume((!check) {{cOr}} (HoutCnt[id] == 0));
+    __CPROVER_assume((!check) {{cOr}} (HinCnt[id] == 0));
 
     Lvalue[id][key] = value;
     // Only update the timestamp of the 1st element in the tuple
@@ -180,7 +180,7 @@ void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, _Bool check) 
 
 _Bool differentLstig(TYPEOFAGENTID comp1, TYPEOFAGENTID comp2, TYPEOFKEYLID key) {
     TYPEOFKEYLID k  = tupleStart[key];
-    return ((Lvalue[comp1][k] != Lvalue[comp1][k]) | (Ltstamp[comp1][k] != Ltstamp[comp2][k]));
+    return ((Lvalue[comp1][k] != Lvalue[comp1][k]) {{cOr}} (Ltstamp[comp1][k] != Ltstamp[comp2][k]));
 }
 
 void confirm(void) {
@@ -202,7 +202,7 @@ void confirm(void) {
     
     // Send data from guessedcomp to i
     for (i=0; i<MAXCOMPONENTS; i++) {
-        if (((guessedcomp!=i) & (timeof(i, guessedkey) != t)) & link(guessedcomp,i,guessedkey)) {
+        if (((guessedcomp!=i) {{cAnd}} (timeof(i, guessedkey) != t)) {{cAnd}} link(guessedcomp,i,guessedkey)) {
             
             setHout(i, guessedkey);
             // If data is fresh, agent i copies it to its stigmergy
@@ -211,7 +211,7 @@ void confirm(void) {
                 clearHin(i, guessedkey);
                 for (k = 0; k < MAXTUPLE; k++) {
                     next = guessedkey + k;
-                    // if ((next<MAXKEYL) && (tupleStart[next] == guessedkey))
+                    // if ((next<MAXKEYL) {{cAnd}} (tupleStart[next] == guessedkey))
                     if (next <= tupleEnd[guessedkey])
                         Lvalue[i][next] = Lvalue[guessedcomp][next];
                 }
@@ -237,7 +237,7 @@ void propagate(void) {
     TYPEOFTIME t = timeof(guessedcomp, guessedkey);
 
     for (i=0; i<MAXCOMPONENTS; i++) {
-        if (((guessedcomp!=i) & (timeof(i, guessedkey)<t)) & (link(guessedcomp,i,guessedkey))) {
+        if (((guessedcomp!=i) {{cAnd}} (timeof(i, guessedkey)<t)) {{cAnd}} (link(guessedcomp,i,guessedkey))) {
             // If data is fresh, i copies it to its stigmergy and
             // will propagate it in the future (setHout)
             setHout(i, guessedkey);
@@ -245,7 +245,7 @@ void propagate(void) {
             TYPEOFKEYLID k, next;
             for (k = 0; k < MAXTUPLE; k++) {
                 next = guessedkey+k;
-                // if (next<MAXKEYL && tupleStart[next] == tupleStart[guessedkey])
+                // if (next<MAXKEYL {{cAnd}} tupleStart[next] == tupleStart[guessedkey])
                 if (next <= tupleEnd[guessedkey])
                     Lvalue[i][next] = Lvalue[guessedcomp][next];
             }

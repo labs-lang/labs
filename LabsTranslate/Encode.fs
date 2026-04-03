@@ -375,10 +375,10 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
     |> List.append baseDict
     |> render (parse (trKit.TemplateInfo.Get "main"))
 
-let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
+let encode encodeTo bound (fair, nobitvector, nobitwise, sim, sync, noprops) prop table =
     let trKit = makeTranslationKit <|
                 match encodeTo with
-                | C -> C.wrapper
+                | C -> C.wrapper nobitwise
                 | Lnt -> Lnt.wrapper
                 | Lnt_Monitor -> Lnt.wrapperMonitor
                 | Lnt_Parallel -> Lnt.wrapperParallel
@@ -390,6 +390,8 @@ let encode encodeTo bound (fair, nobitvector, sim, sync, noprops) prop table =
     let maxkeyL = max table.M.NextL 1
 
     let baseDict = [
+        "cOr", Str <| if nobitwise then "||" else "|"
+        "cAnd", Str <| if nobitwise then "&&" else "&"
         "bound", Int bound
         "hasStigmergy", Bool (table.M.NextL > 0)
         "MAXKEYE", Int maxkeyE

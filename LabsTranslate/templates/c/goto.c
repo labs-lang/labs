@@ -8,7 +8,7 @@ void {{label}}(int tid) {
         pc[tid][{{ item.name }}] = {{ item.value.first }};
         {%- else -%}
         TYPEOFPC pc{{item.name}};
-        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
         pc[tid][{{ item.name }}] = pc{{ item.name }};
         {%- endif -%}{%- endfor -%}
         return;
@@ -52,7 +52,7 @@ void {{label}}(int tid) {
     pc[tid][{{ item.name }}] = {{ item.value.first }};
     {%- else -%}
     TYPEOFPC pc{{item.name}};
-    __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
     pc[tid][{{ item.name }}] = pc{{ item.name }};
     {%- endif -%}{%- endfor -%}
 

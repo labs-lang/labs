@@ -27,7 +27,7 @@ void init(void) {
     pc[{{i}}][{{ p.name }}] = {{ p.value.first }};
     {%- else -%}
     pc[{{i}}][{{ p.name }}] = nondetInit();
-    __CPROVER_assume({%- for val in p.value -%} (pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} | {% endunless %}{%- endfor-%});
+    __CPROVER_assume({%- for val in p.value -%} (pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
     {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
 
     // ___concrete-init___

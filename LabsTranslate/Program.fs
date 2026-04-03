@@ -1,4 +1,6 @@
-﻿open System.IO
+﻿module LabsTranslate.Program
+
+open System.IO
 open FParsec
 
 open Frontend
@@ -25,6 +27,7 @@ let main argv =
     let flags (cli:ParseResults<_>) = (
         cli.Contains Fair,
         cli.Contains No_Bitvector,
+        cli.Contains No_Bitwise,
         cli.Contains Simulation,
         cli.Contains Sync,
         cli.Contains No_Properties)

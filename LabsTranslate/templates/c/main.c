@@ -18,7 +18,7 @@ void monitor(void) {
     {%if simulation%}
     __sim_satisfied({{eventuallypredicates.first.value}}, "{{eventuallypredicates.first.name}}");
     {%else%}
-    if (!__LABS_eventually & ({{eventuallypredicates.first.value}})) {
+    if (!__LABS_eventually {{cAnd}} ({{eventuallypredicates.first.value}})) {
          __LABS_eventually = 1;
     }
     {%endif%}
@@ -40,15 +40,15 @@ void monitor(void) {
     {%-else%}    // {{ item.modality }} {{ item.predicate }}
     {%-endif-%}
     // If both open and close hold, the scope is null and {{item.name}} passes vacuously
-    if ({{ item.scope.open }} & !({{ item.scope.close }})) __LABS_{{item.name}}_isOpen = 1;
+    if ({{ item.scope.open }} {{cAnd}} !({{ item.scope.close }})) __LABS_{{item.name}}_isOpen = 1;
     {%-if item.modality == "thereIs"-%}
-    if (__LABS_{{item.name}}_isOpen & !({{ item.scope.close }}) & ({{ item.predicate }})) __LABS_{{item.name}}_isSat = 1;
+    if (__LABS_{{item.name}}_isOpen {{cAnd}} !({{ item.scope.close }}) {{cAnd}} ({{ item.predicate }})) __LABS_{{item.name}}_isSat = 1;
     {%-endif-%}
     {%-if item.modality == "always" -%}
-    if (__LABS_{{item.name}}_isOpen & !({{ item.scope.close }}) & !({{ item.predicate }})) __LABS_{{item.name}}_isSat = 0;
+    if (__LABS_{{item.name}}_isOpen {{cAnd}} !({{ item.scope.close }}) {{cAnd}} !({{ item.predicate }})) __LABS_{{item.name}}_isSat = 0;
     {%-endif-%}
     // Closing the scope
-    if (__LABS_{{item.name}}_isOpen & ({{ item.scope.close }})) {
+    if (__LABS_{{item.name}}_isOpen {{cAnd}} ({{ item.scope.close }})) {
         __LABS_{{item.name}}_isOpen = 0;
         __CPROVER_assert(__LABS_{{item.name}}_isSat, "{{item.name}}");
     }
@@ -110,7 +110,7 @@ int main(void) {
             {%-unless fair-%}
             // ___symbolic-scheduler___
             scheduled = __CPROVER_nondet();
-            scheduled = ((scheduled >= 0) & (scheduled < MAXCOMPONENTS)) ? scheduled : 0;
+            scheduled = ((scheduled >= 0) {{cAnd}} (scheduled < MAXCOMPONENTS)) ? scheduled : 0;
             // ___end symbolic-scheduler___
             {%-endunless-%}
 
