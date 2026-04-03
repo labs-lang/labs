@@ -25,7 +25,7 @@ let wrapParserResult p text =
 [<EntryPoint>]
 let main argv =
     let flags (cli:ParseResults<_>) = (
-        cli.Contains Fair,
+        cli.GetResult (Fair, defaultValue=Unfair),
         cli.Contains No_Bitvector,
         cli.Contains No_Bitwise,
         cli.Contains Simulation,

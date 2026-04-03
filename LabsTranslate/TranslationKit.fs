@@ -13,6 +13,9 @@ open System.IO
 /// Supported target languages.
 type EncodeTo = | C | Lnt | Lnt_Monitor | Lnt_Parallel | NuXmv
 
+/// Supported kinds of fairness.
+type Fairness = Unfair | RR | Justice
+
 /// Checks that a scalar is not treated as an array and vice versa.
 let private refTypeCheck v (offset:'a option) =
     // TODO move to frontend

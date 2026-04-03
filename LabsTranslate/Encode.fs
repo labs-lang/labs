@@ -286,7 +286,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
     
     a.Sts |> Set.map encoder |> Seq.reduce (<??>)
 
-let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
+let private encodeMain trKit baseDict noprops prop (table:SymbolTable) =
     let scheduleTransition t =
         Dict [
             "name", funcName t |> Str
@@ -357,7 +357,6 @@ let private encodeMain trKit baseDict fair noprops prop (table:SymbolTable) =
     
     [
         "firstagent", if table.Spawn.Count = 1 then Int 0 else Int -1
-        "fair", Bool fair
         "pcmap", Str pcmap
         "schedule",
             table.Agents
@@ -393,6 +392,8 @@ let encode encodeTo bound (fair, nobitvector, nobitwise, sim, sync, noprops) pro
         "cOr", Str <| if nobitwise then "||" else "|"
         "cAnd", Str <| if nobitwise then "&&" else "&"
         "bound", Int bound
+        "fair", (match fair with RR -> true | _ -> false) |> Bool
+        "just", (match fair with Justice -> true | _ -> false) |> Bool
         "hasStigmergy", Bool (table.M.NextL > 0)
         "MAXKEYE", Int maxkeyE
         "MAXKEYI", Int maxkeyI
@@ -409,5 +410,5 @@ let encode encodeTo bound (fair, nobitvector, nobitwise, sim, sync, noprops) pro
             (Map.values x.Agents)
             |> Seq.map (encodeAgent trKit baseDict goto block sync x)
             |> Seq.reduce (<??>))
-    <?> (encodeMain trKit baseDict fair noprops prop)
+    <?> (encodeMain trKit baseDict noprops prop)
     <~~> zero () 

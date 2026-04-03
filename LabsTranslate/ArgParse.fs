@@ -7,7 +7,7 @@ type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string
     | [<Mandatory>] [<Unique>] Bound of int
     | Enc of EncodeTo
-    | Fair
+    | Fair of Fairness
     | No_Bitvector
     | No_Bitwise
     | Sync
@@ -27,7 +27,7 @@ type Arguments =
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
             | Sync -> "force synchronous sending of stigmergic messages"
             | Simulation -> "encode in simulation mode (default: verification mode)."
-            | Fair -> "enforce fair interleaving of components."
+            | Fair _ -> "Specify fairness constraint. (default: none)"
             | Enc _ -> "specify the target encoding."
             | Property _ -> "specify the property to consider, others will be ignored."
             | No_Properties -> "ignore all properties."
