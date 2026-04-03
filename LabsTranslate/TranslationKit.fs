@@ -322,7 +322,7 @@ module internal Lnt =
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "abs(%s)"
-        let nondetFn = fun _ _ (pos:Position) -> $"nondet_{pos.GetHashCode()}" 
+        let nondetFn = fun _ _ (pos:Position) -> $"nondet_{pos.Line}_{pos.Column}" 
         //failwith "nondet expressions are currently not supported in LNT"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
         let ifFn cond ift iff = $"ifelse({trBExpr cond}, {ift}, {iff})"
@@ -412,7 +412,7 @@ module internal NuXmv =
         let unaryFn = function
             | UnaryMinus -> sprintf "-(%s)"
             | Abs -> sprintf "abs(%s)"
-        let nondetFn e1 e2 _ = $"nondetInRange({e1}, {e2})"
+        let nondetFn = fun _ _ (pos:Position) -> $"nondet_{pos.Line}_{pos.Column}"
         let rawFn name args = $"""{name}({String.concat ", " args})"""
         let ifFn cond ift iff = $"(%s{trBExpr cond}) ? ({ift}) : ({iff})"
         
