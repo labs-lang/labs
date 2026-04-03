@@ -1,38 +1,6 @@
--- Scheduler
-TRANS __turn = sched -> (
-    next(__turn) = step
-    & next(i) = i
-    & next(pc) = pc
-    {%- if hasEnvironment -%}
-    & next(e) = e
-    {%- endif -%}
-    {%- if fair -%}
-    & next(tid) = case 
-        tid = __MAXTID : 0; 
-        TRUE : tid + 1;
-        esac
-    {%- endif -%}
-);
-
--- After a step, give control back to the scheduler
-TRANS (__turn = step & !deadlocked) -> (
-    next(__turn) = sched &
-    next(tid) = tid 
-);
-
-TRANS deadlocked -> (
-    next(tid) = tid
-    & next(__turn) = __turn
-    & next(pc) = pc
-    {%- if hasEnvironment -%}
-    & next(e) = e
-    {%- endif -%}
-);
-
--- detect deadlocked agent
-INVAR deadlocked = !(
-    FALSE 
-    | __turn = sched
+-- force to pick non-deadlocked agent
+INVAR (
+    FALSE
     {%- for item in schedule -%}
     | ({% for pc in item.entry -%}(pc[tid][{{pc.name}}] = {{pc.value}}){% unless forloop.last %} & {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} &
     {%-for pc in item.siblings -%}
@@ -41,3 +9,11 @@ INVAR deadlocked = !(
     {%- endif -%}{% if item.guards.size > 0 %} & {{ item.guards | join: ' & ' | replace: "==", "=" }}{% endif %})
     {%- endfor -%}
 );
+
+{%- for item in alwaysasserts -%}
+LTLSPEC G {{item.value}}; -- {{item.name}}
+{%- endfor -%}
+
+{%- for item in finallyasserts -%}
+LTLSPEC F {{item.value}}; -- {{item.name}}
+{%- endfor -%}

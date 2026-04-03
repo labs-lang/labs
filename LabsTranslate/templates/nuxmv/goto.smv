@@ -6,7 +6,7 @@ INVAR {{a.name}} < {{a.bound}};
 
 --{{labs}}
 TRANS (
-    __turn = step
+    TRUE
     {%- for item in entrycond -%}
     {% for val in item.value -%}& (pc[tid][{{ item.name }}] = {{ val }})
     {%- endfor -%}{%- endfor -%}
@@ -14,9 +14,8 @@ TRANS (
     {%- endfor -%}
 ) -> (
     TRUE
-    -- TODO assign
     {%- for item in assignments -%}
-    & next({% if item.loc == "env" -%}e{%- elsif item.loc == "attr"-%}i[tid]{%- endif -%}[{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
+    & next({% if item.loc == "env" -%}e{%- elsif item.loc == "attr"-%}i[prev_tid]{%- endif -%}[{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
     {%- endfor -%}
     {%- if hasEnvironment -%}
     -- hold unchanged environment values
@@ -28,11 +27,11 @@ TRANS (
     -- hold unchanged attribute values
     {%- assign irange = (0..MAXKEYI) -%}
     {%- for i in irange -%}{%- unless forloop.last -%}
-    {% unless forloop.last -%}& {%endunless%}((TRUE {%- for item in assignments -%}{%- if item.loc == "attr" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}) -> next(i[tid][{{i}}]) = i[tid][{{i}}])
+    {% unless forloop.last -%}& {%endunless%}((TRUE {%- for item in assignments -%}{%- if item.loc == "attr" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}) -> next(i[prev_tid][{{i}}]) = i[tid][{{i}}])
     {%- endunless -%}{%- endfor -%}
 
     -- exitcond
     {%- for item in exitcond -%}
-    & next(pc[tid][{{item.name}}]) in { {% for val in item.value -%}{{val}}{%-unless forloop.last -%},{%- endunless -%}{%- endfor %} }
+    & next(pc[prev_tid][{{item.name}}]) in { {% for val in item.value -%}{{val}}{%-unless forloop.last -%},{%- endunless -%}{%- endfor %} }
     {%- endfor -%}
 );

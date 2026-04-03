@@ -1,8 +1,7 @@
 MODULE main
 VAR
-    deadlocked: boolean;
-    __turn: {sched, step};
     tid: 0..{{MAXCOMPONENTS | minus: 1}};
+    prev_tid: 0..{{MAXCOMPONENTS | minus: 1}};
     i: array 0..{{MAXCOMPONENTS | minus: 1}} of array 0..{{MAXKEYI | minus: 1}} of integer;
     pc: array 0..{{MAXCOMPONENTS | minus: 1}} of array 0..{{MAXPC | minus: 1}} of integer;
     {%- if hasEnvironment -%}
@@ -16,12 +15,24 @@ DEFINE
     __MAXKEYI := {{ MAXKEYI }};
     undef_value := -65536;
 
-
+-- Keep track of tid in previous step
+TRANS next(prev_tid) = tid;
 -- keep values of idle agents
-TRANS
-    TRUE
-    {%- assign range = (0..MAXCOMPONENTS) -%}
-    {%- for i in range -%}
-    {%unless forloop.last%}& (tid != {{i}} -> next(i[{{i}}]) = i[{{i}}] & next(pc[{{i}}]) = pc[{{i}}])
-    {%- endunless -%}{%- endfor -%}
-    ;
+{%- assign maxtid = MAXCOMPONENTS | minus: 1 -%}
+{%- assign range = (0..maxtid) -%}{%- assign irange = (0..MAXKEYI) -%}{%- assign pcrange = (0..MAXPC) -%}
+{%- for t in range -%}
+{%- for j in irange -%}{%-unless forloop.last-%}
+TRANS (tid != {{t}}) -> next(i[{{t}}][{{j}}]) = i[{{t}}][{{j}}];
+{%- endunless -%}{%- endfor -%}
+{%- for j in pcrange -%}{%-unless forloop.last-%}
+TRANS (tid != {{t}}) -> next(pc[{{t}}][{{j}}]) = pc[{{t}}][{{j}}];
+{%- endunless -%}{%- endfor -%}
+{%- endfor -%}
+
+{%- if fair -%}
+-- Round-robin scheduler
+TRANS next(tid) = ((tid = __MAXTID) ? 0 : (tid+1));
+{%- endif -%}
+
+-- End header
+
