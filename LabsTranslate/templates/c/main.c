@@ -96,6 +96,7 @@ int main(void) {
     {%- if bound > 0 -%}
     for (__LABS_step=0; __LABS_step<BOUND; __LABS_step++) {
     {%- else -%}
+    __LABS_step=0;
     while(1) {        
     {%- endif -%}
         
@@ -146,6 +147,9 @@ int main(void) {
         if ({{eventuallypredicates.first.value}}) { 
             return 0; 
         }
+        {%- endif -%}
+        {%- if bound == 0 -%}
+        ++__LABS_step;
         {%- endif -%}
     }
 

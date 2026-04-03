@@ -10,9 +10,8 @@ const _Bool SIMULATION = {%if simulation%}1{%else%}0{%endif%};
 const {{typeofBOUND}} BOUND = {{ bound }};
 const {{ typeofMAXCOMPONENTS }} MAXCOMPONENTS = {{ MAXCOMPONENTS }};
 const {{ typeofMAXPC }} MAXPC = {{ MAXPC }};
-{%- if bound > 0 -%}
+
 unsigned __LABS_step = 0;
-{%- endif -%}
 
 {% for item in typedefs -%}
 typedef {{item.value}} {{item.name}};
