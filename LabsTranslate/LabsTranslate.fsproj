@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net8</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
         <PublishTrimmed>true</PublishTrimmed>
         
@@ -43,8 +43,9 @@
     </ItemGroup>
     
     <ItemGroup>
-      <PackageReference Include="Argu" Version="6.2.3" />
-      <PackageReference Include="DotLiquid" Version="2.2.692" />
+      <PackageReference Include="Argu" Version="6.2.5" />
+      <PackageReference Include="DotLiquid" Version="2.3.197" />
+      <PackageReference Update="FSharp.Core" Version="10.1.201" />
     </ItemGroup>
 
 </Project>
