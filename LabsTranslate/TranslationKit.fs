@@ -398,7 +398,7 @@ module internal NuXmv =
             | Extern s -> s 
         
         let roundDiv num den =
-            $"( (floor(({num}/1.0)/{den}) = floor(({num}/1.0)/{den}) + 0.5) ? ({num}/{den}) : (({num}/{den})+1) )"
+            $"( ({num}*{den}>=0) ? ({num} + ({den}/2)) / {den} : -((-{num} + ({den}/2)) / {den}) )"
         
         let arithmFn = function
             | Plus -> sprintf "(%s) + (%s)"
