@@ -406,9 +406,21 @@ let encode encodeTo bound (fair, nobitvector, nobitwise, sim, sync, noprops) pro
     zero table
     <?> (encodeHeader trKit baseDict nobitvector bound)
     <?> (encodeInit trKit baseDict)
-    <?> (fun x -> 
-            (Map.values x.Agents)
-            |> Seq.map (encodeAgent trKit baseDict goto block sync x)
+    <?> (fun x ->
+            let behaviors =
+                Map.values x.Agents |> Seq.map (_.Behavior) |> Set.ofSeq
+            
+            ((Set.empty, Seq.empty), Map.values x.Agents) ||> Seq.fold (fun (seen, enc) agent ->
+                if seen.Contains agent.Behavior then
+                    seen, enc
+                else
+                    let newSeen = if agent.Behavior = "Behavior" then seen else Set.add agent.Behavior seen
+                    let newEnc = encodeAgent trKit baseDict goto block sync x agent
+                    newSeen, Seq.append enc [newEnc]
+            ) 
+            // Map.values x.Agents
+            // |> Seq.map (encodeAgent trKit baseDict goto block sync x)
+            |> snd
             |> Seq.reduce (<??>))
     <?> (encodeMain trKit baseDict noprops prop)
     <~~> zero () 

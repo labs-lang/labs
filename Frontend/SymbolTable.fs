@@ -39,6 +39,7 @@ with
 
 type AgentTable = {
     Sts: TransitionSystem
+    Behavior: string
     Processes: Map<string, Process<Var<int>*int>>
     InitCond: ExitCond
     Variables: Var<int> list
@@ -48,6 +49,7 @@ with
     static member empty =
         {
             Sts=Set.empty
+            Behavior = "Behavior" 
             Processes=Map.empty
             InitCond=Map.empty
             Variables=[]
@@ -291,11 +293,30 @@ module SymbolTable =
         |> (Map.ofList >> zero)
         <~> fun p ->
             let allProcesses = Map.union p table.Processes
+            let baseProcess =
+                match p["Behavior"] with
+                | BaseProcess x ->
+                    match x.Def with Name x when allProcesses.ContainsKey x -> x | _ -> "Behavior"
+                | _ -> "Behavior"
+            
+            let otherAgent =
+                match baseProcess with
+                | "Behavior" -> None
+                | x ->
+                    table.Agents
+                    |> Map.values
+                    |> Seq.tryFind(fun v -> v.Behavior = x)
             let p' = (Map.add "Behavior" (Process.expand allProcesses "Behavior") allProcesses)
-            let (lts, acc), initCond = makeTransitions state p'["Behavior"]
-            let lts' = removeNames p' lts
+            let lts, acc, init=
+                match otherAgent with
+                | None -> 
+                    let (lts, acc), initCond = makeTransitions state p'[baseProcess]
+                    let lts' = removeNames p' lts
+                    lts', acc, initCond
+                | Some a ->
+                    a.Sts, snd state, a.InitCond
             let guards = Map.union table.Guards (setGuards p'["Behavior"])
-            let agent = {table.Agents[a.Name] with Processes=p'; Sts=lts'; InitCond=initCond; Lstig=a.Def.Lstig |> Set.ofList}
+            let agent = {table.Agents[a.Name] with Behavior=baseProcess; Processes=p'; Sts=lts; InitCond=init; Lstig=a.Def.Lstig |> Set.ofList}
             zero ({table with Agents = table.Agents.Add(a.Name, agent); Guards=guards}, (Set.empty, acc))        
     
     let internal makeSpawnRanges externs spawn table =
