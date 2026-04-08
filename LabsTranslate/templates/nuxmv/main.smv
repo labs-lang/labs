@@ -1,19 +1,27 @@
--- force to pick non-deadlocked agent
-INVAR (
-    FALSE
-    {%- for item in schedule -%}
-    | ({% for pc in item.entry -%}(pc[tid][{{pc.name}}] = {{pc.value}}){% unless forloop.last %} & {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} &
+-- tag deadlocked states
+DEFINE canProceed := (
+    TRUE
+    {%-for item in schedule-%}
+    {%- if item.guards.size > 0 -%}
+    & ({% for pc in item.entry -%}(pc[tid][{{pc.name}}] = {{pc.value}}){% unless forloop.last %} & {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} &
     {%-for pc in item.siblings -%}
     (pc[tid][{{pc}}] {%-if item.name contains 'last'-%}={%- else -%}!={%- endif -%} 0){% unless forloop.last %} & {% endunless %}
     {%- endfor -%}
-    {%- endif -%}{% if item.guards.size > 0 %} & {{ item.guards | join: ' & ' | replace: "==", "=" }}{% endif %})
-    {%- endfor -%}
+    {%- endif %} -> ({{ item.guards | join: ' & ' | replace: "==", "=" }}))
+    {%-endif-%}{%-endfor-%}
 );
 
+INIT canProceed;
+TRANS !canProceed -> next(i) = i;
+TRANS !canProceed -> next(pc) = pc;
+{%-if hasEnvironment-%}
+TRANS !canProceed -> next(e) = e;
+{%-endif-%}
+
 {%- for item in alwaysasserts -%}
-LTLSPEC G {{item.value}}; -- {{item.name}}
+LTLSPEC G ({{item.value}}); -- {{item.name}}
 {%- endfor -%}
 
 {%- for item in finallyasserts -%}
-LTLSPEC F {{item.value}}; -- {{item.name}}
+LTLSPEC F ({{item.value}}); -- {{item.name}}
 {%- endfor -%}

@@ -35,4 +35,3 @@ TRANS next(tid) = ((tid = __MAXTID) ? 0 : (tid+1));
 {%- endif -%}
 
 -- End header
-

@@ -288,7 +288,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
 
 let private encodeMain trKit baseDict noprops prop (table:SymbolTable) =
     let scheduleTransition t =
-        Dict [
+         [
             "name", funcName t |> Str
             "siblings", seq t.Siblings |> Seq.map Int |> Lst
             "entry", liquidPcs (t.Entry |> Map.mapValues Set.singleton)
@@ -363,6 +363,8 @@ let private encodeMain trKit baseDict noprops prop (table:SymbolTable) =
             |> Map.mapValues (fun a -> Seq.map scheduleTransition a.Sts)
             |> Map.values
             |> Seq.concat
+            |> Seq.distinctBy (fun x -> snd x[0])
+            |> Seq.map (fun x -> Dict x)
             |> Lst
         "alwaysasserts", alwaysP
         "finallyasserts", finallyP

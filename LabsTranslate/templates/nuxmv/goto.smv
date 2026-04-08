@@ -6,7 +6,7 @@ INVAR {{a.name}} < {{a.bound}};
 
 --{{labs}}
 TRANS (
-    TRUE
+    canProceed
     {%- for item in entrycond -%}
     {% for val in item.value -%}& (pc[tid][{{ item.name }}] = {{ val }})
     {%- endfor -%}{%- endfor -%}

@@ -15,23 +15,23 @@ DEFINE {{l.name}} := toint({{l.expr | replace: "==", "="}});
 {%- for l in locals -%}{%- if l.loc contains "Pick" -%}
 VAR {{l.name}} : array 0..{{l.size | minus: 1}} of 0..{{MAXCOMPONENTS | minus: 1}};
 
-TRANS (TRUE {%- for item in entrycond -%}{% for val in item.value -%}& (pc[next(tid)][{{ item.name }}] = {{ val }}){%- endfor -%}{%- endfor -%}) -> (
+INVAR (
     {% for i in (1..l.size) -%}
-    {%- unless forloop.first -%}& {%- endunless -%} next({{l.name}}[{{i | minus: 1}}]) != next(tid)
+    {%- unless forloop.first -%}& {%- endunless -%} {{l.name}}[{{i | minus: 1}}] != tid
     {%- endfor -%}
     {%- if l.size > 1 -%}{% for i in (1..l.size) -%}{%-for j in (1..i)-%}
-    & next({{l.name}}[{{i | minus: 1}}]) != next({{l.name}})[{{j | minus: 1}}]
+    & {{l.name}}[{{i | minus: 1}}] != {{l.name}})[{{j | minus: 1}}]
     {%- endfor -%}{%- endfor -%}{%-endif-%}
     {%- if l.where != "" -%}
     {% for i in (0..l.size) -%}{%- unless forloop.last -%}
-    {%- capture l2 -%}next({{l.name}}[{{i}}]){%- endcapture %}
-    & {{l.where | replace: "__LABS_link1", "next(tid)" | replace: "__LABS_link2", l2}}
+    {%- capture l2 -%}{{l.name}}[{{i}}]{%- endcapture %}
+    & {{l.where | replace: "__LABS_link1", "tid" | replace: "__LABS_link2", l2}}
     {% endunless %}{% endfor -%}{%-endif-%}
 );
 {%-endif-%}{%- endfor -%}
 
 TRANS (
-    TRUE
+    canProceed
     {%- for item in entrycond -%}
     {% for val in item.value -%}& (pc[tid][{{ item.name }}] = {{ val }})
     {%- endfor -%}{%- endfor -%}
