@@ -55,7 +55,7 @@ let private trref trLocation trLinkId name (v:Var<int>, i:int) offset ofAgent =
             let dims = match v.Vartype with Array s -> s | _ -> []
             let offsets =   
                 [0..dims.Length-1]
-                |> List.map (fun i -> List.reduce (*) (1::List.rev(dims)).[..i])
+                |> List.map (fun i -> List.reduce (*) <| (1::List.rev(dims))[..i])
                 |> List.rev |> List.map string
             if offsets.Length <> List.length indexes then
                 failwith $"Cannot zip {offsets} and {indexes} (in trref)"
@@ -78,7 +78,7 @@ let private trref trLocation trLinkId name (v:Var<int>, i:int) offset ofAgent =
 let translateBExpr bleafFn negFn compareFn compoundFn bexpr =
     bexpr |> cata bleafFn negFn compareFn compoundFn (fun _ _ _ -> failwith $"Unexpected {tFOREACH}")
     
-let private translateQPred trExpr trBExpr trLocation trLinkId name (table:SymbolTable) qp =
+let private translateQPred trExpr trBExpr trLocation trLinkId _ (table:SymbolTable) qp =
     
     //TODO move checks to frontend
     let translateSub (sub:Map<_,_>) =

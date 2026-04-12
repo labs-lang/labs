@@ -88,7 +88,7 @@ let paction =
 let pproc, pprocRef = createParserForwardedToRef()
 
 do pprocRef.Value <-
-    let doBase (pos, stmt) = {Def=stmt; Pos=pos; Source=""; Name=string stmt} |> BaseProcess
+    let doBase (pos, stmt) = {Def=stmt; Pos=pos; Source=""; Name=string stmt |> _.Trim()} |> BaseProcess
     let compose a b = Comp(a, b)
 
     let pGUARDORFATGUARD = choice [

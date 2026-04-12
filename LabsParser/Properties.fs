@@ -76,7 +76,7 @@ let pproperty withModality =
             Modality=m
             QuantPredicate = qp
         }})
-    |> withSkippedString (fun s x -> {x with Source=s}) 
+    |> withSkippedString (fun s x -> {x with Source=s.Trim()}) 
 
 let pproperties : Parser<_> =
     wsUnit

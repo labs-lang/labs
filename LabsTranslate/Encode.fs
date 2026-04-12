@@ -70,8 +70,8 @@ let private encodeHeader trKit baseDict noBitvectors bound (table:SymbolTable) =
         table.Stigmergies
         |> Map.map (fun name link ->
             Dict [
-                "start", fst fromTo.[name] |> Int
-                "end", snd fromTo.[name] |> Int
+                "start", fst fromTo[name] |> Int
+                "end", snd fromTo[name] |> Int
                 "link", trKit.LinkTr link |> Str
             ] 
         )
@@ -101,21 +101,21 @@ let private encodeInit trKit baseDict (table:SymbolTable) =
     let agents =
         table.Spawn
         |> Map.map (fun name (_start, _end) -> Dict [
-            "start", Int _start; "end", Int _end; "pcs", liquidPcs table.Agents.[name].InitCond
+            "start", Int _start; "end", Int _end; "pcs", liquidPcs table.Agents[name].InitCond
         ])
         |> Map.values
         
     let tstamps =
         table.Spawn
         |> Map.map (fun name (_start, _end) ->
-                table.Agents.[name].LstigVariables table
-                |> Seq.map (fun v tid -> Dict ["tid", Int tid; "index", Int (snd table.M.[v.Name])])
+                table.Agents[name].LstigVariables table
+                |> Seq.map (fun v tid -> Dict ["tid", Int tid; "index", Int (snd table.M[v.Name])])
                 |> Seq.collect (fun f -> List.map f [_start.._end-1]))
         |> Map.values
         |> Seq.concat
     
     let assumes =
-        makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, (trKit.PropTr) table n) (Map.values table.Assumes))
+        makeDict Str Str (Seq.map (fun (n:Node<_>) -> n.Name, trKit.PropTr table n) (Map.values table.Assumes))
     
     [
         "assumes", assumes
@@ -184,9 +184,9 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                     | Some off ->
                         let offsets =
                             [0..dims.Length-1]
-                            |> List.map (fun i -> List.reduce (*) (1::List.rev(dims)).[..i])
+                            |> List.map (fun i -> List.reduce (*) <| (1::List.rev(dims))[..i])
                             |> List.rev |> List.map string
-                        let indexes = List.map (trKit.AgentExprTr) off
+                        let indexes = List.map trKit.AgentExprTr off
                         if offsets.Length <> indexes.Length then
                             failwith $"Cannot zip {offsets} and {indexes} (in EncodeAgent)" 
                         List.zip offsets indexes
@@ -273,9 +273,9 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
             [
                 "guards", guards table t |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
                 "locals", locals 
-                "assignments", seq { for e in encodes -> e.["assignments"] } |> Lst
-                "labs", seq { for e in encodes -> e.["labs"] } |> Lst
-                "qrykeys",  seq { for e in encodes -> e.["qrykeys"] } |> Lst
+                "assignments", seq { for e in encodes -> e["assignments"] } |> Lst
+                "labs", seq { for e in encodes -> e["labs"] } |> Lst
+                "qrykeys",  seq { for e in encodes -> e["qrykeys"] } |> Lst
             ]
             |> List.append baseDict
             |> Map.ofList
@@ -409,8 +409,8 @@ let encode encodeTo bound (fair, nobitvector, nobitwise, sim, sync, noprops) pro
     <?> (encodeHeader trKit baseDict nobitvector bound)
     <?> (encodeInit trKit baseDict)
     <?> (fun x ->
-            let behaviors =
-                Map.values x.Agents |> Seq.map (_.Behavior) |> Set.ofSeq
+            // let behaviors =
+            //     Map.values x.Agents |> Seq.map (_.Behavior) |> Set.ofSeq
             
             ((Set.empty, Seq.empty), Map.values x.Agents) ||> Seq.fold (fun (seen, enc) agent ->
                 if seen.Contains agent.Behavior then

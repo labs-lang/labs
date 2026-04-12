@@ -1,4 +1,5 @@
 namespace Frontend
+open System.Text.Json.Serialization
 open System.Text.RegularExpressions
 open FSharpPlus.Operators
 open FSharpPlus.Lens
@@ -410,7 +411,7 @@ module SymbolTable =
 
     let dump (table:SymbolTable) prop =
         let dumpSource p =
-            p.Source |> fun s -> s.Replace('\n', ' ')
+            p.Source |> _.Replace('\n', ' ')
             |> fun s -> let i = s.IndexOf('=') in s.Substring(i+1).Trim() // Remove property name 
             |> fun s -> Regex.Replace(s, "\s+", " ") // Remove duplicate spaces
         

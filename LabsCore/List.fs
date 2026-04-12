@@ -20,7 +20,7 @@ let duplicates lst = duplicatesBy id lst
 // [2; 4; 6]; [1; 4; 6]]
 let rec cartesian lstlst =
     match lstlst with
-    | h::[] ->
+    | [ h ] ->
         List.fold (fun acc elem -> [elem]::acc) [] h
     | h::t ->
         List.fold (fun cacc celem ->

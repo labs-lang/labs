@@ -23,5 +23,5 @@ LTLSPEC G ({{item.value}}); -- {{item.name}}
 {%- endfor -%}
 
 {%- for item in finallyasserts -%}
-LTLSPEC F ({{item.value}}); -- {{item.name}}
+LTLSPEC (G canProceed) -> F ({{item.value}}); -- {{item.name}}
 {%- endfor -%}

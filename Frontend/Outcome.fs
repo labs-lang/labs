@@ -1,6 +1,5 @@
 namespace Frontend
 open FSharpPlus
-open FSharpPlus.Data
 open Message
 
 /// Helper type. An Outcome may be successful, 

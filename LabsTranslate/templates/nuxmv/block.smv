@@ -8,10 +8,13 @@ INVAR {{a.name}} >= {{a.start}};
 INVAR {{a.name}} < {{a.bound}};
 {%endfor%}
 
+-- Locals
 {%- for a in assignments -%}{% for l in a %}{%- if l.loc == "Local" -%}
 DEFINE {{l.name}} := toint({{l.expr | replace: "==", "="}});
 {%-endif-%}{%- endfor -%}{%- endfor -%}
 
+
+-- Pick-variables
 {%- for l in locals -%}{%- if l.loc contains "Pick" -%}
 VAR {{l.name}} : array 0..{{l.size | minus: 1}} of 0..{{MAXCOMPONENTS | minus: 1}};
 
@@ -28,6 +31,17 @@ INVAR (
     & {{l.where | replace: "__LABS_link1", "tid" | replace: "__LABS_link2", l2}}
     {% endunless %}{% endfor -%}{%-endif-%}
 );
+
+{%- assign maxtid = MAXCOMPONENTS | minus: 1 -%}
+{%-if just-%}{%- for i in (1..l.size) -%}{%-for tid in (0..maxtid)-%}{%-for j in (0..maxtid)-%}
+{%-unless j == tid-%}JUSTICE tid = {{tid}} & {{l.name}}[{{i | minus: 1}}] = {{j}};{%-endunless-%}
+
+{% endfor %}
+
+{%endfor%}
+{%endfor%}
+{%-endif-%}
+
 {%-endif-%}{%- endfor -%}
 
 TRANS (

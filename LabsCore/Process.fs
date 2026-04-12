@@ -25,6 +25,7 @@ module Process =
     /// as a sort of "visitor pattern". (S. Wlaschin, "F# for fun and profit")</remark>
     /// <param name="fbase">Function to apply to <c>BaseProcess</c> objects.</param>
     /// <param name="fguard">Function to apply to <c>Guard</c> objects.</param>
+    /// <param name="ffatguard">Function to apply to <c>FatGuard</c> objects.</param>
     /// <param name="fcomp">Function to apply to <c>Comp</c> objects.</param>
     /// <param name="proc">The input process.</param>
     let rec cata fbase fguard ffatguard fcomp proc = 
@@ -128,7 +129,7 @@ module Process =
                         |> map ((tag $"%s{n}@{b.Pos}") >> BaseProcess) id
                     | None -> failwith n
                 | _ -> BaseProcess b
-            map baseFn id procDefs.[name]
+            map baseFn id procDefs[name]
         expandFn Set.empty name
         
     /// Returns the set of "pick" variables defined in a process p

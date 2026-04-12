@@ -5,6 +5,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
         <PublishTrimmed>true</PublishTrimmed>
+        <GenerateProgramFile>false</GenerateProgramFile>
         
         <UseAppHost>true</UseAppHost> <!--See https://github.com/dotnet/runtime/issues/3704 -->
         <TrimMode>partial</TrimMode>
@@ -20,24 +21,13 @@
     </PropertyGroup>
 
 
-    <ItemGroup>
-        <Compile Include="Liquid.fs" />
-        <Compile Include="TranslationKit.fs" />
-        <Compile Include="Encode.fs" />
-        <Compile Include="ArgParse.fs" />
-        <Compile Include="Program.fs" />
-        <Content Include="templates\**">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Frontend\Frontend.fsproj" />
-      <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
-      <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
+        <ProjectReference Include="..\Frontend\Frontend.fsproj" />
+        <ProjectReference Include="..\LabsCore\LabsCore.fsproj" />
+        <ProjectReference Include="..\LabsParser\LabsParser.fsproj" />
     </ItemGroup>
     
-
     <ItemGroup>
         <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
     </ItemGroup>
@@ -48,4 +38,16 @@
       <PackageReference Update="FSharp.Core" Version="10.1.201" />
     </ItemGroup>
 
+
+    <ItemGroup>
+        <Compile Include="Liquid.fs" />
+        <Compile Include="TranslationKit.fs" />
+        <Compile Include="Encode.fs" />
+        <Compile Include="ArgParse.fs" />
+        <Content Include="templates\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+    
 </Project>
