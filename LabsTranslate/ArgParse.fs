@@ -12,6 +12,7 @@ type Arguments =
     | No_Bitwise
     | Sync
     | Info
+    | Ast
     | Simulation
     | [<Unique>] Values of string list
     | Property of string
@@ -19,8 +20,9 @@ type Arguments =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
+            | Ast -> "dump AST and quit."
             | File _ -> "specify a file."
-            | Info -> "do not translate, only gather information on the system"
+            | Info -> "dump information on the system and quit."
             | No_Bitvector -> "disable bitvector optimizations"
             | No_Bitwise -> "use logical and/or instead of bitwise. Implies --no-bitvector"
             | Values _ -> "specify the value of placeholders (use the format key=value)."

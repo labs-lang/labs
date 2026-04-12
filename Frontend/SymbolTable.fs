@@ -81,8 +81,8 @@ and SymbolTable = {
     Stigmergies: Map<string, Link<Var<int>*int>>
     Processes : Map<string, Process<Var<int>*int>>
     Variables: Map<string, Var<int>>
-    M: Mapping
-    Guards: Map<Node<Stmt<Var<int>*int>>, Set<BExpr<Var<int>*int, unit>>>
+    [<JsonIgnore>] M: Mapping
+    [<JsonIgnore>] Guards: Map<Node<Stmt<Var<int>*int>>, Set<BExpr<Var<int>*int, unit>>>
     Properties: Map<string, Node<Property<Var<int>*int>>>
     Assumes: Map<string, Node<Property<Var<int>*int>>>
 }

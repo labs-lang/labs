@@ -1,11 +1,15 @@
 ﻿module LabsTranslate.Program
 
 open System.IO
+open System.Text.Json
 open FParsec
 
 open Frontend
 open Frontend.Outcome
 open Frontend.Message
+open LabsCore.ExprTypes
+open LabsCore.Grammar
+open LabsTranslate.Json
 open LabsTranslate.TranslationKit
 open LabsTranslate.Encode
 open LabsTranslate.ArgParse
@@ -41,6 +45,21 @@ let main argv =
             (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
         <?> (fun (cli, x) ->
             if cli.Contains Info then zero (x.Dump(prop))
+            elif cli.Contains Ast then
+                let options = JsonSerializerOptions()
+                options.Converters.Add(BExprConverter<(Var<int>*int) * string option, string>())
+                options.Converters.Add(BExprConverter<Var<int>*int, unit>())
+                options.Converters.Add(ExprConverter<Var<int>*int, unit>())
+                options.Converters.Add(ExprConverter<(Var<int>*int) * string option, string>())
+                options.Converters.Add(StmtConverter<Var<int>*int>())
+                options.Converters.Add(NodeStmtConverter(x))
+                options.Converters.Add(ProcessConverter<Var<int>*int>())
+                options.Converters.Add(VarTypeConverter())
+                options.Converters.Add(ConvertToString<Modality<Var<int>*int>>())
+                options.Converters.Add(ConvertToString<Location>())
+                options.Converters.Add(ConvertToString<Quantifier>())
+                // let sts = x.Agents |> Map.values |> Seq.map (_.Sts) |> Set.unionMany |> List.ofSeq 
+                zero( printfn $"%s{JsonSerializer.Serialize(x, options)}" )
             else
                 let bound = cli.GetResult (Bound, defaultValue=1)
                 let enc = cli.GetResult (Enc, defaultValue=C)

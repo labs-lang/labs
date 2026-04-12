@@ -44,6 +44,7 @@
         <Compile Include="TranslationKit.fs" />
         <Compile Include="Encode.fs" />
         <Compile Include="ArgParse.fs" />
+        <Compile Include="Json.fs" />
         <Content Include="templates\**">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
