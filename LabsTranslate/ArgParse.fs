@@ -5,18 +5,22 @@ open TranslationKit
 
 type Arguments =
     | [<Mandatory>] [<Unique>] File of path:string
-    | [<Mandatory>] [<Unique>] Bound of int
-    | Enc of EncodeTo
-    | Fair of Fairness
-    | No_Bitvector
-    | No_Bitwise
-    | Sync
-    | Info
-    | Ast
-    | Simulation
     | [<Unique>] Values of string list
+    // Emulation program parameters
+    | [<Mandatory>] [<Unique>] Bound of int
+    | [<Unique>] Enc of EncodeTo
+    | [<Unique>] Fair of Fairness
+    | Simulation
+    | [<Unique>] Sync
+    // Information dumps
+    | [<Unique>] Info
+    | [<Unique>]  Ast
+    // Specify which property to analyze
     | Property of string
     | No_Properties
+    // C translation parameters
+    | [<Unique>] No_Bitvector
+    | [<Unique>] No_Bitwise
     interface IArgParserTemplate with
         member s.Usage =
             match s with

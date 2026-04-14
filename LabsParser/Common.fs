@@ -130,4 +130,5 @@ let pquantifier =
         ])
         (ws IDENTIFIER)
         (ws KEYNAME)
+        // forall Agent x ---> x, (Agent, forall)
         (fun a b c -> c, (b, a))
