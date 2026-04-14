@@ -17,6 +17,8 @@ process INITAGENT[attrGate, l: any] (in out agent:Agent{%-if hasStigmergy-%}, in
         {% if hasStigmergy %}L := agent.L;{%- endif %}
         p := agent.pc;
 
+        {%-assign maxi = MAXKEYI | minus: 1-%}
+        {%-assign maxl = MAXKEYL | minus: 1-%}
         {%- for agent in agents -%}
         {% unless forloop.first %}els{% endunless %}if (Nat(agent.id) >= {{agent.start}}) and (Nat(agent.id) < {{agent.end}}) then
 
@@ -28,19 +30,21 @@ process INITAGENT[attrGate, l: any] (in out agent:Agent{%-if hasStigmergy-%}, in
         p[{{ p.name }}] := x;
         {%- endif -%}{%- endfor -%}
 
-        {%- for item in agent.initvars -%}
+        {%- for i in (0..maxi) -%}
+        x := any Int;
+        I[{{ i }}] = x;
+        {%- endfor -%}
+        {%- if hasStigmergy -%}{%-for i in (0..maxl)-%}
+        x := any Int;
+        L[{{ i }}] := x;
+        l(Nat(agent.id), {{i}} , x);
+        eval refresh(!?m, {{i}}, Nat(agent.Id));
+        {%-endfor-%}{%- endif -%}
 
-        x := any Int where {{ item.bexpr }};
-        {%- if hasStigmergy and item.loc == "L" -%}
-        L[{{ item.index }}] := x;
-        l(Nat(agent.id), {{item.index}} of Nat , x);
-        eval refresh(!?m, {{item.index}}, Nat(agent.Id)){%- else -%}
-        {{item.loc}}[{{ item.index }}] := x;
-        attrGate(Nat(agent.id), {{item.index}} of Nat , x){%- endif -%}
-        {%- unless forloop.last-%};{%- endunless -%}
+        null
         {%- endfor -%}
-        {%- endfor -%}
-        
+
+
         end if;
 
         agent := agent.{I -> I{%-if hasStigmergy-%}, L -> L{%- endif -%}, pc -> p}
