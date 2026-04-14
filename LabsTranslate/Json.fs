@@ -100,3 +100,18 @@ type ExprConverter<'a, 'b>() =
 type ConvertToString<'a>() =
     inherit WriteOnlyConverter<'a>()
     override this.Write(writer, value, _) = writer.WriteStringValue(string value)
+    
+let JsonOptions table =
+    let options = JsonSerializerOptions()
+    options.Converters.Add(BExprConverter<(Var<int>*int) * string option, string>())
+    options.Converters.Add(BExprConverter<Var<int>*int, unit>())
+    options.Converters.Add(ExprConverter<Var<int>*int, unit>())
+    options.Converters.Add(ExprConverter<(Var<int>*int) * string option, string>())
+    options.Converters.Add(StmtConverter<Var<int>*int>())
+    options.Converters.Add(NodeStmtConverter(table))
+    options.Converters.Add(ProcessConverter<Var<int>*int>())
+    options.Converters.Add(VarTypeConverter())
+    options.Converters.Add(ConvertToString<Modality<Var<int>*int>>())
+    options.Converters.Add(ConvertToString<Location>())
+    options.Converters.Add(ConvertToString<Quantifier>())
+    options

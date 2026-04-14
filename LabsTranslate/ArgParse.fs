@@ -14,7 +14,8 @@ type Arguments =
     | [<Unique>] Sync
     // Information dumps
     | [<Unique>] Info
-    | [<Unique>]  Ast
+    | [<Unique>] Only_Ast
+    | [<Unique>] Ast of string
     // Specify which property to analyze
     | Property of string
     | No_Properties
@@ -27,16 +28,17 @@ type Arguments =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | Ast -> "dump AST and quit."
+            | Only_Ast -> "dump AST to standard output and quit."
+            | Ast _ -> "path of AST dump (default: no dump)."
             | File _ -> "specify a file."
             | Info -> "dump information on the system and quit."
             | No_Bitvector -> "disable bitvector optimizations"
-            | No_Bitwise -> "use logical and/or instead of bitwise. Implies --no-bitvector"
+            | No_Bitwise -> "use logical and/or instead of bitwise. Implies --no-bitvector/"
             | Values _ -> "specify the value of placeholders (use the format key=value)."
             | Bound _ -> "specify the number of iterations (for bounded model checking)."
-            | Sync -> "force synchronous sending of stigmergic messages"
+            | Sync -> "force synchronous sending of stigmergic messages."
             | Simulation -> "encode in simulation mode (default: verification mode)."
-            | Fair _ -> "Specify fairness constraint. (default: none)"
+            | Fair _ -> "Specify fairness constraint. (default: none)."
             | Enc _ -> "specify the target encoding."
             | Property _ -> "specify the property to consider, others will be ignored."
             | No_Properties -> "ignore all properties."
