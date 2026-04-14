@@ -8,7 +8,7 @@ void {{label}}(int tid) {
         pc[tid][{{ item.name }}] = {{ item.value.first }};
         {%- else -%}
         TYPEOFPC pc{{item.name}};
-        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
+        {{cAssume}}({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
         pc[tid][{{ item.name }}] = pc{{ item.name }};
         {%- endif -%}{%- endfor -%}
         return;
@@ -22,7 +22,7 @@ void {{label}}(int tid) {
     {%- if item.size != 0 -%}
     {% if item.loc == "lstig" %}TYPEOFKEYLID{% elsif item.loc == "attr" %}TYPEOFKEYIID{% else %}TYPEOFKEYEID{% endif %} offset{{forloop.index0}} = {{item.offset}};
     // TODO make array bound checks optional (e.g., only if --debug is set on the sliver CLI)
-    // __CPROVER_assert(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}}, "array bound");
+    // {{cAssert}}(offset{{forloop.index0}} >= 0 && offset{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endif -%}{%- endfor -%}
 
     {%- for item in assignments -%}
@@ -37,8 +37,8 @@ void {{label}}(int tid) {
     {%- endfor -%}
     {%- else -%}
     {%- if hasStigmergy -%}
-    __CPROVER_assume(HoutCnt[tid] == 0);
-    __CPROVER_assume(HinCnt[tid] == 0);
+    {{cAssume}}(HoutCnt[tid] == 0);
+    {{cAssume}}(HinCnt[tid] == 0);
     {%- endif -%}
     {%- endif -%}
 
@@ -52,7 +52,7 @@ void {{label}}(int tid) {
     pc[tid][{{ item.name }}] = {{ item.value.first }};
     {%- else -%}
     TYPEOFPC pc{{item.name}};
-    __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
+    {{cAssume}}({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
     pc[tid][{{ item.name }}] = pc{{ item.name }};
     {%- endif -%}{%- endfor -%}
 

@@ -21,6 +21,9 @@ type Arguments =
     // C translation parameters
     | [<Unique>] No_Bitvector
     | [<Unique>] No_Bitwise
+    | [<Unique>] C_Assert_Fn of string
+    | [<Unique>] C_Assume_Fn of string
+    | [<Unique>] C_Nondet_Fn of string
     interface IArgParserTemplate with
         member s.Usage =
             match s with
@@ -37,6 +40,9 @@ type Arguments =
             | Enc _ -> "specify the target encoding."
             | Property _ -> "specify the property to consider, others will be ignored."
             | No_Properties -> "ignore all properties."
+            | C_Assert_Fn _ -> "Name of assert intrinsic (C only) (default: __CPROVER_assert)"
+            | C_Assume_Fn _ -> "Name of assume intrinsic (C only) (default: __CPROVER_assume)"
+            | C_Nondet_Fn _ -> "Name of assume intrinsic (C only) (default: __CPROVER_nondet)"
 
 let argParser = ArgumentParser.Create<Arguments>(programName = "LabsTranslate")
 

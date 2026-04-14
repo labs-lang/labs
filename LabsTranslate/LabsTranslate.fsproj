@@ -42,8 +42,8 @@
     <ItemGroup>
         <Compile Include="Liquid.fs" />
         <Compile Include="TranslationKit.fs" />
-        <Compile Include="Encode.fs" />
         <Compile Include="ArgParse.fs" />
+        <Compile Include="Encode.fs" />
         <Compile Include="Json.fs" />
         <Content Include="templates\**">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -27,7 +27,7 @@ void monitor(void) {
     {%-if simulation-%}
     __sim_assert({{item.value}}, "{{item.name}}");
     {%-else-%}
-    __CPROVER_assert({{item.value}}, "{{item.name}}");
+    {{cAssert}}({{item.value}}, "{{item.name}}");
     {%-endif-%}
     {%- endfor -%}
 
@@ -50,7 +50,7 @@ void monitor(void) {
     // Closing the scope
     if (__LABS_{{item.name}}_isOpen {{cAnd}} ({{ item.scope.close }})) {
         __LABS_{{item.name}}_isOpen = 0;
-        __CPROVER_assert(__LABS_{{item.name}}_isSat, "{{item.name}}");
+        {{cAssert}}(__LABS_{{item.name}}_isSat, "{{item.name}}");
     }
     // ------------------------------------------------------------------------
     {%-endfor-%}
@@ -63,15 +63,15 @@ void finally(void) {
     {%-if simulation-%}
     __sim_assert({{item.value}}, "{{item.name}}");
     {%-else-%}
-    __CPROVER_assert({{item.value}}, "{{item.name}}");
+    {{cAssert}}({{item.value}}, "{{item.name}}");
     {%-endif-%}
     {%- endfor -%}
     {%- if simulation -%}
-    __CPROVER_assert(0, "__sliver_simulation__");
+    {{cAssert}}(0, "__sliver_simulation__");
     {%- else -%}
     {% if eventuallypredicates.size > 0 %}
     {%-unless simulation-%}
-    __CPROVER_assert(__LABS_eventually, "{{eventuallypredicates.first.name}}");
+    {{cAssert}}(__LABS_eventually, "{{eventuallypredicates.first.name}}");
     {%-endunless-%}
     {%endif%}
     {%- endif -%}
@@ -110,7 +110,7 @@ int main(void) {
 
             {%-unless fair-%}
             // ___symbolic-scheduler___
-            scheduled = __CPROVER_nondet();
+            scheduled = {{cNondet}}();
             scheduled = ((scheduled >= 0) {{cAnd}} (scheduled < MAXCOMPONENTS)) ? scheduled : 0;
             // ___end symbolic-scheduler___
             {%-endunless-%}
@@ -120,7 +120,7 @@ int main(void) {
                 case {{ item.entry.first.value }}: {{ item.name }}(scheduled); break;
             {%- endfor -%}
               default: 
-                __CPROVER_assume(0);
+                {{cAssume}}(0);
             }
             
             {%- if fair -%}
@@ -131,7 +131,7 @@ int main(void) {
         {%- if hasStigmergy -%}
         }
         else {
-            propagate_or_confirm = __CPROVER_nondet(); 
+            propagate_or_confirm = {{cNondet}}(); 
             if (propagate_or_confirm) propagate();
             else confirm();
         }

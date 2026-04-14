@@ -1,4 +1,4 @@
-{%- if siblings.size > 0 %}    __CPROVER_assume({%- if last -%}
+{%- if siblings.size > 0 %}    {{cAssume}}({%- if last -%}
 {%- for item in siblings -%}(pc[tid][{{ item }}] == 0){% unless forloop.last %} && {% endunless %}{%- endfor -%}
 {%- else -%}
 {%- for item in siblings -%}(pc[tid][{{ item }}] != 0){%- unless forloop.last -%} || {% endunless %}{%- endfor -%}
@@ -6,8 +6,8 @@
 {%- endif -%}
 
 {%- if hasStigmergy and assignments -%}
-    __CPROVER_assume((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
+    {{cAssume}}((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
 {%- endif -%}
 {%- for guard in guards %}
-    __CPROVER_assume({{ guard }});
+    {{cAssume}}({{ guard }});
 {%- endfor -%}

@@ -9,14 +9,14 @@ void {{label}}(int tid) {
         pc[tid][{{ item.name }}] = {{ item.value.first }};
         {%- else -%}
         TYPEOFPC pc{{item.name}};
-        __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
+        {{cAssume}}({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
         pc[tid][{{ item.name }}] = pc{{ item.name }};
         {%- endif -%}{%- endfor -%}
         return;
     }
     {%- endif -%}
 
-    {%- if siblings.size > 0 %}    __CPROVER_assume({%- if last -%}
+    {%- if siblings.size > 0 %}    {{cAssume}}({%- if last -%}
     {%- for item in siblings -%}(pc[tid][{{ item }}] == 0){% unless forloop.last %} {{cAnd}} {% endunless %}{%- endfor -%}
     {%- else -%}
     {%- for item in siblings -%}(pc[tid][{{ item }}] != 0){%- unless forloop.last -%} {{cOr}} {% endunless %}{%- endfor -%}
@@ -24,10 +24,10 @@ void {{label}}(int tid) {
     {%- endif -%}
 
     {%-if hasStigmergy and assignments-%}
-    __CPROVER_assume((HoutCnt[tid] == 0) {{cAnd}} (HinCnt[tid] == 0));
+    {{cAssume}}((HoutCnt[tid] == 0) {{cAnd}} (HinCnt[tid] == 0));
     {%-endif-%}
     {%-for guard in guards %}
-    __CPROVER_assume({{ guard }});
+    {{cAssume}}({{ guard }});
     {%-endfor-%}
 
     {%- for l in locals-%}
@@ -35,22 +35,22 @@ void {{label}}(int tid) {
     TYPEOFVALUES {{l.name}}{%-if l.size > 0-%}[{{l.size}}]{%-endif-%}; /* {{l.loc}} */
     {%-if l.loc contains "Pick" and l.size > 0-%}
     {%-for i in (1..l.size)-%}
-    __CPROVER_assume(({{l.name}}[{{forloop.index0}}] >= {{l.pickFrom}}) {{cAnd}} ({{l.name}}[{{forloop.index0}}] < {{l.pickTo}}) {{cAnd}} ({{l.name}}[{{forloop.index0}}] != tid));
+    {{cAssume}}(({{l.name}}[{{forloop.index0}}] >= {{l.pickFrom}}) {{cAnd}} ({{l.name}}[{{forloop.index0}}] < {{l.pickTo}}) {{cAnd}} ({{l.name}}[{{forloop.index0}}] != tid));
     {%-endfor-%}
     {%-capture allDifferent-%}
     {%-for i in (1..l.size)-%}{%- assign outer = forloop %}{%-for j in (1..i)-%}
     {%-if i != j-%}({{l.name}}[{{i | minus : 1}}] != {{l.name}}[{{j | minus : 1}}]) {{cAnd}} {% endif-%}
     {%-endfor-%}{%-endfor-%}
     {%-endcapture-%}
-    {%-if allDifferent != "" -%}__CPROVER_assume({{allDifferent}} 1);{%-endif-%}
+    {%-if allDifferent != "" -%}{{cAssume}}({{allDifferent}} 1);{%-endif-%}
     // ___end symbolic-pick{%-if l.where != ""-%}-where{%endif%}___
     {%-if l.where != ""-%}
     TYPEOFAGENTID __LABS_link1 = tid;
 
     for (unsigned char i = 0; i < {{l.size}}; ++i) {
         TYPEOFAGENTID __LABS_link2 = {{l.name}}[i];
-        //__CPROVER_assume({{l.where}});
-        __CPROVER_assume({{l.where}});
+        //{{cAssume}}({{l.where}});
+        {{cAssume}}({{l.where}});
     }
     {%-endif-%}
     {%-endif-%}
@@ -61,7 +61,7 @@ void {{label}}(int tid) {
     {%- for item in a -%}
     {%- if item.size != 0 -%}{% unless item.loc contains "Pick" %}
     {%if item.loc == "lstig"%}TYPEOFKEYLID{%elsif item.loc == "attr"%}TYPEOFKEYIID{%else%}TYPEOFKEYEID{%endif%} offset{{outer.index0}}_{{forloop.index0}} = {{item.offset}};
-    // __CPROVER_assert(offset{{outer.index0}}_{{forloop.index0}} >= 0 && offset{{outer.index0}}_{{forloop.index0}} < {{item.size}}, "array bound");
+    // {{cAssert}}(offset{{outer.index0}}_{{forloop.index0}} >= 0 && offset{{outer.index0}}_{{forloop.index0}} < {{item.size}}, "array bound");
     {%- endunless -%}{%- endif -%}
     {%- if item.loc == "Local"  -%}
     {{item.name}}{%- if item.size != 0 %}[offset{{forloop.index0}}]{% endif %} = {{item.expr}};
@@ -82,8 +82,8 @@ void {{label}}(int tid) {
     {%- endif -%}
     {%- else -%}
     {%- if hasStigmergy -%}
-    __CPROVER_assume(HoutCnt[tid] == 0);
-    __CPROVER_assume(HinCnt[tid] == 0);
+    {{cAssume}}(HoutCnt[tid] == 0);
+    {{cAssume}}(HinCnt[tid] == 0);
     {%- endif -%}
     {%- endif -%}
 
@@ -100,7 +100,7 @@ void {{label}}(int tid) {
     pc[tid][{{ item.name }}] = {{ item.value.first }};
     {%- else -%}
     TYPEOFPC pc{{item.name}};
-    __CPROVER_assume({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
+    {{cAssume}}({%- for val in item.value -%} (pc{{ item.name }} == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
     pc[tid][{{ item.name }}] = pc{{ item.name }};
     {%- endif -%}{%- endfor -%}
 

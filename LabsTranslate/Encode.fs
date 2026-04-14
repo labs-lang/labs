@@ -1,5 +1,6 @@
 ﻿module LabsTranslate.Encode
 
+open Argu
 open Frontend
 open LabsCore.Grammar
 open Frontend.STS
@@ -8,6 +9,7 @@ open LabsCore.BExpr
 open LabsCore.Tokens
 open FSharpPlus
 
+open LabsTranslate.ArgParse
 open Outcome
 open TranslationKit
 open Liquid
@@ -376,7 +378,16 @@ let private encodeMain trKit baseDict noprops prop (table:SymbolTable) =
     |> List.append baseDict
     |> render (parse (trKit.TemplateInfo.Get "main"))
 
-let encode encodeTo bound (fair, nobitvector, nobitwise, sim, sync, noprops) prop table =
+let internal encode encodeTo bound (cli: ParseResults<Arguments>) prop table =
+    // (fair, nobitvector, nobitwise, sim, sync, noprops)
+    // let flags (cli:ParseResults<_>) = (
+    let fair = cli.GetResult (Fair, defaultValue=Unfair)
+    let nobitvector = cli.Contains No_Bitvector
+    let nobitwise = cli.Contains No_Bitwise
+    let sim = cli.Contains Simulation
+    let sync = cli.Contains Sync
+    let noprops = cli.Contains No_Properties    
+    
     let trKit = makeTranslationKit <|
                 match encodeTo with
                 | C -> C.wrapper nobitwise
@@ -391,18 +402,24 @@ let encode encodeTo bound (fair, nobitvector, nobitwise, sim, sync, noprops) pro
     let maxkeyL = max table.M.NextL 1
 
     let baseDict = [
-        "cOr", Str <| if nobitwise then "||" else "|"
-        "cAnd", Str <| if nobitwise then "&&" else "&"
+        // Emulation programs parameters
         "bound", Int bound
         "fair", (match fair with RR -> true | _ -> false) |> Bool
         "just", (match fair with Justice -> true | _ -> false) |> Bool
+        "simulation", Bool sim
+        "hasEnvironment", Bool (table.M.NextE > 0)
         "hasStigmergy", Bool (table.M.NextL > 0)
+        // To size state arrays
+        "MAXCOMPONENTS", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
         "MAXKEYE", Int maxkeyE
         "MAXKEYI", Int maxkeyI
         "MAXKEYL", Int maxkeyL
-        "hasEnvironment", Bool (table.M.NextE > 0)
-        "MAXCOMPONENTS", table.Spawn |> Map.values |> Seq.map snd |> Seq.max |> Int
-        "simulation", Bool sim
+        // For C programs
+        "cOr", Str <| if nobitwise then "||" else "|"
+        "cAnd", Str <| if nobitwise then "&&" else "&"
+        "cAssume", Str <| cli.GetResult(C_Assume_Fn, "__CPROVER_assume")
+        "cAssert", Str <| cli.GetResult(C_Assert_Fn, "__CPROVER_assert")
+        "cNondet", Str <| cli.GetResult(C_Nondet_Fn, "__CPROVER_nondet")
     ]
     
     zero table

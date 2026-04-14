@@ -13,7 +13,6 @@ open LabsTranslate.Json
 open LabsTranslate.TranslationKit
 open LabsTranslate.Encode
 open LabsTranslate.ArgParse
-open Argu
 
 let wrapParserResult p text =
     try
@@ -28,13 +27,6 @@ let wrapParserResult p text =
 
 [<EntryPoint>]
 let main argv =
-    let flags (cli:ParseResults<_>) = (
-        cli.GetResult (Fair, defaultValue=Unfair),
-        cli.Contains No_Bitvector,
-        cli.Contains No_Bitwise,
-        cli.Contains Simulation,
-        cli.Contains Sync,
-        cli.Contains No_Properties)
     try
         zero argv
         <~> (parseCLI >> zero)
@@ -63,7 +55,7 @@ let main argv =
             else
                 let bound = cli.GetResult (Bound, defaultValue=1)
                 let enc = cli.GetResult (Enc, defaultValue=C)
-                encode enc bound (flags cli) prop x)
+                encode enc bound cli prop x)
         |> function
            | Result.Ok (_, warns) ->
                 warns |> List.map(pprintWarn >> eprintfn "%s") |> ignore

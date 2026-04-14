@@ -32,13 +32,13 @@ TYPEOFVALUES mod(TYPEOFVALUES n, TYPEOFVALUES m) {
 }
 
 TYPEOFVALUES nondetInit(void) {
-  TYPEOFVALUES x = __CPROVER_nondet();
+  TYPEOFVALUES x = {{cNondet}}();
   return x;
 }
 
 TYPEOFVALUES nondetInRange(TYPEOFVALUES minValue, TYPEOFVALUES bound) {
   TYPEOFVALUES x;
-  __CPROVER_assume((x >= minValue) {{cAnd}} (x < bound));
+  {{cAssume}}((x >= minValue) {{cAnd}} (x < bound));
   return x;
 
 }
@@ -132,8 +132,8 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
 //
 void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, _Bool check) {
     {%- if hasStigmergy -%}
-    __CPROVER_assume((!check) {{cOr}} (HoutCnt[id] == 0));
-    __CPROVER_assume((!check) {{cOr}} (HinCnt[id] == 0));
+    {{cAssume}}((!check) {{cOr}} (HoutCnt[id] == 0));
+    {{cAssume}}((!check) {{cOr}} (HinCnt[id] == 0));
     {%- endif -%}
 
 
@@ -148,8 +148,8 @@ const TYPEOFKEYEID MAXKEYE = {{ MAXKEYE }};
 TYPEOFVALUES E[{{ MAXKEYE }}];
 void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
     {%- if hasStigmergy -%}
-    __CPROVER_assume((!check) {{cOr}} (HoutCnt[id] == 0));
-    __CPROVER_assume((!check) {{cOr}} (HinCnt[id] == 0));
+    {{cAssume}}((!check) {{cOr}} (HoutCnt[id] == 0));
+    {{cAssume}}((!check) {{cOr}} (HinCnt[id] == 0));
     {%- endif -%}
 
     E[key] = value;
@@ -167,8 +167,8 @@ void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
 //  Rule LSTIG
 //
 void lstig(TYPEOFAGENTID id, TYPEOFKEYLID key, TYPEOFVALUES value, _Bool check) {
-    __CPROVER_assume((!check) {{cOr}} (HoutCnt[id] == 0));
-    __CPROVER_assume((!check) {{cOr}} (HinCnt[id] == 0));
+    {{cAssume}}((!check) {{cOr}} (HoutCnt[id] == 0));
+    {{cAssume}}((!check) {{cOr}} (HinCnt[id] == 0));
 
     Lvalue[id][key] = value;
     // Only update the timestamp of the 1st element in the tuple
@@ -184,12 +184,12 @@ _Bool differentLstig(TYPEOFAGENTID comp1, TYPEOFAGENTID comp2, TYPEOFKEYLID key)
 
 void confirm(void) {
     TYPEOFAGENTID guessedcomp;
-    __CPROVER_assume(guessedcomp < MAXCOMPONENTS);
-    __CPROVER_assume(HinCnt[guessedcomp] > 0);
+    {{cAssume}}(guessedcomp < MAXCOMPONENTS);
+    {{cAssume}}(HinCnt[guessedcomp] > 0);
 
     TYPEOFKEYLID guessedkey;
-    __CPROVER_assume(guessedkey < MAXKEYL);
-    __CPROVER_assume(Hin[guessedcomp][guessedkey] == 1);
+    {{cAssume}}(guessedkey < MAXKEYL);
+    {{cAssume}}(Hin[guessedcomp][guessedkey] == 1);
 
     // NOTE: Since SetHin(), SetHout() only work on tupleStarts,
     // guessedkey is guaranteed to be the 1st element of some tuple
@@ -223,12 +223,12 @@ void confirm(void) {
 
 void propagate(void) {
     TYPEOFAGENTID guessedcomp;
-    __CPROVER_assume(guessedcomp < MAXCOMPONENTS);
-    __CPROVER_assume(HoutCnt[guessedcomp] > 0);
+    {{cAssume}}(guessedcomp < MAXCOMPONENTS);
+    {{cAssume}}(HoutCnt[guessedcomp] > 0);
 
     TYPEOFKEYLID guessedkey;
-    __CPROVER_assume(guessedkey < MAXKEYL);
-    __CPROVER_assume(Hout[guessedcomp][guessedkey] == 1);
+    {{cAssume}}(guessedkey < MAXKEYL);
+    {{cAssume}}(Hout[guessedcomp][guessedkey] == 1);
 
     // assert(guessedkey == tupleStart[guessedkey]);
 

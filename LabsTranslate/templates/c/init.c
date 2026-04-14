@@ -27,7 +27,7 @@ void init(void) {
     pc[{{i}}][{{ p.name }}] = {{ p.value.first }};
     {%- else -%}
     pc[{{i}}][{{ p.name }}] = nondetInit();
-    __CPROVER_assume({%- for val in p.value -%} (pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
+    {{cAssume}}({%- for val in p.value -%} (pc[{{i}}][{{ p.name }}] == {{ val }}){% unless forloop.last %} {{cOr}} {% endunless %}{%- endfor-%});
     {%- endif -%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
 
     // ___concrete-init___
@@ -44,7 +44,7 @@ void init(void) {
     {%- endfor -%}
 
     {%-for item in assumes-%}
-    __CPROVER_assume({{item.value}}); //{{item.name}}
+    {{cAssume}}({{item.value}}); //{{item.name}}
     {%-endfor-%}
     // ___end symbolic-init___
     
