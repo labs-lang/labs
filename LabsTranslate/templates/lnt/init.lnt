@@ -38,7 +38,7 @@ process INITAGENT[attrGate, l: any] (in out agent:Agent{%-if hasStigmergy-%}, in
         x := any Int;
         L[{{ i }}] := x;
         l(Nat(agent.id), {{i}} , x);
-        eval refresh(!?m, {{i}}, Nat(agent.Id));
+        eval refresh(!?m, TUPLESTART({{i}}), Nat(agent.Id));
         {%-endfor-%}{%- endif -%}
 
         null
@@ -52,16 +52,14 @@ process INITAGENT[attrGate, l: any] (in out agent:Agent{%-if hasStigmergy-%}, in
 end process
 
 {%- if hasEnvironment -%}
+{%-assign maxe = MAXKEYE | minus: 1-%}
 process INITENV(in out e: Env) is
-    {%- if initenv.size > 0 -%}
     var x: Int in 
-        {% for item in initenv %}
-        x := any Int where {{ item.bexpr }};
-        e[{{ item.index }}] := x{%- unless forloop.last-%};{%- endunless -%}
+        {% for i in (0..maxe) %}
+        x := any Int;
+        e[{{ i }}] := x;
         {%- endfor -%}
+        null
     end var
-    {%- else -%}
-    null
-    {%- endif -%}
 end process
 {%- endif -%}
