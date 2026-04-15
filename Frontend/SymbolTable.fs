@@ -85,6 +85,7 @@ and SymbolTable = {
     [<JsonIgnore>] Guards: Map<Node<Stmt<Var<int>*int>>, Set<BExpr<Var<int>*int, unit>>>
     Properties: Map<string, Node<Property<Var<int>*int>>>
     Assumes: Map<string, Node<Property<Var<int>*int>>>
+    Info: string option
 }
 with
     static member empty =
@@ -99,7 +100,10 @@ with
             Guards = Map.empty
             Properties = Map.empty
             Assumes = Map.empty
+            Info = None
         }
+    
+   
         
 module SymbolTable = 
     let internal mapVar (v:Var<_>) table =
@@ -423,27 +427,30 @@ module SymbolTable =
         let dumpSpawn agentName (_start, _end) =
             let iface = table.Agents[agentName].Variables |> List.map dumpVar |> String.concat ";"
             let lstig = table.Agents[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"
-            printfn $"{agentName} %i{_start},%i{_end}\n{iface}\n{lstig}"
+            $"{agentName} %i{_start},%i{_end}\n{iface}\n{lstig}"
         
         let dumpPicks agentName =
             let picks = table.Agents[agentName].Processes["Behavior"] |> Process.collectPicks |> String.concat ","
-            printf $"{agentName} {picks};"
+            $"{agentName} {picks};"
         
         
-        printfn "%s" (table.Variables |> Map.filter (fun _ -> isEnvVar) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
-        Map.map dumpSpawn table.Spawn |> ignore
-        table.Properties
-        |> maybeFilterProp prop
-        |> Map.mapValues dumpSource
-        |> Map.values
-        |> String.concat ";"
-        |> printfn "%s"
-        table.Assumes
-        |> Map.mapValues dumpSource
-        |> Map.values
-        |> String.concat ";"
-        |> printfn "%s"
-        Map.map (fun k _ -> dumpPicks k) table.Spawn |> ignore
+        let s1 = (table.Variables |> Map.filter (fun _ -> isEnvVar) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
+        let s2 = Map.map dumpSpawn table.Spawn |> Map.values |> String.concat ";"
+        let s3 =
+            table.Properties
+            |> maybeFilterProp prop
+            |> Map.mapValues dumpSource
+            |> Map.values
+            |> String.concat ";"
+        
+        let s4 =
+            table.Assumes
+            |> Map.mapValues dumpSource
+            |> Map.values
+            |> String.concat ";"
+        
+        let s5 = Map.map (fun k _ -> dumpPicks k) table.Spawn |> Map.values |> String.concat "\n"
+        String.concat "\n" [s1; s2; s3; s4; s5]
         
 type SymbolTable with
     member this.Dump(prop) = SymbolTable.dump this prop

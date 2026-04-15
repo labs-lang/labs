@@ -7,6 +7,8 @@ open FParsec
 open Frontend
 open Frontend.Outcome
 open Frontend.Message
+open LabsCore.ExprTypes
+open LabsCore.Grammar
 open LabsTranslate.Json
 open LabsTranslate.TranslationKit
 open LabsTranslate.Encode
@@ -34,17 +36,17 @@ let main argv =
             let externs = getExterns cli |> Map.mapValues int
             (wrapParserResult Parser.parse input <~> Frontend.run externs) <~> fun x -> zero (cli, x)
         <?> (fun (cli, table) ->
-            if cli.Contains Info then zero (table.Dump(prop))
+            if cli.Contains Info then zero (table.Dump(prop) |> printf "%s")
             elif cli.Contains Only_Ast then
-                zero( printfn $"%s{JsonSerializer.Serialize(table, JsonOptions table)}" )
+                zero( printfn $"%s{JsonSerializer.Serialize({table with Info = Some <| table.Dump(prop)}, JsonOptions table)}" )
             else
                 let bound = cli.GetResult (Bound, defaultValue=1)
                 let enc = cli.GetResult (Enc, defaultValue=C)
                 match cli.TryGetResult Ast with
                 | Some path ->
-                    let dump = JsonSerializer.Serialize(table, JsonOptions table)
+                    let json = JsonSerializer.Serialize({table with Info = Some <| table.Dump(prop)}, JsonOptions table)
                     use writer = new StreamWriter(path)
-                    writer.Write(dump)
+                    writer.Write(json)
                 | None -> ()
                 encode enc bound cli prop table
             )
