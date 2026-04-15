@@ -9,6 +9,9 @@ let writeOp (writer:Utf8JsonWriter) (options:JsonSerializerOptions) (op: string)
     JsonSerializer.Serialize({| Op = op; Terms = terms |}, options)
     |> writer.WriteRawValue
 
+let writeObject (writer:Utf8JsonWriter) (options:JsonSerializerOptions) obj =
+    JsonSerializer.Serialize(obj, options) |> writer.WriteRawValue
+
 type WriteOnlyConverter<'a>() =
     inherit JsonConverter<'a>()
     override this.Read(reader, _, _) = failwith "Not Implemented"
@@ -18,9 +21,8 @@ type StmtConverter<'a>() =
     inherit WriteOnlyConverter<Stmt<'a>>()
     override this.Write(writer, value, options) =
         match value with
-        | Act a -> JsonSerializer.Serialize(a, options) |> writer.WriteRawValue
-        | Block actions ->
-            List.map Act actions |> fun x -> JsonSerializer.Serialize(x, options) |> writer.WriteRawValue
+        | Act a -> writeObject writer options a
+        | Block actions -> List.map Act actions |> writeObject writer options
         | Name name -> writer.WriteStringValue name
         | Nil -> writer.WriteStringValue "Nil"
         | Skip -> writer.WriteStringValue "Skip"
@@ -34,7 +36,7 @@ type NodeStmtConverter(table: SymbolTable) =
             | Act a -> Block [a]
             | x -> x
         {|Name = value.Name; Pos = value.Pos; Guard = table.Guards.TryFind(value); Stmt = stmt|}
-        |> fun x -> JsonSerializer.Serialize (x, options) |> writer.WriteRawValue 
+        |> writeObject writer options 
 
 type ProcessConverter<'a>() =
     inherit WriteOnlyConverter<Process<'a>>()
@@ -42,8 +44,7 @@ type ProcessConverter<'a>() =
         let myWriteOp = writeOp writer options
         match value with
         | Comp(composition, processes) -> myWriteOp (string composition) processes
-        | BaseProcess(node) ->
-            JsonSerializer.Serialize(node, options) |> writer.WriteRawValue
+        | BaseProcess node -> writeObject writer options node
         | _ -> writer.WriteNullValue()
             
 
@@ -54,7 +55,7 @@ type VarTypeConverter() =
         | C1Ref -> writer.WriteStringValue "c1"
         | C2Ref -> writer.WriteStringValue "c2"
         | Scalar -> writer.WriteNumberValue(0)
-        | Array dims -> JsonSerializer.Serialize(dims, options) |> writer.WriteRawValue
+        | Array dims -> writeObject writer options dims
 
 type BExprConverter<'a, 'b>() =
     inherit WriteOnlyConverter<BExpr<'a, 'b>>()
@@ -74,7 +75,8 @@ type ExprConverter<'a, 'b>() =
     override this.Write(writer, value, options) =
         let myWriteOp = writeOp writer options
         match value with
-        | Leaf (Id _) -> writer.WriteStringValue("id")
+        | Leaf (Id x) when (string x) = "" -> writer.WriteStringValue("id")
+        | Leaf (Id x) -> writeObject writer options {| IdOfAgent = x |}
         | Leaf (Const n) -> writer.WriteNumberValue(n)
         | Leaf (Extern x) -> writer.WriteStringValue(string x)
         | Arithm (e1, op, e2) -> myWriteOp (string op) [e1; e2]
@@ -82,21 +84,16 @@ type ExprConverter<'a, 'b>() =
         | Unary(Abs, Leaf (Const n)) -> writer.WriteNumberValue(abs(n))
         | Unary(op, x) -> myWriteOp (string op) [x]
         | Nondet(e1, e2, _) -> myWriteOp "Nondet" [e1; e2]
-        | Ref x -> JsonSerializer.Serialize(x, options) |> writer.WriteRawValue
-        | Count(typ, name, bExpr) ->
-            {| Count = typ; Name = name; Pred = bExpr |}
-            |> fun x -> JsonSerializer.Serialize(x, options) |> writer.WriteRawValue
+        | Ref x -> writeObject writer options x
+        | Count(typ, name, bExpr) -> writeObject writer options {| Count = typ; Name = name; Pred = bExpr |}
         | QB(stringMap, expr) ->
             Map.toSeq stringMap
             |> (Seq.map <| fun (var, (typ, quant)) -> [string quant; typ; var])
-            |> fun s -> {| Quantifiers = s; Pred = expr |}
-            |> fun x -> JsonSerializer.Serialize(x, options) |> writer.WriteRawValue
+            |> fun s -> writeObject writer options {| Quantifiers = s; Pred = expr |}
         | IfElse(bExpr, ifTrue, ifFalse) ->
-            {| IfElse = bExpr; IfTrue = ifTrue; IfFalse = ifFalse |}
-            |> fun x -> JsonSerializer.Serialize(x, options) |> writer.WriteRawValue
+            writeObject writer options {| IfElse = bExpr; IfTrue = ifTrue; IfFalse = ifFalse |}
         | RawCall(name, exprs) ->
-            {| RawCall = name; Terms = exprs |}
-            |> fun x -> JsonSerializer.Serialize(x, options) |> writer.WriteRawValue
+            writeObject writer options {| RawCall = name; Terms = exprs |}
 type ConvertToString<'a>() =
     inherit WriteOnlyConverter<'a>()
     override this.Write(writer, value, _) = writer.WriteStringValue(string value)
