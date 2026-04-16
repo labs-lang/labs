@@ -426,7 +426,7 @@ module SymbolTable =
             | Array s -> $"%i{snd table.M[v.Name]}={v.Name}[%i{List.reduce (*) s}]"
         let dumpSpawn agentName (_start, _end) =
             let iface = table.Agents[agentName].Variables |> List.map dumpVar |> String.concat ";"
-            let lstig = table.Agents[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"
+            let lstig = table.Agents[agentName].LstigVariables table |> Seq.map dumpVar |> String.concat ";"    
             $"{agentName} %i{_start},%i{_end}\n{iface}\n{lstig}"
         
         let dumpPicks agentName =
@@ -434,8 +434,10 @@ module SymbolTable =
             $"{agentName} {picks};"
         
         
-        let s1 = (table.Variables |> Map.filter (fun _ -> isEnvVar) |> Map.values |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";")
-        let s2 = Map.map dumpSpawn table.Spawn |> Map.values |> String.concat ";"
+        let s1 =
+            table.Variables |> Map.filter (fun _ -> isEnvVar) |> Map.values
+            |> Seq.sortBy table.M.IndexOf |> Seq.map dumpVar |> String.concat ";"
+        let s2 = Map.map dumpSpawn table.Spawn |> Map.values |> String.concat "\n"
         let s3 =
             table.Properties
             |> maybeFilterProp prop
@@ -449,7 +451,7 @@ module SymbolTable =
             |> Map.values
             |> String.concat ";"
         
-        let s5 = Map.map (fun k _ -> dumpPicks k) table.Spawn |> Map.values |> String.concat "\n"
+        let s5 = Map.map (fun k _ -> dumpPicks k) table.Spawn |> Map.values |> String.concat ""
         String.concat "\n" [s1; s2; s3; s4; s5]
         
 type SymbolTable with
