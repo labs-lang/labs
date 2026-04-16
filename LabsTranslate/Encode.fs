@@ -139,7 +139,8 @@ let private guards table t =
 let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
     let encodeTransition (t:Transition) =
         let guards = guards table t
-        let assignments = t.Action.Def |> (function Act a -> Some a | _ -> None)
+        let assignments =
+            t.Action.Def |> (function Act a -> Some a | _ -> None)
         
         // LStig Variables that are being updated
         // and therefore should not be queried  
@@ -241,6 +242,7 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
         | Block stmts ->
             let encodes =
                 List.map (fun a -> {t with Action.Def = Act a} |> encodeTransition |> Map.ofList) stmts
+            
             let hd = encodes.Head
             let locals =
                 let liquidVar v =
@@ -273,6 +275,9 @@ let private encodeAgent trKit baseDict goto block sync table (a:AgentTable) =
                 |> Lst
 
             [
+                "aux",
+                    seq { for e in encodes -> match e["aux"] with Lst x -> x | _ -> [] }
+                    |> Seq.concat |> Lst
                 "guards", guards table t |> Seq.map (Str << trKit.AgentGuardTr) |> Lst
                 "locals", locals 
                 "assignments", seq { for e in encodes -> e["assignments"] } |> Lst
@@ -437,8 +442,6 @@ let internal encode encodeTo bound (cli: ParseResults<Arguments>) prop table =
                     let newEnc = encodeAgent trKit baseDict goto block sync x agent
                     newSeen, Seq.append enc [newEnc]
             ) 
-            // Map.values x.Agents
-            // |> Seq.map (encodeAgent trKit baseDict goto block sync x)
             |> snd
             |> Seq.reduce (<??>))
     <?> (encodeMain trKit baseDict noprops prop)
