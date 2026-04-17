@@ -1,13 +1,17 @@
+{%- assign maxtid = MAXCOMPONENTS | minus: 1 -%}
 {%-if labs-%}
 --{%-for l in labs-%}{{l}}{%unless forloop.last%}; {%endunless%}{%-endfor-%}
 {%- endif -%}
 
--- Aux variables
+-- Aux variables (nondet values)
 {%for a in aux%}
 VAR {{a.name}} : integer;
 INVAR {{a.name}} >= {{a.start}};
 INVAR {{a.name}} < {{a.bound}};
-{%endfor%}
+{%-if just-%}{%-for tid in (0..maxtid)-%}{%-for j in (a.start..a.bound)-%}
+{%unless forloop.last%}JUSTICE tid = {{tid}} & {{a.name}} = {{j}};{%endunless%}
+{%-endfor-%}{%-endfor-%}{%-endif-%}
+{% endfor %}
 
 -- Locals
 {%- for a in assignments -%}{% for l in a %}{%- if l.loc == "Local" -%}
@@ -17,7 +21,7 @@ DEFINE {{l.name}} := toint({{l.expr | replace: "==", "="}});
 
 -- Pick-variables
 {%- for l in locals -%}{%- if l.loc contains "Pick" -%}
-VAR {{l.name}} : array 0..{{l.size | minus: 1}} of 0..{{MAXCOMPONENTS | minus: 1}};
+VAR {{l.name}} : array 0..{{l.size | minus: 1}} of {{l.pickFrom}}..{{l.pickTo | minus: 1}};
 
 INVAR (
     {% for i in (1..l.size) -%}
@@ -33,15 +37,19 @@ INVAR (
     {% endunless %}{% endfor -%}{%-endif-%}
 );
 
-{%- assign maxtid = MAXCOMPONENTS | minus: 1 -%}
-{%-if just-%}{%- for i in (1..l.size) -%}{%-for tid in (0..maxtid)-%}{%-for j in (0..maxtid)-%}
+{%-if just-%}{%assign pickMax = l.pickTo | minus: 1%}{%-if l.pickFrom != pickMax-%}
+{%- for i in (1..l.size) -%}{%-for tid in (0..maxtid)-%}{%-for j in (l.pickFrom..pickMax)-%}
+{%- if l.where != "" -%}
+{%-unless j == tid-%}JUSTICE tid = {{tid}} & ({{l.where | replace: "__LABS_link1", tid | replace: "__LABS_link2", j}} -> {{l.name}}[{{i | minus: 1}}] = {{j}});{%-endunless-%}
+{%-else-%}
 {%-unless j == tid-%}JUSTICE tid = {{tid}} & {{l.name}}[{{i | minus: 1}}] = {{j}};{%-endunless-%}
+{%-endif-%}
 
 {% endfor %}
 
 {%endfor%}
 {%endfor%}
-{%-endif-%}
+{%-endif-%}{%-endif-%}
 
 {%-endif-%}{%- endfor -%}
 
