@@ -55,7 +55,7 @@ let (|-) (entry: EntryCond) (exit: ExitCond) =
     Map.toSeq entry
     |> Seq.forall (fun (pc, v) ->
         match exit.TryFind pc with
-        | Some s -> Set.contains v s || (Set.contains -1 s && v <> 0)
+        | Some s -> Set.contains v s || Set.contains -1 s && v <> 0
         | None -> true)
 
 module ExecPoint =
@@ -63,7 +63,7 @@ module ExecPoint =
 
     let freshpc k v =
         match Map.tryFind k v with
-        | Some x -> let x' = x + 1 in (Map.add k x' v), x'
+        | Some x -> let x' = x + 1 in Map.add k x' v, x'
         | None -> Map.add k 1 v, 1
 
     let newpc n v =
@@ -88,7 +88,7 @@ let rec removeNames (procs: Map<string, Process<_>>) lts =
                         fun x ->
                             match x.Def with
                             | Name _ -> x
-                            | _ -> (Process.tag pos.StreamName) x
+                            | _ -> Process.tag pos.StreamName x
                 )
 
             let nestedNames =
@@ -125,8 +125,8 @@ let rec removeNames (procs: Map<string, Process<_>>) lts =
         lts
         |> Set.filter (fun tr ->
             actions.Contains tr.Action
-            || (Set.exists (fun i -> i.Def = tr.Action.Def) actions
-                && tr.Action.Pos.StreamName.Contains($"{name}@{pos}")))
+            || Set.exists (fun i -> i.Def = tr.Action.Def) actions
+               && tr.Action.Pos.StreamName.Contains $"{name}@{pos}")
         |> Set.map (fun t -> t.Entry)
         |> ExitCond.ofEntryConds
         .>>. recurseEntry
@@ -145,7 +145,9 @@ let rec removeNames (procs: Map<string, Process<_>>) lts =
 
         let tmpResult =
             affected
-            |> Set.map (fun t -> { t with Exit = (ExitCond.remove tr.Entry t.Exit) >>. exit })
+            |> Set.map (fun t ->
+                { t with
+                    Exit = ExitCond.remove tr.Entry t.Exit >>. exit })
             |> Set.union others
 
         let affectedAtIf, othersAtIt =
@@ -153,7 +155,7 @@ let rec removeNames (procs: Map<string, Process<_>>) lts =
             |> Set.remove tr
             |> Set.partition (fun t ->
                 t.If
-                |> Option.map (fun cond -> tr.Entry |- (snd cond))
+                |> Option.map (fun cond -> tr.Entry |- snd cond)
                 |> Option.defaultValue false
                 |> (&&) (t.Siblings.IsEmpty || t.Last))
 
@@ -185,7 +187,7 @@ let makeTransitions (state: Accumulator) proc =
     let baseFn (lts, acc) b =
         let k, v, parent, exit = acc
         let v', vk = ExecPoint.freshpc k v
-        let entry = (Map.add k vk parent)
+        let entry = Map.add k vk parent
         (* If b is an initial action of procs, add its entry condition to initCond *)
         initCond <-
             initCond
@@ -195,16 +197,16 @@ let makeTransitions (state: Accumulator) proc =
                      Map.empty
 
         let lts' =
-            (Set.add
+            Set.add
                 { Entry = entry
                   Exit = exit
                   Action = b
                   If = None
                   Siblings = Set.empty
-                  Last = false })
+                  Last = false }
                 lts
 
-        lts', (setl _2 v' acc)
+        lts', setl _2 v' acc
 
     let fatguardFn recurse (lts, acc) def =
         let _, _, _, exit = acc
@@ -221,7 +223,7 @@ let makeTransitions (state: Accumulator) proc =
                 else
                     tr)
 
-        (Set.union lts lts'', acc')
+        Set.union lts lts'', acc'
 
     let rec compFn typ recurse (lts, acc) l =
         match typ with
@@ -238,7 +240,7 @@ let makeTransitions (state: Accumulator) proc =
 
             match l with
             | []
-            | [ _ ] -> (Set.union lts lts', acc'')
+            | [ _ ] -> Set.union lts lts', acc''
             (* recurse on l without its last element*)
             | _ -> compFn Seq recurse (Set.union lts lts', acc'') ((List.rev << List.tail << List.rev) l)
         | Choice ->

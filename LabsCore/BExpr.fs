@@ -1,4 +1,5 @@
 module LabsCore.BExpr
+
 open FSharpPlus.Operators
 open ExprTypes
 
@@ -15,16 +16,19 @@ let rec canonical bexpr =
 
 let rec map fleaf fexpr bexpr =
     let recurse = map fleaf fexpr
+
     match bexpr with
     | BLeaf b -> fleaf b
     | Neg b -> Neg(recurse b)
     | Compound(op, b) -> Compound(op, List.map recurse b)
     | Compare(e1, op, e2) -> Compare(fexpr e1, op, fexpr e2)
     | ForEach(var, arr, b) -> ForEach(fexpr var, fexpr arr, recurse b)
-let rec cata fleaf fneg fcompare fcompound fforeach bexpr = 
+
+let rec cata fleaf fneg fcompare fcompound fforeach bexpr =
     let recurse = cata fleaf fneg fcompare fcompound fforeach
+
     match bexpr with
-    | BLeaf b -> fleaf b 
+    | BLeaf b -> fleaf b
     | Neg b -> fneg (recurse b)
     | Compare(e1, op, e2) -> fcompare e1 op e2
     | Compound(op, b) -> fcompound op (List.map recurse b)
@@ -34,59 +38,76 @@ let rec cata fleaf fneg fcompare fcompound fforeach bexpr =
 let rec simplify bexpr =
     let equalConsts e1 e2 =
         match e1, e2 with
-        | Leaf (Const x), Leaf (Const y) -> x = y
-        | Leaf (Id x), Leaf (Id y) -> x = y
+        | Leaf(Const x), Leaf(Const y) -> x = y
+        | Leaf(Id x), Leaf(Id y) -> x = y
         | _ -> false
+
     let compareFn e1 op e2 =
         match op, e1, e2 with
-        | Equal, Leaf (Const _), Leaf (Const _)
-        | Equal, Leaf (Id _), Leaf (Id _) ->
+        | Equal, Leaf(Const _), Leaf(Const _)
+        | Equal, Leaf(Id _), Leaf(Id _) ->
             let x = (equalConsts e1 e2)
             BLeaf x
-        | Neq, Leaf (Const _), Leaf (Const _)
-        | Neq, Leaf (Id _), Leaf (Id _) ->
+        | Neq, Leaf(Const _), Leaf(Const _)
+        | Neq, Leaf(Id _), Leaf(Id _) ->
             let x = not (equalConsts e1 e2)
             BLeaf x
-        | Equal, _, _ when (equal e1 e2) ->
-            BLeaf true
-        | Neq, _, _ when (equal e1 e2) ->
-            BLeaf false
+        | Equal, _, _ when equal e1 e2 -> BLeaf true
+        | Neq, _, _ when equal e1 e2 -> BLeaf false
         | _ -> Compare(e1, op, e2)
+
     let compoundFn op ls =
         let lsSimpl = List.map simplify ls
         // Flatten nested Compound nodes
         // e.g. (Conj b1 (Conj b2 b3)) becomes (Conj b1 b2 b3)
-        let sameOp, others = List.partition (function | Compound(o, _) when o=op -> true | _ -> false) lsSimpl 
+        let sameOp, others =
+            List.partition
+                (function
+                | Compound(o, _) when o = op -> true
+                | _ -> false)
+                lsSimpl
+
         sameOp
-        |> List.collect (function Compound(_, l) -> l | _ -> [])
+        |> List.collect (function
+            | Compound(_, l) -> l
+            | _ -> [])
         |> List.append others
         |> List.distinctBy canonical // Remove duplicate predicates
         |> fun l -> if l.IsEmpty then BLeaf true else Compound(op, l)
-        
-    /// Propagates boolean constants within bexpr. 
+
+    /// Propagates boolean constants within bexpr.
     let constPropagation bexpr =
-        let isTrue = function BLeaf true -> true | _ -> false
-        let isFalse = function BLeaf false -> true | _ -> false
+        let isTrue =
+            function
+            | BLeaf true -> true
+            | _ -> false
+
+        let isFalse =
+            function
+            | BLeaf false -> true
+            | _ -> false
 
         let compoundFn op ls =
             match op with
             | Disj ->
-                // (true | bexpr) -> true 
-                if List.exists isTrue ls
-                then BLeaf true
+                // (true | bexpr) -> true
+                if List.exists isTrue ls then
+                    BLeaf true
                 else
-                    // (false | bexpr) -> bexpr 
+                    // (false | bexpr) -> bexpr
                     let ls1 = List.filter (not << isFalse) ls
-                    if ls1.IsEmpty then BLeaf false else  Compound(Disj, ls1)
+                    if ls1.IsEmpty then BLeaf false else Compound(Disj, ls1)
             | Conj ->
                 // (false & bexpr) -> false
-                if List.exists isFalse ls
-                then BLeaf false
-                else 
+                if List.exists isFalse ls then
+                    BLeaf false
+                else
                     // (true & bexpr) -> bexpr
-                    List.filter (not << isTrue) ls 
+                    List.filter (not << isTrue) ls
                     |> fun l -> if l.IsEmpty then BLeaf true else Compound(Conj, l)
+
         cata BLeaf Neg (curryN Compare) compoundFn (curryN ForEach) bexpr
 
-    bexpr |> cata BLeaf Neg compareFn compoundFn (curryN ForEach) |> constPropagation
-
+    bexpr
+    |> cata BLeaf Neg compareFn compoundFn (curryN ForEach)
+    |> constPropagation

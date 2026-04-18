@@ -1,13 +1,14 @@
 ﻿module internal LabsTranslate.ArgParse
+
 open Argu
 open Frontend.Message
 open TranslationKit
 
 type Arguments =
-    | [<Mandatory>] [<Unique>] File of path:string
+    | [<Mandatory; Unique>] File of path: string
     | [<Unique>] Values of string list
     // Emulation program parameters
-    | [<Mandatory>] [<Unique>] Bound of int
+    | [<Mandatory; Unique>] Bound of int
     | [<Unique>] Enc of EncodeTo
     | [<Unique>] Fair of Fairness
     | Simulation
@@ -25,6 +26,7 @@ type Arguments =
     | [<Unique>] C_Assert_Fn of string
     | [<Unique>] C_Assume_Fn of string
     | [<Unique>] C_Nondet_Fn of string
+
     interface IArgParserTemplate with
         member s.Usage =
             match s with
@@ -52,16 +54,17 @@ let parseCLI argv =
     try
         argParser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
     with e ->
-        raise (LabsException {What = CLI e.Message; Where=[]})
+        raise (LabsException { What = CLI e.Message; Where = [] })
 
-let getExterns (args:ParseResults<_>) = 
-    let parseValues (vals:string list) =
+let getExterns (args: ParseResults<_>) =
+    let parseValues (vals: string list) =
         vals
         |> Seq.map (fun x -> x.Split "=")
         |> Seq.filter (fun a -> Array.length a = 2)
-        |> Seq.map (fun a -> (a[0], a[1]))
+        |> Seq.map (fun a -> a[0], a[1])
         |> Map.ofSeq
+
     try
-        args.PostProcessResult (<@ Values @>, parseValues)
-    with 
-        e -> Map.empty
+        args.PostProcessResult(<@ Values @>, parseValues)
+    with e ->
+        Map.empty

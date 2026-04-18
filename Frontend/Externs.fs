@@ -1,46 +1,66 @@
 module Frontend.Externs
+
 open LabsCore.ExprTypes
 open LabsCore.Grammar
 open Message
 
 module ExprExterns =
     /// Replaces external parameters with their values.
-    let replaceExterns (externs:Map<_,_>) expr =
-        let leafFn = function
+    let replaceExterns (externs: Map<_, _>) expr =
+        let leafFn =
+            function
             | Id x -> Id x
             | Extern s ->
                 match externs.TryFind s with
                 | Some i -> Const i
-                | None -> raise (LabsException {What=NoValueForExtern s; Where=[]})
+                | None ->
+                    raise (
+                        LabsException
+                            { What = NoValueForExtern s
+                              Where = [] }
+                    )
             | Const x -> Const x
-            
-        LabsCore.Expr.map leafFn (fun r o of_ -> {r with Offset=o; OfAgent=of_}) expr
-        
+
+        LabsCore.Expr.map leafFn (fun r o of_ -> { r with Offset = o; OfAgent = of_ }) expr
+
 module BExprExterns =
     /// Replaces external parameters with their values.
-    let replaceExterns externs = LabsCore.BExpr.map BLeaf (ExprExterns.replaceExterns externs)
+    let replaceExterns externs =
+        LabsCore.BExpr.map BLeaf (ExprExterns.replaceExterns externs)
 
 module VarExterns =
     /// Replaces external parameters with their values.
     let replaceExterns externs v =
         let replace = ExprExterns.replaceExterns externs
+
         let vartype' =
             match v.Vartype with
-            | Array e -> Array (List.map replace e)
-            | Scalar -> Scalar | C1Ref -> C1Ref | C2Ref -> C2Ref
-        {v with Vartype=vartype'}
+            | Array e -> Array(List.map replace e)
+            | Scalar -> Scalar
+            | C1Ref -> C1Ref
+            | C2Ref -> C2Ref
+
+        { v with Vartype = vartype' }
 
 module ProcessExterns =
     /// Replaces external parameters with their values.
     let replaceExterns externs =
         let baseFn b =
             let doUpdate (r, expr) =
-                {r with Offset=Option.map (List.map (ExprExterns.replaceExterns externs)) r.Offset}, ExprExterns.replaceExterns externs expr
-            let doAction a = {a with Updates = List.map doUpdate a.Updates}
+                { r with
+                    Offset = Option.map (List.map (ExprExterns.replaceExterns externs)) r.Offset },
+                ExprExterns.replaceExterns externs expr
+
+            let doAction a =
+                { a with
+                    Updates = List.map doUpdate a.Updates }
+
             match b.Def with
-            | Act a ->
-                BaseProcess {b with Def=doAction a |> Act}
+            | Act a -> BaseProcess { b with Def = doAction a |> Act }
             | Block stmts ->
-                BaseProcess {b with Def=List.map doAction stmts |> Block}
+                BaseProcess
+                    { b with
+                        Def = List.map doAction stmts |> Block }
             | _ -> BaseProcess b
+
         LabsCore.Process.map baseFn (BExprExterns.replaceExterns externs)

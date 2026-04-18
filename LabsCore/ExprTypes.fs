@@ -1,20 +1,34 @@
 ﻿module LabsCore.ExprTypes
+
 open Tokens
 open FParsec
 
 
 type ArithmOp =
-    | Plus | Minus
-    | Times | Div | RoundDiv | Mod
-    | Min | Max
-    override this.ToString() = 
-        match this with
-        | Plus -> tPLUS | Minus -> tMINUS
-        | Times -> tMUL | Div -> tDIV | RoundDiv -> tROUNDDIV | Mod -> tMOD
-        | Min -> tMIN | Max -> tMAX
+    | Plus
+    | Minus
+    | Times
+    | Div
+    | RoundDiv
+    | Mod
+    | Min
+    | Max
 
-type UnaryOp = 
-    | Abs | UnaryMinus
+    override this.ToString() =
+        match this with
+        | Plus -> tPLUS
+        | Minus -> tMINUS
+        | Times -> tMUL
+        | Div -> tDIV
+        | RoundDiv -> tROUNDDIV
+        | Mod -> tMOD
+        | Min -> tMIN
+        | Max -> tMAX
+
+type UnaryOp =
+    | Abs
+    | UnaryMinus
+
     override this.ToString() =
         match this with
         | Abs -> tABS
@@ -24,16 +38,21 @@ type UnaryOp =
 type Quantifier =
     | All
     | Exists
-    override this.ToString() = match this with All -> "forall" | Exists -> "exists"
 
-type CmpOp = 
+    override this.ToString() =
+        match this with
+        | All -> "forall"
+        | Exists -> "exists"
+
+type CmpOp =
     | Equal
     | Greater
     | Less
     | Leq
     | Geq
     | Neq
-    override this.ToString() = 
+
+    override this.ToString() =
         match this with
         | Less -> "<"
         | Equal -> "=="
@@ -45,51 +64,76 @@ type CmpOp =
 type Bop =
     | Conj
     | Disj
-    override this.ToString() = 
-        match this with Conj -> tCONJ | Disj -> tDISJ
+
+    override this.ToString() =
+        match this with
+        | Conj -> tCONJ
+        | Disj -> tDISJ
 
 type LeafExpr<'b> =
     | Id of 'b
     | Const of int
     | Extern of string
-    override this.ToString() = 
+
+    override this.ToString() =
         match this with
         | Id x -> if string x <> "" then $"{tID} of {x}" else tID
-        | Const v -> string v 
+        | Const v -> string v
         | Extern s -> "_" + s
+
 type Expr<'a, 'b> =
-    | QB of Map<string, string*Quantifier> * BExpr<'a, 'b>
+    | QB of Map<string, string * Quantifier> * BExpr<'a, 'b>
     | Count of string * string * BExpr<'a, 'b>
     | Leaf of LeafExpr<'b>
     | Nondet of Expr<'a, 'b> * Expr<'a, 'b> * Position
     | Ref of Ref<'a, 'b>
     | Unary of UnaryOp * Expr<'a, 'b>
     | Arithm of Expr<'a, 'b> * ArithmOp * Expr<'a, 'b>
-    | IfElse of Cond:BExpr<'a, 'b> * IfTrue:Expr<'a, 'b> * IfFalse:Expr<'a, 'b> 
-    | RawCall of Name:string * Args:Expr<'a, 'b> list
-    override this.ToString() = 
+    | IfElse of Cond: BExpr<'a, 'b> * IfTrue: Expr<'a, 'b> * IfFalse: Expr<'a, 'b>
+    | RawCall of Name: string * Args: Expr<'a, 'b> list
+
+    override this.ToString() =
         match this with
-        | QB (quants, pred) ->
+        | QB(quants, pred) ->
             let qs = quants |> Map.values |> Seq.map string |> String.concat ", "
             $"{qs}, {string pred}"
-        | Count (typ, name, bexpr) -> $"{tCOUNT} {typ} {name}, {bexpr}"
+        | Count(typ, name, bexpr) -> $"{tCOUNT} {typ} {name}, {bexpr}"
         | Leaf l -> string l
-        | Nondet (start, bound, _) -> $"[{start}..{bound}]"
+        | Nondet(start, bound, _) -> $"[{start}..{bound}]"
         | Ref r -> string r
-        | Unary(op, e) -> 
-            let s = match op with Abs -> tABS | UnaryMinus -> tMINUS in $"%s{s}({e})"
-        | RawCall (name, args) -> $"""@{name}({args |> List.map string |> String.concat ", "})"""
-        | IfElse (cond, iftrue, iffalse) -> $"if ({cond}) then ({iftrue}) else ({iffalse})"
+        | Unary(op, e) ->
+            let s =
+                match op with
+                | Abs -> tABS
+                | UnaryMinus -> tMINUS in
+
+            $"%s{s}({e})"
+        | RawCall(name, args) -> $"""@{name}({args |> List.map string |> String.concat ", "})"""
+        | IfElse(cond, iftrue, iffalse) -> $"if ({cond}) then ({iftrue}) else ({iffalse})"
         | Arithm(e1, op, e2) ->
             match op with
-            | Min | Max -> $"{op}({e1}, {e2})" 
+            | Min
+            | Max -> $"{op}({e1}, {e2})"
             | _ -> $"{e1} {op} {e2}"
-and Ref<'a, 'b> = 
-    {Var:'a; Offset: Expr<'a, 'b> list option; OfAgent: Expr<'a, 'b> option}
+
+and Ref<'a, 'b> =
+    { Var: 'a
+      Offset: Expr<'a, 'b> list option
+      OfAgent: Expr<'a, 'b> option }
+
     override this.ToString() =
         let COMMA = ", "
-        let ofAgent = match this.OfAgent with None -> "" | Some e -> $" of {e}"
-        let offset = match this.Offset with None -> "" | Some e -> $"[{List.map string e |> String.concat COMMA}]" 
+
+        let ofAgent =
+            match this.OfAgent with
+            | None -> ""
+            | Some e -> $" of {e}"
+
+        let offset =
+            match this.Offset with
+            | None -> ""
+            | Some e -> $"[{List.map string e |> String.concat COMMA}]"
+
         $"%O{this.Var}{offset}{ofAgent}"
 
 
@@ -100,9 +144,11 @@ and BExpr<'a, 'b> =
     | Neg of BExpr<'a, 'b>
     | Compound of Bop * BExpr<'a, 'b> list
     | ForEach of Expr<'a, 'b> * Expr<'a, 'b> * BExpr<'a, 'b>
+
     override this.ToString() =
         match this with
-        | BLeaf true -> tTRUE | BLeaf false -> tFALSE
+        | BLeaf true -> tTRUE
+        | BLeaf false -> tFALSE
         | Neg b -> $"%s{tNEG}({b})"
         | Compare(e1, op, e2) -> $"({e1}) {op} ({e2})"
         | Compound(op, b) -> List.map (sprintf "%O") b |> String.concat $" {op} "
@@ -117,23 +163,22 @@ let rec equal e1 e2 =
         | Id i, Id j -> i = j
         | Extern e1, Extern e2 -> e1 = e2
         | _ -> false
-    | Arithm(e11, op1, e12), Arithm(e21, op2, e22) when op1 = op2 ->
-        (equal e11 e21) && (equal e12 e22)
+    | Arithm(e11, op1, e12), Arithm(e21, op2, e22) when op1 = op2 -> (equal e11 e21) && (equal e12 e22)
     | Unary(o1, e1_), Unary(o2, e2_) when o1 = o2 -> equal e1_ e2_
     | Ref r1, Ref r2 when r1.Var = r2.Var ->
         match r1.Offset, r2.Offset, r1.OfAgent, r2.OfAgent with
         | Some o1, Some o2, Some of1, Some of2 ->
-            if o1.Length <> o2.Length then false
+            if o1.Length <> o2.Length then
+                false
             else
                 List.zip o1 o2
-                |> List.map (fun (x, y) -> equal x y) 
-                |> List.reduce (&&) 
-                |> fun x -> x && (equal of1 of2) 
+                |> List.map (fun (x, y) -> equal x y)
+                |> List.reduce (&&)
+                |> fun x -> x && equal of1 of2
         | None, None, None, None -> true
         | _ -> false
     | RawCall(n1, a1), RawCall(n2, a2) ->
-        n1 = n2 &&
-        a1.Length = a2.Length &&
-        List.zip a1 a2 |> List.forall (fun (x1, x2) -> equal x1 x2)
-    | _ -> false    
-        
+        n1 = n2
+        && a1.Length = a2.Length
+        && List.zip a1 a2 |> List.forall (fun (x1, x2) -> equal x1 x2)
+    | _ -> false

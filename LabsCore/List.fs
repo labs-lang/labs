@@ -1,7 +1,7 @@
 ﻿module List
 
 /// Returns a list of duplicates according to function fn.
-let duplicatesBy fn lst = 
+let duplicatesBy fn lst =
     lst
     |> List.groupBy fn
     |> List.filter (fun (_, y) -> y.Length > 1)
@@ -20,10 +20,9 @@ let duplicates lst = duplicatesBy id lst
 // [2; 4; 6]; [1; 4; 6]]
 let rec cartesian lstlst =
     match lstlst with
-    | [ h ] ->
-        List.fold (fun acc elem -> [elem]::acc) [] h
-    | h::t ->
-        List.fold (fun cacc celem ->
-            (List.fold (fun acc elem -> (elem::celem)::acc) [] h) @ cacc
-            ) [] (cartesian t)
+    | [ h ] -> List.fold (fun acc elem -> [ elem ] :: acc) [] h
+    | h :: t ->
+        List.fold (
+            fun cacc celem ->
+                List.fold (fun acc elem -> (elem :: celem) :: acc) [] h @ cacc) [] (cartesian t)
     | _ -> []
