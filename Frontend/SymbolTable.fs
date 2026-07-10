@@ -226,6 +226,22 @@ module SymbolTable =
           OfAgent = of_ }
 
     let private toVarExpr f e = Expr.map id (toVarRef f) e
+
+    let private foreachBindings bexpr =
+        let rec collect bexpr =
+            match bexpr with
+            | ForEach(var, _, body) ->
+                let bound =
+                    getRefs var
+                    |> Set.map (fun v -> string v.Var, (0, Local))
+                    |> Map.ofSeq
+
+                Map.union bound (collect body)
+            | Compound(_, bexprs) -> List.map collect bexprs |> List.fold (Map.union) Map.empty
+            | _ -> Map.empty
+
+        collect bexpr
+
     let internal toVarBExpr f b = BExpr.map BLeaf (toVarExpr f) b
 
 
@@ -346,7 +362,8 @@ module SymbolTable =
             |> BaseProcess
 
         let fs locals = findString locals table
-        Process.map (toVarBase fs) (toVarBExpr (fs Map.empty)) proc
+        let toVarBExprForeach b = toVarBExpr (fs (foreachBindings b)) b
+        Process.map (toVarBase fs) toVarBExprForeach proc
 
     let private handleProcessNode externs table p =
         map
@@ -382,19 +399,87 @@ module SymbolTable =
         Process.fold baseFn guardFn (fun _ acc _ -> acc) compFn (Set.empty, Map.empty) proc
         |> snd
 
+    let expandForEach extractVar (table: Mapping) bexpr =
+        match bexpr with
+        | ForEach(var, arr, bExpr) ->
+            let arrRef =
+                match arr with
+                | Ref r -> r
+                | _ -> failwith $"Unexpected var {arr} in {tFOREACH}"
+
+            let arrVar = extractVar arrRef.Var
+
+            let dims =
+                match arrVar.Vartype with
+                | Array l -> l
+                | _ -> failwith $"Scalar {arr} used as Array"
+
+            let indexes =
+                dims
+                |> List.map (fun i -> [ 0 .. i - 1 ] |> List.map (Const >> Leaf))
+                |> List.cartesian
+                |> List.sort
+
+            let refFn newOffset v off ofa =
+                let varRef =
+                    match var with
+                    | Ref r -> extractVar r.Var
+                    | _ -> failwith $"Unexpected var {var} in {tFOREACH}"
+
+                let vref = extractVar v
+
+                if vref.Name = varRef.Name then
+                    Ref
+                        { Var = arrRef.Var
+                          Offset = newOffset
+                          OfAgent = ofa }
+                else
+                    Ref { Var = v; Offset = off; OfAgent = ofa }
+
+            let rec fexpr newOffset exp =
+                cata
+                    Leaf
+                    (fun op e1 e2 -> Arithm(e1, op, e2))
+                    (curry Unary)
+                    (curryN Nondet)
+                    (refFn newOffset)
+                    (curry RawCall)
+                    (fun c t f -> IfElse(fbexpr newOffset c, t, f))
+                    exp
+
+            and fbexpr newOffset bexp = BExpr.map BLeaf (fexpr newOffset) bexp
+
+            indexes
+            |> List.map (fun i -> fbexpr (Some i) bExpr)
+            |> fun clauses -> Compound(Conj, clauses)
+        | _ -> bexpr
+
+    let private doBExpr externs table bexpr =
+        let boundVar =
+            match bexpr with
+            | ForEach(var, _, _) -> getRefs var |> Set.map (fun v -> fst v.Var, (snd v.Var, Local)) |> Map.ofSeq
+            | _ -> Map.empty
+
+        bexpr
+        |> (BExprExterns.replaceExterns externs
+            >> toVarBExpr (fun (x, y) -> findString boundVar table x, y)
+            >> expandForEach (fst << fst) table.M)
+
     let internal tryAddProcess externs (p: Node<Process<_>>) table =
         let p' = handleProcessNode externs table p
+        let guards = setGuards p'.Def |> Map.mapValues (Set.map (expandForEach fst table.M))
 
         zero
             { table with
                 Processes = Map.add p.Name p'.Def table.Processes
-                Guards = Map.union table.Guards (setGuards p'.Def) }
+                Guards = Map.union table.Guards guards }
 
     let internal tryAddStigmergy externs (s: Node<Stigmergy<string>>) table =
         let link =
             map
                 (BExprExterns.replaceExterns externs
-                 >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y))
+                 >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
+                 >> expandForEach (fst << fst) table.M)
                 s.Def.Link
 
         zero
@@ -444,7 +529,8 @@ module SymbolTable =
                     lts', acc, initCond
                 | Some a -> a.Sts, snd state, a.InitCond
 
-            let guards = Map.union table.Guards (setGuards p'["Behavior"])
+            let guards =
+                Map.union table.Guards (setGuards p'["Behavior"] |> Map.mapValues (Set.map (expandForEach fst table.M)))
 
             let agent =
                 { table.Agents[a.Name] with
@@ -495,69 +581,6 @@ module SymbolTable =
                 SymbolTable.Spawn = makeRanges valid }
             (List.ofSeq warnings)
             (List.ofSeq errors)
-
-    let private doBExpr externs table bexpr =
-        let boundVar =
-            match bexpr with
-            | ForEach(var, _, _) -> getRefs var |> Set.map (fun v -> fst v.Var, (snd v.Var, Local)) |> Map.ofSeq
-            | _ -> Map.empty
-
-        let b =
-            bexpr
-            |> (BExprExterns.replaceExterns externs
-                >> toVarBExpr (fun (x, y) -> findString boundVar table x, y))
-
-        match b with
-        | ForEach(var, arr, bExpr) ->
-            let arrRef =
-                match arr with
-                | Ref r -> r
-                | _ -> failwith $"Unexpected var {arr} in {tFOREACH}"
-
-            let dims =
-                match ((fst << fst) arrRef.Var).Vartype with
-                | Array l -> l
-                | _ -> failwith $"Scalar {arr} used as Array"
-
-            let indexes =
-                dims
-                |> List.map (fun i -> [ 0 .. i - 1 ] |> List.map (Const >> Leaf))
-                |> List.cartesian
-                |> List.sort
-
-            let refFn newOffset v off ofa =
-                let varRef =
-                    match var with
-                    | Ref r -> (fst << fst) r.Var
-                    | _ -> failwith $"Unexpected var {var} in {tFOREACH}"
-
-                let vref = (fst << fst) v
-
-                if vref.Name = varRef.Name then
-                    Ref
-                        { Var = arrRef.Var
-                          Offset = newOffset
-                          OfAgent = ofa }
-                else
-                    Ref { Var = v; Offset = off; OfAgent = ofa }
-
-            let rec fexpr newOffset exp =
-                cata
-                    Leaf
-                    (fun op e1 e2 -> Arithm(e1, op, e2))
-                    (curry Unary)
-                    (curryN Nondet)
-                    (refFn newOffset)
-                    (curry RawCall)
-                    (fun c t f -> IfElse(fbexpr newOffset c, t, f))
-                    exp
-
-            and fbexpr newOffset bexp = BExpr.map BLeaf (fexpr newOffset) bexp
-
-            indexes
-            |> List.map (fun i -> fbexpr (Some i) bExpr)
-            |> fun clauses -> Compound(Conj, clauses)
-        | _ -> b
 
     let doProp fn p =
         let doModality =
@@ -682,5 +705,6 @@ type SymbolTable with
 
     member this.TranslateBExpr(bexpr) =
         (BExprExterns.replaceExterns this.Externs
-         >> SymbolTable.toVarBExpr (fun (x, y) -> SymbolTable.findString Map.empty this x, y))
+         >> SymbolTable.toVarBExpr (fun (x, y) -> SymbolTable.findString Map.empty this x, y)
+         >> SymbolTable.expandForEach (fst << fst) this.M)
             bexpr
