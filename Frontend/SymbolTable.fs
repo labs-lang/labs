@@ -237,7 +237,7 @@ module SymbolTable =
                     |> Map.ofSeq
 
                 Map.union bound (collect body)
-            | Compound(_, bexprs) -> List.map collect bexprs |> List.fold (Map.union) Map.empty
+            | Compound(_, bexprs) -> List.map collect bexprs |> List.fold Map.union Map.empty
             | _ -> Map.empty
 
         collect bexpr
@@ -399,7 +399,7 @@ module SymbolTable =
         Process.fold baseFn guardFn (fun _ acc _ -> acc) compFn (Set.empty, Map.empty) proc
         |> snd
 
-    let expandForEach extractVar (table: Mapping) bexpr =
+    let expandForEach extractVar bexpr =
         match bexpr with
         | ForEach(var, arr, bExpr) ->
             let arrRef =
@@ -463,11 +463,11 @@ module SymbolTable =
         bexpr
         |> (BExprExterns.replaceExterns externs
             >> toVarBExpr (fun (x, y) -> findString boundVar table x, y)
-            >> expandForEach (fst << fst) table.M)
+            >> expandForEach (fst << fst))
 
     let internal tryAddProcess externs (p: Node<Process<_>>) table =
         let p' = handleProcessNode externs table p
-        let guards = setGuards p'.Def |> Map.mapValues (Set.map (expandForEach fst table.M))
+        let guards = setGuards p'.Def |> Map.mapValues (Set.map (expandForEach fst))
 
         zero
             { table with
@@ -479,7 +479,7 @@ module SymbolTable =
             map
                 (BExprExterns.replaceExterns externs
                  >> toVarBExpr (fun (x, y) -> (findString Map.empty) table x, y)
-                 >> expandForEach (fst << fst) table.M)
+                 >> expandForEach (fst << fst))
                 s.Def.Link
 
         zero
@@ -530,7 +530,7 @@ module SymbolTable =
                 | Some a -> a.Sts, snd state, a.InitCond
 
             let guards =
-                Map.union table.Guards (setGuards p'["Behavior"] |> Map.mapValues (Set.map (expandForEach fst table.M)))
+                Map.union table.Guards (setGuards p'["Behavior"] |> Map.mapValues (Set.map (expandForEach fst)))
 
             let agent =
                 { table.Agents[a.Name] with
@@ -706,5 +706,5 @@ type SymbolTable with
     member this.TranslateBExpr(bexpr) =
         (BExprExterns.replaceExterns this.Externs
          >> SymbolTable.toVarBExpr (fun (x, y) -> SymbolTable.findString Map.empty this x, y)
-         >> SymbolTable.expandForEach (fst << fst) this.M)
+         >> SymbolTable.expandForEach (fst << fst))
             bexpr

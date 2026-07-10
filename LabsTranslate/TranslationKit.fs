@@ -81,7 +81,7 @@ let private trref trLocation trLinkId name (v: Var<int>, i: int) offset ofAgent 
 
             let offsets =
                 [ 0 .. dims.Length - 1 ]
-                |> List.map (fun i -> List.reduce (*) <| (1 :: List.rev (dims))[..i])
+                |> List.map (fun i -> List.reduce (*) <| (1 :: List.rev dims)[..i])
                 |> List.rev
                 |> List.map string
 

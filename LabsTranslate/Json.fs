@@ -95,7 +95,7 @@ type ExprConverter<'a, 'b>() =
         | Leaf(Extern x) -> writer.WriteStringValue(string x)
         | Arithm(e1, op, e2) -> myWriteOp (string op) [ e1; e2 ]
         | Unary(UnaryMinus, Leaf(Const n)) -> writer.WriteNumberValue(-n)
-        | Unary(Abs, Leaf(Const n)) -> writer.WriteNumberValue(abs (n))
+        | Unary(Abs, Leaf(Const n)) -> writer.WriteNumberValue(abs n)
         | Unary(op, x) -> myWriteOp (string op) [ x ]
         | Nondet(e1, e2, _) -> myWriteOp "Nondet" [ e1; e2 ]
         | Ref x -> writeObject writer options x

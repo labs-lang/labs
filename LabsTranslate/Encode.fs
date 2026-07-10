@@ -214,7 +214,7 @@ let private encodeAgent trKit baseDict goto block sync table (a: AgentTable) =
               | Some off ->
                   let offsets =
                       [ 0 .. dims.Length - 1 ]
-                      |> List.map (fun i -> List.reduce (*) <| (1 :: List.rev (dims))[..i])
+                      |> List.map (fun i -> List.reduce (*) <| (1 :: List.rev dims)[..i])
                       |> List.rev
                       |> List.map string
 
