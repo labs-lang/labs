@@ -70,9 +70,6 @@ module Outcome =
     /// If x is Ok, it performs a transform with function f().
     let inline (<~~>) x f = x <~> fun _ -> f
 
-    // Implements traverse on the Outcome type.
-    // let traverse (fn: 'a -> Outcome<_>) lst = Result.traverse fn lst
-
     /// <summary>
     /// Applies a function to each element of the collection, threading an
     /// outcome as the accumulator of the computation.

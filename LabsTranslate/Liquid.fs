@@ -18,9 +18,6 @@ and LiquidVal =
 let fs = FileSystems.LocalFileSystem("")
 
 let private internalRender strfun (template: Template) values =
-
-
-
     let rec hashval =
         function
         | Int i -> box i

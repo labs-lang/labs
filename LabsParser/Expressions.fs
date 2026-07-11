@@ -32,17 +32,17 @@ module ParseBExpr =
     let compare op p1 p2 =
         match p1, p2 with
         | E e1, E e2 -> Compare(e1, op, e2) |> B
-        | _ -> failwith "?"
+        | _ -> invalidArg "p1,p2" "expected two expressions"
 
     let arithm op p1 p2 =
         match p1, p2 with
         | E e1, E e2 -> Arithm(e1, op, e2) |> E
-        | _ -> failwith "?"
+        | _ -> invalidArg "p1,p2" "expected two expressions"
 
     let compose op p1 p2 =
         match p1, p2 with
         | B b1, B b2 -> Compound(op, [ b1; b2 ]) |> B
-        | _ -> failwith "?"
+        | _ -> invalidArg "p1,p2" "expected two boolean expressions"
 
     let mapE f =
         function

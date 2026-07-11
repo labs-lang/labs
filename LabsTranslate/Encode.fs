@@ -14,7 +14,8 @@ open Outcome
 open TranslationKit
 open Liquid
 
-let private encodeHeader trKit baseDict noBitvectors bound (table: SymbolTable) =
+let private encodeHeader trKit baseDict noBitvectors bound maxKeys (table: SymbolTable) =
+    let maxkeyE, maxkeyI, maxkeyL = maxKeys
     let stigmergyVarsFromTo groupBy : Map<'a, int * int> =
         table.Variables
         |> Map.filter (fun _ -> isLstigVar)
@@ -62,10 +63,6 @@ let private encodeHeader trKit baseDict noBitvectors bound (table: SymbolTable) 
         |> Seq.max
 
     let maxcomponents = table.Spawn |> Map.values |> Seq.map snd |> Seq.max
-    let maxkeyE = max table.M.NextE 1
-    let maxkeyI = max table.M.NextI 1
-    let maxkeyL = max table.M.NextL 1
-
     let typedefs =
         [ "TYPEOFVALUES", "short"
           "TYPEOFPC", "unsigned char"
@@ -508,7 +505,7 @@ let internal encode encodeTo bound (cli: ParseResults<Arguments>) prop table =
           "cNondet", Str <| cli.GetResult(C_Nondet_Fn, "__CPROVER_nondet") ]
 
     zero table
-    <?> encodeHeader trKit baseDict nobitvector bound
+    <?> encodeHeader trKit baseDict nobitvector bound (maxkeyE, maxkeyI, maxkeyL)
     <?> encodeInit trKit baseDict
     <?> (fun x ->
         ((Set.empty, Seq.empty), Map.values x.Agents)
