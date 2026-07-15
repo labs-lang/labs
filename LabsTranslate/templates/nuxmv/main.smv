@@ -1,6 +1,9 @@
 -- tag deadlocked states
 DEFINE canProceed := (
     TRUE
+    {%-if hasStigmergy-%}
+    hincnt[tid] == 0 & houtcnt[tid] == 0 &
+    {%- endif -%}
     {%-for item in schedule-%}
     {%- if item.guards.size > 0 -%}
     & ({% for pc in item.entry -%}(pc[tid][{{pc.name}}] = {{pc.value}}){% unless forloop.last %} & {% endunless %}{%- endfor -%}{%- if item.siblings.size != 0 -%} &
@@ -11,7 +14,127 @@ DEFINE canProceed := (
     {%-endif-%}{%-endfor-%}
 );
 
-INIT canProceed;
+{%-if hasStigmergy-%}
+{%- assign lrange = (1..MAXKEYL) -%}
+{%- assign tidrange = (0..MAXCOMPONENTS) -%}
+
+-- Forbid interference between a propagate and a confirm in the same step
+VAR trueMeansPropagate : boolean;
+
+DEFINE
+    canStig := hincnt[tid] == 0 | houtcnt[tid] == 0;
+
+    confirm_updates(i) :=
+        (tid != i)
+        & link(tid, i, stig_key)
+        & (timeof(i, stig_key) != timeof(tid, stig_key));
+    confirm_fresh(i) :=
+        confirm_updates(i)
+        & (timeof(i, stig_key) < timeof(tid, stig_key));
+
+    confirm_agent_update(i) :=
+        (confirm_updates(i) -> (
+            -- tid has different data compared to i:
+            -- in any case, i has to propagate
+            next(hout[i][tupleStart[stig_key]])
+            & (confirm_fresh(i) -> (
+                -- tid has fresh data compared to i:
+                -- i stops asking for confirmation and copies the data
+                next(hin[i][tupleStart[stig_key]]) = FALSE
+                & next(ltstamp[i][tupleStart[stig_key]]) = timeof(tid, stig_key)
+                {%- for k in lrange %}
+                & next(lvalue[i][{{k | minus: 1}}]) =
+                    (({{k | minus: 1}} >= tupleStart[stig_key]) & ({{k | minus: 1}} <= tupleEnd[stig_key]))
+                    ? lvalue[tid][{{k | minus: 1}}] : lvalue[i][{{k | minus: 1}}]
+                {%- endfor %}
+             ))
+            -- i has fresh data compared to tid:
+            -- it keeps the current value/tstamp/confirmation 
+            & (!confirm_fresh(i) -> (
+                next(hin[i][tupleStart[stig_key]]) = hin[i][tupleStart[stig_key]]
+                & next(ltstamp[i][tupleStart[stig_key]]) = ltstamp[i][tupleStart[stig_key]]
+                {%- for k in lrange %}
+                & next(lvalue[i][{{k | minus: 1}}]) = lvalue[i][{{k | minus: 1}}]
+                {%- endfor %}
+            ))
+        ))
+        -- either no link, or same timestamp: keep data unchanged
+        & (!confirm_updates(i) -> (
+            next(hout[i][tupleStart[stig_key]]) = hout[i][tupleStart[stig_key]]
+            & next(hin[i][tupleStart[stig_key]]) = hin[i][tupleStart[stig_key]]
+            & next(ltstamp[i][tupleStart[stig_key]]) = ltstamp[i][tupleStart[stig_key]]
+            {%- for k in lrange %}
+            & next(lvalue[i][{{k | minus: 1}}]) = lvalue[i][{{k | minus: 1}}]
+            {%- endfor %}
+        ));
+
+    propagate_agent_update(i) :=
+        -- propagate only acts on fresh data (no non-fresh branch)
+        (confirm_fresh(i) -> (
+            next(hout[i][tupleStart[stig_key]])
+            & next(hin[i][tupleStart[stig_key]]) = FALSE
+            & next(ltstamp[i][tupleStart[stig_key]]) = timeof(tid, stig_key)
+            {%- for k in lrange %}
+            & next(lvalue[i][{{k | minus: 1}}]) =
+                (({{k | minus: 1}} >= tupleStart[stig_key]) & ({{k | minus: 1}} <= tupleEnd[stig_key]))
+                ? lvalue[tid][{{k | minus: 1}}] : lvalue[i][{{k | minus: 1}}]
+            {%- endfor %}
+         ))
+         & (!confirm_fresh(i) -> (
+            next(hout[i][tupleStart[stig_key]]) = hout[i][tupleStart[stig_key]]
+            & next(hin[i][tupleStart[stig_key]]) = hin[i][tupleStart[stig_key]]
+            & next(ltstamp[i][tupleStart[stig_key]]) = ltstamp[i][tupleStart[stig_key]]
+            {%- for k in lrange %}
+            & next(lvalue[i][{{k | minus: 1}}]) = lvalue[i][{{k | minus: 1}}]
+            {%- endfor %}
+         ));
+
+TRANS hin[tid][stig_key] & !trueMeansPropagate -> TRUE
+    -- sender clears hin at the confirmed key
+    & next(hin[prev_tid][tupleStart[stig_key]]) = FALSE
+    -- sender keeps all other hin keys unchanged
+    {%- for k in lrange %}
+    & ({{k | minus: 1}} != tupleStart[stig_key]) -> next(hin[prev_tid][{{k | minus: 1}}]) = hin[tid][{{k | minus: 1}}]
+    {%- endfor %}
+    -- sender keeps hout unchanged at all keys
+    & next(hout[prev_tid][tupleStart[stig_key]]) = hout[tid][tupleStart[stig_key]]
+    {%- for k in lrange %}
+    & ({{k | minus: 1}} != tupleStart[stig_key]) -> next(hout[prev_tid][{{k | minus: 1}}]) = hout[tid][{{k | minus: 1}}]
+    {%- endfor %}
+    -- sender keeps lvalue and ltstamp unchanged
+    {%- for k in lrange %}
+    & next(lvalue[prev_tid][{{k | minus: 1}}]) = lvalue[tid][{{k | minus: 1}}]
+    {%- endfor %}
+    & next(ltstamp[prev_tid][tupleStart[stig_key]]) = ltstamp[tid][tupleStart[stig_key]]
+    {%-for i in tidrange-%}{%-unless forloop.last-%}
+    & tid != {{i}} -> confirm_agent_update({{i}})
+    {%-endunless-%}{%-endfor-%}
+    ;
+
+TRANS hout[tid][stig_key] & trueMeansPropagate -> TRUE
+    -- sender clears hout at the propagated key
+    & next(hout[prev_tid][tupleStart[stig_key]]) = FALSE
+    -- sender keeps all other hout keys unchanged
+    {%- for k in lrange %}
+    & ({{k | minus: 1}} != tupleStart[stig_key]) -> next(hout[prev_tid][{{k | minus: 1}}]) = hout[tid][{{k | minus: 1}}]
+    {%- endfor %}
+    -- sender keeps all hin keys unchanged
+    & next(hin[prev_tid][tupleStart[stig_key]]) = hin[tid][tupleStart[stig_key]]
+    {%- for k in lrange %}
+    & ({{k | minus: 1}} != tupleStart[stig_key]) -> next(hin[prev_tid][{{k | minus: 1}}]) = hin[tid][{{k | minus: 1}}]
+    {%- endfor %}
+    -- sender keeps lvalue and ltstamp unchanged
+    {%- for k in lrange %}
+    & next(lvalue[prev_tid][{{k | minus: 1}}]) = lvalue[tid][{{k | minus: 1}}]
+    {%- endfor %}
+    & next(ltstamp[prev_tid][tupleStart[stig_key]]) = ltstamp[tid][tupleStart[stig_key]]
+    {%-for i in tidrange-%}{%-unless forloop.last-%}
+    & tid != {{i}} -> propagate_agent_update({{i}})
+    {%-endunless-%}{%-endfor-%}
+    ;
+
+{%- endif -%}
+
 TRANS !canProceed -> next(i) = i;
 TRANS !canProceed -> next(pc) = pc;
 {%-if hasEnvironment-%}
@@ -23,5 +146,5 @@ LTLSPEC G ({{item.value}}); -- {{item.name}}
 {%- endfor -%}
 
 {%- for item in finallyasserts -%}
-LTLSPEC (G canProceed) -> F ({{item.value}}); -- {{item.name}}
+LTLSPEC (G (canProceed | canStig)) -> F ({{item.value}}); -- {{item.name}}
 {%- endfor -%}

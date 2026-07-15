@@ -14,9 +14,16 @@ TRANS (
     {%- endfor -%}
 ) -> (
     TRUE
-    {%- for item in assignments -%}
+    -- assignments
+    {%- for item in assignments -%}{% if item.loc != "lstig" -%}
     & next({% if item.loc == "env" -%}e{%- elsif item.loc == "attr"-%}i[prev_tid]{%- endif -%}[{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
-    {%- endfor -%}
+    {%endif%}{%- endfor -%}
+    {%- for item in assignments -%}{% if item.loc == "lstig" -%}
+    & next(lvalue[prev_tid][{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
+    & next(ltstamp[prev_tid][tupleStart[{{item.key}} + {{item.offset}}]]) = now
+    & next(hout[tupleStart[{{item.key}} + {{item.offset}}]])
+    {%endif%}{%- endfor -%}
+
     {%- if hasEnvironment -%}
     -- hold unchanged environment values
     {%- assign erange = (0..MAXKEYE) -%}
@@ -29,6 +36,24 @@ TRANS (
     {%- for i in irange -%}{%- unless forloop.last -%}
     {% unless forloop.last -%}& {%endunless%}((TRUE {%- for item in assignments -%}{%- if item.loc == "attr" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}) -> next(i[prev_tid][{{i}}]) = i[tid][{{i}}])
     {%- endunless -%}{%- endfor -%}
+
+    {%-if hasStigmergy-%}
+    -- hold unchanged stigmergy values/timestamps, update/keep hin
+    {%- assign lrange = (0..MAXKEYL) -%}
+    {% for i in lrange -%}{%- unless forloop.last -%}
+    & ((TRUE {%- for item in assignments -%}{%- if item.loc == "lstig" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}) -> next(lvalue[prev_tid][{{i}}]) = lvalue[tid][{{i}}])
+    & ((TRUE {%- for item in assignments -%}{%- if item.loc == "lstig" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}) -> next(ltstamp[prev_tid][{{i}}]) = ltstamp[tid][{{i}}])
+    & next(hin[tupleStart[{{i}}]]) = {% if qrykeys contains i %}TRUE{%else%}hin[tupleStart[{{i}}]]{%-endif-%}
+    {% endunless %}
+    {%- endfor -%}
+    -- hold unchanged stigmergy timestamps
+    {%- for i in lrange -%}{%- unless forloop.last -%}
+    
+    {%- endunless -%}{%- endfor -%}
+    {%- for k in qrykeys -%}
+    setHin(tid, {{k}});
+    {%- endfor -%}
+    {%- endif -%}
 
     -- exitcond
     {%- for item in exitcond -%}

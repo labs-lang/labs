@@ -13,6 +13,19 @@ JUSTICE tid = {{i}};
 INIT pc[{{i}}][{{ p.name }}] in { {% for val in p.value -%}{{ val }}{% unless forloop.last %}, {% endunless %}{%- endfor %} };
 {%endunless%}{%- endfor -%}{%- endfor -%}{%- endfor -%}
 
+{%-if hasStigmergy-%}
+{%- assign lrange = (0..MAXKEYL) -%}
+{%- for agent in agents -%}{%- assign range = (agent.start..agent.end) -%}
+{%- for i in range -%}{%-unless forloop.last-%}
+INIT ltstamp[{{i}}][k] = 0;
+INIT hincnt[{{i}}] = 0;
+INIT houtcnt[{{i}}] = 0;
+{%- for j in lrange -%}{%-unless forloop.last-%}
+INIT !hin[{{i}}][{{j}}] & !hout[{{i}}][{{j}}];
+{%endunless%}{%-endfor-%}
+{%endunless%}{%-endfor-%}{%-endfor-%}
+{%- endif -%}
+
 --assumes
 {%-for item in assumes-%}
 INIT ({{item.value}}); --{{item.name}}

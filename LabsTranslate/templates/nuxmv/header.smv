@@ -4,29 +4,79 @@ VAR
     prev_tid: 0..{{MAXCOMPONENTS | minus: 1}};
     i: array 0..{{MAXCOMPONENTS | minus: 1}} of array 0..{{MAXKEYI | minus: 1}} of integer;
     pc: array 0..{{MAXCOMPONENTS | minus: 1}} of array 0..{{MAXPC | minus: 1}} of integer;
-    {%- if hasEnvironment -%}
+{%- if hasEnvironment -%}
     e: array 0..{{MAXKEYE | minus: 1}} of integer;
-    {%- endif -%}
+{%- endif -%}
+{%-if hasStigmergy-%}
+    lvalue:  array 0..MAXCOMPONENTS-1 of array 0..MAXKEYL-1 of integer;
+    ltstamp: array 0..MAXCOMPONENTS-1 of array 0..MAXKEYL-1 of integer;
+    hin:     array 0..MAXCOMPONENTS-1 of array 0..MAXKEYL-1 of boolean;
+    hout:    array 0..MAXCOMPONENTS-1 of array 0..MAXKEYL-1 of boolean;
+    hincnt:  array 0..MAXCOMPONENTS-1 of 0..MAXKEYL;
+    houtcnt: array 0..MAXCOMPONENTS-1 of 0..MAXKEYL;
+    now: integer;
+
+    -- Nondeterministic selection of sender and key
+    guessedKey:  0..MAXKEYL-1;
+
+
+INIT now = 0;
+TRANS now = now + 1;
+
+FROZENVAR tupleStart: array 0..MAXKEYL-1 of 0..MAXKEYL-1;
+FROZENVAR tupleEnd: array 0..MAXKEYL-1 of 0..MAXKEYL-1;
+{%- for ts in tupleStart -%}
+INIT tupleStart[{{forloop.index0}}] = {{ts}};
+{%-endfor-%}
+{%- for ts in tupleEnd -%}
+INIT tupleEnd[{{forloop.index0}}] = {{ts}};
+{%-endfor-%}
+{%- endif -%}
 
 DEFINE
     __AGENTS := {{ MAXCOMPONENTS }};
     __MAXTID := __AGENTS - 1;
     __MAXPC := {{ MAXPC }};
     __MAXKEYI := {{ MAXKEYI }};
-    undef_value := -65536;
+
+    {%-if hasStigmergy-%}
+    timeof(a, k) := ltstamp[a][tupleStart[k]];
+
+    -- link predicates
+    link(a1, a2, k) := case
+    {%- for l in links -%}
+    (k >= {{l.start}}) & (k <= {{l.end}}) : {{l.link}};
+    {%-endfor-%}
+    esac;
+    {%- endif -%}
+
 
 -- Keep track of tid in previous step
 TRANS next(prev_tid) = tid;
 -- keep values of idle agents
+-- For sanity, force all elements that are not tupleStart to never change timestamp
 {%- assign maxtid = MAXCOMPONENTS | minus: 1 -%}
 {%- assign range = (0..maxtid) -%}{%- assign irange = (0..MAXKEYI) -%}{%- assign pcrange = (0..MAXPC) -%}
 {%- for t in range -%}
-{%- for j in irange -%}{%-unless forloop.last-%}
+    {%- for j in irange -%}{%-unless forloop.last-%}
 TRANS (tid != {{t}}) -> next(i[{{t}}][{{j}}]) = i[{{t}}][{{j}}];
-{%- endunless -%}{%- endfor -%}
-{%- for j in pcrange -%}{%-unless forloop.last-%}
+    {%- endunless -%}{%- endfor -%}
+    {%- for j in pcrange -%}{%-unless forloop.last-%}
 TRANS (tid != {{t}}) -> next(pc[{{t}}][{{j}}]) = pc[{{t}}][{{j}}];
-{%- endunless -%}{%- endfor -%}
+    {%- endunless -%}{%- endfor -%}
+{%-if hasStigmergy-%}
+TRANS (canProceed & tid != {{t}}) -> next(hincnt[{{t}}]) = hincnt[{{t}}];
+TRANS (canProceed & tid != {{t}}) -> next(houtcnt[{{t}}]) = houtcnt[{{t}}];
+{%- assign lrange = (0..MAXKEYI) -%}
+    {%- for j in lrange -%}{%-unless forloop.last-%}
+TRANS (canProceed & tid != {{t}}) -> next(lvalue[{{t}}][{{j}}]) = lvalue[{{t}}][{{j}}];
+TRANS (canProceed & tid != {{t}}) -> next(ltstamp[{{t}}][{{j}}]) = ltstamp[{{t}}][{{j}}];
+TRANS (canProceed & tid != {{t}}) -> next(hin[{{t}}][{{j}}]) = hin[{{t}}][{{j}}];
+TRANS (canProceed & tid != {{t}}) -> next(hout[{{t}}][{{j}}]) = hout[{{t}}][{{j}}];
+TRANS ({{j}} != tupleStart[{{j}}]) -> next(ltstamp[{{t}}][{{j}}]) = ltstamp[{{t}}][{{j}}];
+    {%- endunless -%}{%- endfor -%}
+
+{%- endif -%}
 {%- endfor -%}
 
 {%- if fair -%}

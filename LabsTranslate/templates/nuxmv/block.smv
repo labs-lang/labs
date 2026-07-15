@@ -63,10 +63,20 @@ TRANS (
 ) -> (
     TRUE
     {%- for a in assignments -%}
-    {%- for item in a -%}{%- if item.loc == "Local" -%}{%-continue-%}{%- elsif item.loc contains "Pick" -%}{%-continue-%}{%-else-%}
-    & next({% if item.loc == "env" -%}e{%- elsif item.loc == "attr"-%}i[prev_tid]{%- endif -%}[{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
+    {%- for item in a -%}
+    {%- if item.loc == "Local" -%}{%-continue-%}{%- elsif item.loc contains "Pick" -%}{%-continue-%}
+    {%- elsif item.loc == "env" -%}
+    & next(e[{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
+    {%- elsif item.loc == "attr" -%}
+    & next(i[prev_tid][{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
+    {%- elsif item.loc == "lstig" -%}
+    & next(lvalue[prev_tid][{{item.key}} + {{item.offset}}]) = toint({{item.expr  | replace: "==", "="}})
+    & next(ltstamp[prev_tid][tupleStart[{{item.key}} + {{item.offset}}]]) = now
+    & next(hout[prev_tid][tupleStart[{{item.key}} + {{item.offset}}]]) = 1 + hout[tid][tupleStart[{{item.key}} + {{item.offset}}]]
     {%-endif-%}{%- endfor -%}{%- endfor -%}
     {%- if hasEnvironment -%}
+    
+
     -- hold unchanged environment values
     {%- assign erange = (0..MAXKEYE) -%}
     {%- for i in erange -%}{%- unless forloop.last -%}
@@ -77,6 +87,27 @@ TRANS (
     {%- assign irange = (0..MAXKEYI) -%}
     {%- for i in irange -%}{%- unless forloop.last -%}
     {% unless forloop.last -%}& {%endunless%}((TRUE {%- for a in assignments -%}{%- for item in a -%}{%- if item.loc == "attr" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}{%- endfor -%}) -> next(i[prev_tid][{{i}}]) = i[tid][{{i}}])
+    {%- endunless -%}{%- endfor -%}
+
+    {%-if hasStigmergy-%}
+    -- hold unchanged stigmergy values
+    {%- assign lrange = (0..MAXKEYL) -%}
+    {%- for i in lrange -%}{%- unless forloop.last -%}
+    & ((TRUE {%- for a in assignments -%}{%for item in a%}{%- if item.loc == "lstig" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}{%- endfor -%}) -> next(lvalue[prev_tid][{{i}}]) = lvalue[tid][{{i}}])
+    {%- endunless -%}{%- endfor -%}
+    -- hold unchanged stigmergy timestamps/hout
+    {%- for i in lrange -%}{%- unless forloop.last -%}
+    & ((TRUE {%- for a in assignments -%}{%for item in a%}{%- if item.loc == "lstig" %} & tupleStart[{{i}}] != tupleStart[{{item.key}} + {{item.offset}}] {%- endif -%}{%- endfor -%}{%- endfor -%}) -> (next(ltstamp[prev_tid][tupleStart[{{i}}]]) = ltstamp[tid][tupleStart[{{i}}]]) & next(hout[prev_tid][tupleStart[{{i}}]]) = hout[tid][tupleStart[{{i}}]]))
+    {%- endunless -%}{%- endfor -%}
+    {%- endif -%}
+
+    -- if a variable is a tuplestart & has been read, update hin, otherwise keep it
+    -- qrykeys: {%- for k in qrykeys %} {{k}} {%endfor%}
+    {%- for i in qrykeys %}
+    & next(hin[prev_tid][tupleStart[{{i}}]]))
+    {%- endfor -%}
+    {%- for i in lrange -%}{%- unless forloop.last -%}
+    & (TRUE {% for j in qrykeys %} & tupleStart[{{i}}] != tupleStart[{{j}}]{%endfor%}) -> next(hin[prev_tid][tupleStart[{{i}}]]) = next(hin[prev_tid][tupleStart[{{i}}]])
     {%- endunless -%}{%- endfor -%}
 
     -- exitcond

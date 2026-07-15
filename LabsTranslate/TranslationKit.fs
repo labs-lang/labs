@@ -578,8 +578,8 @@ module internal NuXmv =
 
             member _.TrLinkId x =
                 match x with
-                | C1 -> "__LABS_link1"
-                | C2 -> "__LABS_link2"
+                | C1 -> "a1"
+                | C2 -> "a2"
 
             member _.TrBExpr trExpr b = trBExprNuXmv trExpr (simplify b)
             member _.TrExpr trRef trId trBExpr e = translate trRef trId trBExpr e
