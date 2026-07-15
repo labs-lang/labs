@@ -14,29 +14,8 @@ open Outcome
 open TranslationKit
 open Liquid
 
-let private encodeHeader trKit baseDict noBitvectors bound maxKeys (table: SymbolTable) =
-    let maxkeyE, maxkeyI, maxkeyL = maxKeys
-    let stigmergyVarsFromTo groupBy : Map<'a, int * int> =
-        table.Variables
-        |> Map.filter (fun _ -> isLstigVar)
-        |> Map.values
-        |> Seq.groupBy groupBy
-        |> Seq.map (fun (n, vars) ->
-            let extrema = Seq.map table.M.RangeOf vars
-            n, ((fst << Seq.minBy fst) extrema, (snd << Seq.maxBy snd) extrema))
-        |> Map.ofSeq
-
-    let tupleStart, tupleEnd, maxTuple = //TODO maybe move to frontend
-        let vars = stigmergyVarsFromTo (fun v -> v.Location) |> Map.values |> Seq.sortBy fst
-
-        let repeat fstOrSnd =
-            Seq.concat
-            << Seq.map (fun pair -> Seq.replicate (snd pair - fst pair + 1) (fstOrSnd pair))
-
-        if Seq.isEmpty vars then
-            seq [ 0 ], seq [ 0 ], 1
-        else
-            repeat fst vars, repeat snd vars, Seq.map (fun (a, b) -> b - a + 1) vars |> Seq.max
+let private encodeHeader trKit baseDict noBitvectors bound maxValues (table: SymbolTable) =
+    let maxkeyE, maxkeyI, maxkeyL, maxtuple, maxpc = maxValues
 
     let getTypedef num nobv =
         let getStandardTypes =
@@ -56,12 +35,6 @@ let private encodeHeader trKit baseDict noBitvectors bound maxKeys (table: Symbo
         else
             $"unsigned __CPROVER_bitvector[%i{bitwidth num}]"
 
-    let maxpc =
-        Map.mapValues (fun (x: AgentTable) -> Map.keys x.InitCond) table.Agents
-        |> Map.values
-        |> Seq.concat
-        |> Seq.max
-
     let maxcomponents = table.Spawn |> Map.values |> Seq.map snd |> Seq.max
     let typedefs =
         [ "TYPEOFVALUES", "short"
@@ -71,33 +44,13 @@ let private encodeHeader trKit baseDict noBitvectors bound maxKeys (table: Symbo
           "TYPEOFKEYEID", getTypedef maxkeyE noBitvectors
           "TYPEOFKEYIID", getTypedef maxkeyI noBitvectors
           "TYPEOFKEYLID", getTypedef maxkeyL noBitvectors ]
-
-    let links =
-        let fromTo =
-            stigmergyVarsFromTo (fun v ->
-                match v.Location with
-                | L(n, _) -> n
-                | _ -> "")
-
-        table.Stigmergies
-        |> Map.map (fun name link ->
-            Dict
-                [ "start", fst fromTo[name] |> Int
-                  "end", snd fromTo[name] |> Int
-                  "link", trKit.LinkTr link |> Str ])
-        |> Map.values
-
-    let values =
-        [ "MAXCOMPONENTS", maxcomponents; "MAXPC", maxpc + 1; "MAXTUPLE", maxTuple ]
-        |> fun x -> x, List.map (fun (name, value) -> $"typeof%s{name}", getTypedef value true |> Str) x
-        |> fun (x, y) -> List.append (List.map (fun (name, value) -> name, Int value) x) y
-
-    [ "typeofBOUND", getTypedef bound true |> Str
-      "typedefs", makeDict Str Str typedefs
-      "links", Lst links
-      "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
-      "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst ]
-    |> List.append values
+    [
+        "typeofBOUND", getTypedef bound true |> Str
+        "typeofMAXTUPLE", getTypedef maxtuple true |> Str
+        "typeofMAXPC", getTypedef maxpc true |> Str
+        "typeofMAXCOMPONENTS", getTypedef maxcomponents true |> Str
+        "typedefs", makeDict Str Str typedefs
+    ]
     |> List.append baseDict
     |> render (parse (trKit.TemplateInfo.Get "header"))
 
@@ -139,7 +92,7 @@ let private funcName t =
 let private guards table t =
     table.Guards.TryFind t.Action |> Option.defaultValue Set.empty
 
-let private encodeAgent trKit baseDict goto block sync table (a: AgentTable) =
+let private encodeAgent trKit baseDict goto block sync table tupleStart (a: AgentTable) =
     let encodeTransition (t: Transition) =
         let guards = guards table t
 
@@ -170,13 +123,26 @@ let private encodeAgent trKit baseDict goto block sync table (a: AgentTable) =
                 cata (fun _ -> Set.empty) id compareFn (fun _ -> Set.unionMany) (fun _ _ ->
                     failwithf $"{tFOREACH} not allowed here")
 
+
+            let lstigTuplesAssignedTo: Set<int> =
+                LStigVarsAssignedTo
+                |> Seq.map snd
+                |> Seq.map (fun x -> List.tryItem x tupleStart)
+                |> Seq.choose id
+                |> Set.ofSeq
+
+
             assignments
+            // Find all stigmergy variables that have been read in this step
             |>> (fun a -> List.map (getLstigVars << snd) a.Updates)
             |>> Set.unionMany
-            |> Option.orElse (Some Set.empty)
             |>> Set.union (guards |> Set.map getLstigVarsBExpr |> Set.unionMany)
-            |>> fun s -> Set.difference s LStigVarsAssignedTo
-            |>> Seq.map (Int << snd)
+            // Map each elemnt to its tupleStart index
+            |>> Set.map (fun x -> List.tryItem (snd x) tupleStart)
+            // Remove indexes of tuples that received some assignment (the whole tuple is fresh)
+            |>> Set.map (fun x -> match x with Some i when Set.contains i lstigTuplesAssignedTo -> None | _ -> x)
+            |>> Seq.choose id
+            |>> Seq.map Int
             |> Option.defaultValue Seq.empty
             |> Lst
 
@@ -266,7 +232,8 @@ let private encodeAgent trKit baseDict goto block sync table (a: AgentTable) =
         |> List.append baseDict
 
     let encoder (t: Transition) =
-        match t.Action.Def with
+        let rec enc = function
+        | Act stmt -> enc <| Block [stmt]
         | Block stmts ->
             let encodes =
                 List.map (fun a -> { t with Action.Def = Act a } |> encodeTransition |> Map.ofList) stmts
@@ -337,6 +304,7 @@ let private encodeAgent trKit baseDict goto block sync table (a: AgentTable) =
             |> Map.toList
             |> render block
         | _ -> encodeTransition t |> render goto
+        enc t.Action.Def
 
     a.Sts |> Set.map encoder |> Seq.reduce (<??>)
 
@@ -474,6 +442,48 @@ let internal encode encodeTo bound (cli: ParseResults<Arguments>) prop table =
     let maxkeyE = max table.M.NextE 1
     let maxkeyI = max table.M.NextI 1
     let maxkeyL = max table.M.NextL 1
+    let stigmergyVarsFromTo groupBy : Map<'a, int * int> =
+        table.Variables
+        |> Map.filter (fun _ -> isLstigVar)
+        |> Map.values
+        |> Seq.groupBy groupBy
+        |> Seq.map (fun (n, vars) ->
+            let extrema = Seq.map table.M.RangeOf vars
+            n, ((fst << Seq.minBy fst) extrema, (snd << Seq.maxBy snd) extrema))
+        |> Map.ofSeq
+
+    let tupleStart, tupleEnd, maxTuple = //TODO maybe move to frontend
+        let vars = stigmergyVarsFromTo (fun v -> v.Location) |> Map.values |> Seq.sortBy fst
+
+        let repeat fstOrSnd =
+            Seq.concat
+            << Seq.map (fun pair -> Seq.replicate (snd pair - fst pair + 1) (fstOrSnd pair))
+
+        if Seq.isEmpty vars then
+            seq [ 0 ], seq [ 0 ], 1
+        else
+            repeat fst vars, repeat snd vars, Seq.map (fun (a, b) -> b - a + 1) vars |> Seq.max
+
+    let links =
+        let fromTo =
+            stigmergyVarsFromTo (fun v ->
+                match v.Location with
+                | L(n, _) -> n
+                | _ -> "")
+
+        table.Stigmergies
+        |> Map.map (fun name link ->
+            Dict
+                [ "start", fst fromTo[name] |> Int
+                  "end", snd fromTo[name] |> Int
+                  "link", trKit.LinkTr link |> Str ])
+        |> Map.values
+
+    let maxpc =
+        Map.mapValues (fun (x: AgentTable) -> Map.keys x.InitCond) table.Agents
+        |> Map.values
+        |> Seq.concat
+        |> Seq.max
 
     let baseDict =
         [
@@ -497,6 +507,12 @@ let internal encode encodeTo bound (cli: ParseResults<Arguments>) prop table =
           "MAXKEYE", Int maxkeyE
           "MAXKEYI", Int maxkeyI
           "MAXKEYL", Int maxkeyL
+          "MAXPC", Int <| maxpc + 1
+          // For stigmergies
+          "tupleStart", tupleStart |> Seq.map (Str << string) |> Lst
+          "tupleEnd", tupleEnd |> Seq.map (Str << string) |> Lst
+          "MAXTUPLE", Int maxTuple
+          "links", Lst links
           // For C programs
           "cOr", Str <| (if nobitwise then "||" else "|")
           "cAnd", Str <| (if nobitwise then "&&" else "&")
@@ -505,7 +521,7 @@ let internal encode encodeTo bound (cli: ParseResults<Arguments>) prop table =
           "cNondet", Str <| cli.GetResult(C_Nondet_Fn, "__CPROVER_nondet") ]
 
     zero table
-    <?> encodeHeader trKit baseDict nobitvector bound (maxkeyE, maxkeyI, maxkeyL)
+    <?> encodeHeader trKit baseDict nobitvector bound (maxkeyE, maxkeyI, maxkeyL, maxTuple, maxpc)
     <?> encodeInit trKit baseDict
     <?> (fun x ->
         ((Set.empty, Seq.empty), Map.values x.Agents)
@@ -519,7 +535,7 @@ let internal encode encodeTo bound (cli: ParseResults<Arguments>) prop table =
                     else
                         Set.add agent.Behavior seen
 
-                let newEnc = encodeAgent trKit baseDict goto block sync x agent
+                let newEnc = encodeAgent trKit baseDict goto block sync x (List.ofSeq tupleStart) agent
                 newSeen, Seq.append enc [ newEnc ])
         |> snd
         |> Seq.reduce (<??>))
