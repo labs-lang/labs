@@ -80,7 +80,9 @@ type BExprConverter<'a, 'b>() =
         | Neg b -> myWriteOp1 "not" [ b ]
         | Compare(e1, op, e2) -> myWriteOp2 (string op) [ e1; e2 ]
         | Compound(bop, bExprs) -> myWriteOp1 (string bop) bExprs
-        | _ -> writer.WriteNullValue()
+        | ForEach _ ->
+            // NOTE: This should never happen. ForEach's are removed in an earlier pass
+            failwith $"Unsupported JSON serialization for: {value}"
 
 type ExprConverter<'a, 'b>() =
     inherit WriteOnlyConverter<Expr<'a, 'b>>()
@@ -127,8 +129,10 @@ let JsonOptions table =
     let options = JsonSerializerOptions()
     options.Converters.Add(BExprConverter<(Var<int> * int) * string option, string>())
     options.Converters.Add(BExprConverter<Var<int> * int, unit>())
+    options.Converters.Add(BExprConverter<(Var<int> * int) * LinkComponent option, LinkComponent>())
     options.Converters.Add(ExprConverter<Var<int> * int, unit>())
     options.Converters.Add(ExprConverter<(Var<int> * int) * string option, string>())
+    options.Converters.Add(ExprConverter<(Var<int> * int) * LinkComponent option, LinkComponent>())
     options.Converters.Add(StmtConverter<Var<int> * int>())
     options.Converters.Add(NodeStmtConverter(table))
     options.Converters.Add(ProcessConverter<Var<int> * int>())
@@ -136,4 +140,5 @@ let JsonOptions table =
     options.Converters.Add(ConvertToString<Modality<Var<int> * int>>())
     options.Converters.Add(ConvertToString<Location>())
     options.Converters.Add(ConvertToString<Quantifier>())
+    options.Converters.Add(ConvertToString<LinkComponent>())
     options
