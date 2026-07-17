@@ -43,7 +43,8 @@ TRANS (
     {% for i in lrange -%}{%- unless forloop.last -%}
     & ((TRUE {%- for item in assignments -%}{%- if item.loc == "lstig" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}) -> next(lvalue[prev_tid][{{i}}]) = lvalue[tid][{{i}}])
     & ((TRUE {%- for item in assignments -%}{%- if item.loc == "lstig" %} & {{i}} != ({{item.key}} + {{item.offset}}) {%- endif -%}{%- endfor -%}) -> next(ltstamp[prev_tid][{{i}}]) = ltstamp[tid][{{i}}])
-    & next(hin[tupleStart[{{i}}]]) = {% if qrykeys contains i %}TRUE{%else%}hin[tupleStart[{{i}}]]{%-endif-%}
+    {%- capture qryFound -%}{%- for q in qrykeys -%}{%- if q == i -%}1{%- endif -%}{%- endfor -%}{%- endcapture -%}
+    & next(hin[tupleStart[{{i}}]]) = {% if qryFound != "" %}TRUE{%else%}hin[tupleStart[{{i}}]]{%-endif-%}
     {% endunless %}
     {%- endfor -%}
     -- hold unchanged stigmergy timestamps

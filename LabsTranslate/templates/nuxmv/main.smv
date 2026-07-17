@@ -128,23 +128,22 @@ TRANS hout[tid][stig_key] & trueMeansPropagate -> TRUE
     & next(lvalue[prev_tid][{{k | minus: 1}}]) = lvalue[tid][{{k | minus: 1}}]
     {%- endfor %}
     & next(ltstamp[prev_tid][tupleStart[stig_key]]) = ltstamp[tid][tupleStart[stig_key]]
-    {%-for i in tidrange-%}{%-unless forloop.last-%}
+    {% for i in tidrange -%}{% unless forloop.last %}
     & tid != {{i}} -> propagate_agent_update({{i}})
-    {%-endunless-%}{%-endfor-%}
+    {%- endunless %}{%-endfor %}
     ;
-
-{%- endif -%}
+{%- endif %}
 
 TRANS !canProceed -> next(i) = i;
 TRANS !canProceed -> next(pc) = pc;
-{%-if hasEnvironment-%}
+{% if hasEnvironment -%}
 TRANS !canProceed -> next(e) = e;
-{%-endif-%}
+{%- endif %}
 
-{%- for item in alwaysasserts -%}
+{% for item in alwaysasserts -%}
 LTLSPEC G ({{item.value}}); -- {{item.name}}
-{%- endfor -%}
+{%- endfor %}
 
-{%- for item in finallyasserts -%}
+{% for item in finallyasserts -%}
 LTLSPEC (G (canProceed | canStig)) -> F ({{item.value}}); -- {{item.name}}
-{%- endfor -%}
+{%- endfor %}

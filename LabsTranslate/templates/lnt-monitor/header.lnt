@@ -11,7 +11,7 @@ module HEADER is
       dest := any Int where ((dest >= start) and (dest < bound))
     end process
 
-    {%- if hasStigmergy -%}
+    {% if hasStigmergy -%}
 
     (* Stigmergy *)
     type Lstig is array [ 0 .. {{ MAXKEYL | minus: 1 }} ] of Int with get, set end type
@@ -160,37 +160,37 @@ module HEADER is
             m[TUPLESTART(key)]:= mkey
         end var
     end function
-    {%- endif -%}
+    {%- endif %}
 
-    {%- if hasEnvironment -%}
+    {% if hasEnvironment -%}
     type Env is array [ 0 .. {{ MAXKEYE | minus : 1 }} ] of Int with get, set end type
 
     process env (in out E:Env, id:ID, key:Int, val:Int) is 
         E[IntToNat(key)] := val
         --action("E", id, key, val)
     end process
-    {%- endif -%}
+    {%- endif %}
 
-    {%- if hasStigmergy -%}
+    {% if hasStigmergy -%}
     type Agent is agent(id: ID, I: Iface, L: Lstig, Zput: Pending, Zqry: Pending, pc:PC) with get, set end type
-    {%- else -%}
+    {% else -%}
     type Agent is agent(id: ID, I: Iface, pc:PC) with get, set end type
-    {%- endif -%}
+    {%- endif %}
     type Agents is array [ 0 .. {{ MAXCOMPONENTS | minus : 1 }} ] of Agent with get, set end type
 
-    {%- if hasEnvironment -%}
-    type Sys is sys(agents: Agents, {%- if hasStigmergy -%}m: Matrix,{%- endif-%} env: Env) with get, set end type
-    {%- else -%}
-    type Sys is sys(agents: Agents{%- if hasStigmergy -%}, m: Matrix{%- endif-%}) with get, set end type
-    {%- endif -%}
+    {% if hasEnvironment -%}
+    type Sys is sys(agents: Agents, {% if hasStigmergy -%}m: Matrix,{%- endif-%} env: Env) with get, set end type
+    {% else -%}
+    type Sys is sys(agents: Agents{% if hasStigmergy -%}, m: Matrix{%- endif-%}) with get, set end type
+    {%- endif %}
 
 
     function emptyAgent: Agent is
-        {%- if hasStigmergy -%}
+        {% if hasStigmergy -%}
         return Agent(ID(0), Iface(0), Lstig(0), Pending(false), Pending(false), PC(0))
-        {%- else -%}
+        {% else -%}
         return Agent(ID(0), Iface(0), PC(0))
-        {%- endif -%}
+        {%- endif %}
     end function
 
     process attr [attrGate: any] (in out a:Agent, key:Nat, val:Int) is 
@@ -202,7 +202,7 @@ module HEADER is
         attrGate(a.id, key, val)
     end process
 
-    {%- if hasStigmergy -%}
+    {% if hasStigmergy -%}
     function incr(x: Nat): Nat is 
         if x < 255 then return x + 1 else return 0 end if
     end function

@@ -128,7 +128,7 @@ process agent [spurious: none, tick: IDchannel, attr{%if hasStigmergy%}, put, qr
         Zqry := remove (key, Zqry)
       end if
     end var
-    {%-endif-%}
+    {%- endif %}
   end select end loop
   end var
 end process

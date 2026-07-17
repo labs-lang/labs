@@ -17,32 +17,32 @@ process INITAGENT[attrGate, l: any] (in out agent:Agent{%-if hasStigmergy-%}, in
         {% if hasStigmergy %}L := agent.L;{%- endif %}
         p := agent.pc;
 
-        {%-assign maxi = MAXKEYI | minus: 1-%}
-        {%-assign maxl = MAXKEYL | minus: 1-%}
-        {%- for agent in agents -%}
+        {%assign maxi = MAXKEYI | minus: 1-%}
+        {%assign maxl = MAXKEYL | minus: 1-%}
+        {% for agent in agents -%}
         {% unless forloop.first %}els{% endunless %}if (Nat(agent.id) >= {{agent.start}}) and (Nat(agent.id) < {{agent.end}}) then
 
-        {%- for p in agent.pcs -%}
-        {%- if p.value.size == 1 -%}
+        {% for p in agent.pcs -%}
+        {% if p.value.size == 1 -%}
         p[{{ p.name }}] := {{ p.value.first }};
-        {%- else -%}
-        x := any Nat where {%- for val in p.value -%} (x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
+        {% else -%}
+        x := any Nat where {% for val in p.value -%} (x == {{ val }}){% unless forloop.last %} or {% endunless %}{% endfor %};
         p[{{ p.name }}] := x;
-        {%- endif -%}{%- endfor -%}
+        {% endif -%}{% endfor -%}
 
-        {%- for i in (0..maxi) -%}
+        {% for i in (0..maxi) -%}
         x := any Int;
-        I[{{ i }}] = x;
-        {%- endfor -%}
-        {%- if hasStigmergy -%}{%-for i in (0..maxl)-%}
+        I[{{ i }}] := x;
+        {% endfor -%}
+        {% if hasStigmergy -%}{% for i in (0..maxl) -%}
         x := any Int;
         L[{{ i }}] := x;
-        l(Nat(agent.id), {{i}} , x);
+        l(Nat(agent.id), ({{i}} of Nat) , x);
         eval refresh(!?m, TUPLESTART({{i}}), Nat(agent.Id));
-        {%-endfor-%}{%- endif -%}
+        {% endfor -%}{% endif -%}
 
         null
-        {%- endfor -%}
+        {% endfor -%}
 
 
         end if;
@@ -51,7 +51,7 @@ process INITAGENT[attrGate, l: any] (in out agent:Agent{%-if hasStigmergy-%}, in
     end var 
 end process
 
-{%- if hasEnvironment -%}
+{% if hasEnvironment -%}
 {%-assign maxe = MAXKEYE | minus: 1-%}
 process INITENV(in out e: Env) is
     var x: Int in 

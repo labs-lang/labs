@@ -6,36 +6,36 @@ process INITAGENT[attr, l, refresh: any] (id:ID, out var I:Iface, out var p:PC{%
         {%if hasStigmergy%}L := Lstig (0);{%endif%}
         {%-assign maxi = MAXKEYI | minus: 1-%}
         {%-assign maxl = MAXKEYL | minus: 1-%}
-        {%- for agent in agents -%}
+        {% for agent in agents -%}
 
         {% if forloop.first %}if{% else %}elsif{% endif %} (Nat(id) >= {{agent.start}}) and (Nat(id) < {{agent.end}}) then
 
-        {%- for p in agent.pcs -%}
-        {%- if p.value.size == 1 -%}
+        {% for p in agent.pcs -%}
+        {% if p.value.size == 1 -%}
         p[{{ p.name }}] := {{ p.value.first }};
-        {%- else -%}
-        x := any Nat where {%- for val in p.value -%} (x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%};
+        {% else -%}
+        x := any Nat where {% for val in p.value -%} (x == {{ val }}){% unless forloop.last %} or {% endunless %}{% endfor %};
         p[{{ p.name }}] := x;
-        {%- endif -%}{%- endfor -%}
+        {% endif -%}{% endfor -%}
         
-        {%- for i in (0..maxi) -%}
+        {% for i in (0..maxi) -%}
         x := any Int;
-        I[{{ i }}] = x;
-        {%- endfor -%}
-        {%- if hasStigmergy -%}{%-for i in (0..maxl)-%}
+        I[{{ i }}] := x;
+        {% endfor -%}
+        {% if hasStigmergy -%}{% for i in (0..maxl) -%}
         x := any Int;
         L[{{ i }}] := x;
-        l(Nat(agent.id), {{i}}, x);
+        l(Nat(agent.id), ({{i}} of Nat), x);
         refresh(id, TUPLESTART({{i}}));
-        {%-endfor-%}{%- endif -%}
+        {% endfor -%}{% endif -%}
 
-        {%- endfor -%}
+        {% endfor -%}
         null        
         end if
     end var 
 end process
 
-{%- if hasEnvironment -%}
+{% if hasEnvironment -%}
 {%-assign maxe = MAXKEYE | minus: 1-%}
 process ENV [getenv, setenv: any] is
     var x: Int, e:ENV, index:Nat in 

@@ -1,14 +1,13 @@
-void init(void) {
-    
+void init(void) {    
     {%-assign maxi = MAXKEYI | minus: 1-%}
     {%-assign maxe = MAXKEYE | minus: 1-%}
-    {%-if hasEnvironment-%}
-    {%- for i in (0..maxe) -%}
+
+    {% if hasEnvironment %}{% for i in (0..maxe) %}
     E[{{ i }}] = nondetInit();
-    {%- endfor -%}
-    {%- endif -%}
-    {%-if hasStigmergy-%}unsigned char j = 0;{%-endif-%}
-    {%- for agent in agents -%}
+    {% endfor %}{% endif %}
+
+    {% if hasStigmergy -%}unsigned char j = 0;{%- endif %}
+    {% for agent in agents -%}
     {%- assign a = agent.end | minus: 1 -%}
     {%- for i in (agent.start..a) -%}
     {%- if hasStigmergy -%}
@@ -34,26 +33,23 @@ void init(void) {
     // ___end concrete-init___
     
     // ___symbolic-init___
-    {%- for agent in agents -%}
+    {% for agent in agents %}
     {%-assign end = agent.end | minus: 1-%}
-    {%- for i in (agent.start..end) -%}
-    {%- for j in (0..maxi) -%}
+    {% for i in (agent.start..end) %}{% for j in (0..maxi) %}
     I[{{ i }}][{{ j }}] = nondetInit();
-    {%- endfor -%}
-    {%- endfor -%}
-    {%- endfor -%}
+    {%- endfor %}
+    {%- endfor %}{% endfor %}
 
-    {%-for item in assumes-%}
+    {%-for item in assumes %}
     {{cAssume}}({{item.value}}); //{{item.name}}
-    {%-endfor-%}
+    {%- endfor %}
     // ___end symbolic-init___
     
-
-    {%- if hasStigmergy -%}
-    {%- for item in tstamps -%}
-    Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();
-    {%- endfor -%}
+    {% if hasStigmergy -%}
+    {% for item in tstamps %}
+    if ({{item.index}} == tupleStart[{{item.index}}]) Ltstamp[{{item.tid}}][tupleStart[{{item.index}}]] = now();
+    {%- endfor %}
     now();
-    {%- endif -%}
+    {% endif %}
 
 }

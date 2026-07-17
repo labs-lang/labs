@@ -15,9 +15,21 @@ void {{label}}(int tid) {
     }
     {%-endif-%}
     
-    {%- include "templates/entry" -%}
+    {%- if siblings.size > 0 %}    {{cAssume}}({%- if last -%}
+{%- for item in siblings -%}(pc[tid][{{ item }}] == 0){% unless forloop.last %} && {% endunless %}{%- endfor -%}
+{%- else -%}
+{%- for item in siblings -%}(pc[tid][{{ item }}] != 0){%- unless forloop.last -%} || {% endunless %}{%- endfor -%}
+{%- endif -%});
+{%- endif -%}
 
-    {%- if assignments -%}{%- for item in assignments -%}
+{%- if hasStigmergy and assignments.size > 0 -%}
+    {{cAssume}}((HoutCnt[tid] == 0) & (HinCnt[tid] == 0));
+{%- endif -%}
+{%- for guard in guards %}
+    {{cAssume}}({{ guard }});
+{%- endfor -%}
+
+    {%- if assignments.size > 0 -%}{%- for item in assignments -%}
     TYPEOFVALUES val{{forloop.index0}} = {{item.expr}};
     {%- if item.size != 0 -%}
     {% if item.loc == "lstig" %}TYPEOFKEYLID{% elsif item.loc == "attr" %}TYPEOFKEYIID{% else %}TYPEOFKEYEID{% endif %} offset{{forloop.index0}} = {{item.offset}};

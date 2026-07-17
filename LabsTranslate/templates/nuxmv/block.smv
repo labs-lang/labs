@@ -1,16 +1,16 @@
 {%- assign maxtid = MAXCOMPONENTS | minus: 1 -%}
-{%-if labs-%}
+{%if labs.size > 0-%}
 --{%-for l in labs-%}{{l}}{%unless forloop.last%}; {%endunless%}{%-endfor-%}
-{%- endif -%}
+{%- endif %}
 
 -- Aux variables (nondet values)
-{%for a in aux%}
+{% for a in aux %}
 VAR {{a.name}} : integer;
 INVAR {{a.name}} >= {{a.start}};
 INVAR {{a.name}} < {{a.bound}};
-{%-if just-%}{%-for tid in (0..maxtid)-%}{%-for j in (a.start..a.bound)-%}
+{% if just -%}{%-for tid in (0..maxtid)-%}{%-for j in (a.start..a.bound)-%}
 {%unless forloop.last%}JUSTICE tid = {{tid}} & {{a.name}} = {{j}};{%endunless%}
-{%-endfor-%}{%-endfor-%}{%-endif-%}
+{%-endfor-%}{%-endfor-%}{%-endif %}
 {% endfor %}
 
 -- Locals
@@ -20,7 +20,7 @@ DEFINE {{l.name}} := toint({{l.expr | replace: "==", "="}});
 
 
 -- Pick-variables
-{%- for l in locals -%}{%- if l.loc contains "Pick" -%}
+{% for l in locals -%}{%- if l.loc contains "Pick" -%}
 VAR {{l.name}} : array 0..{{l.size | minus: 1}} of {{l.pickFrom}}..{{l.pickTo | minus: 1}};
 
 INVAR (

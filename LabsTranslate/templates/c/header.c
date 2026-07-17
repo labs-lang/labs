@@ -1,10 +1,10 @@
-{%-if simulation-%}
+{% if simulation %}
 _Bool __sim_spurious = 0;
 char* format;
 #define __sim_assert(COND, LBL) if (!(COND)) format = ("(SIMULATION) Violation: " LBL)
 #define __sim_satisfied(COND, LBL) if (COND) format = ("(SIMULATION) Satisfied: " LBL)
+{% endif %}
 
-{%-endif-%}
 const char undef_value = -128;
 const _Bool SIMULATION = {%if simulation%}1{%else%}0{%endif%};
 const {{typeofBOUND}} BOUND = {{ bound }};
@@ -69,7 +69,7 @@ const TYPEOFKEYLID tupleEnd[{{ MAXKEYL }}] = { {{ tupleEnd | join: ", " }} };
 
 _Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID key) {
     _Bool __LABS_link = 0;
-    {%- for l in links -%}
+    {% for l in links -%}
         {%- if forloop.first -%}
     if ((key >= {{l.start}}) {{cAnd}} (key <= {{l.end}})){
         {%- else -%}
@@ -77,7 +77,7 @@ _Bool link(TYPEOFAGENTID __LABS_link1, TYPEOFAGENTID __LABS_link2, TYPEOFKEYLID 
         {%- endif -%}
         __LABS_link = {{l.link}};
     }
-    {%- endfor -%}
+    {%- endfor %}
 
     return __LABS_link;
 }
@@ -123,7 +123,7 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
     HoutCnt[id] = HoutCnt[id] - (Hout[id][tupleStart[key]]);
     Hout[id][tupleStart[key]] = 0;
 }
-{%- endif -%}
+{% endif %}
 
 //
 //  Rule ATTR
@@ -131,19 +131,18 @@ void clearHout(TYPEOFAGENTID id, TYPEOFKEYLID key) {
 //  If check is true, transition is guarded by HoutCnt == HinCnt == 0
 //
 void attr(TYPEOFAGENTID id, TYPEOFKEYIID key, TYPEOFVALUES value, _Bool check) {
-    {%- if hasStigmergy -%}
+    {%- if hasStigmergy %}
     {{cAssume}}((!check) {{cOr}} (HoutCnt[id] == 0));
     {{cAssume}}((!check) {{cOr}} (HinCnt[id] == 0));
-    {%- endif -%}
-
+    {% endif %}
 
     I[id][key] = value;
-    {%- if hasStigmergy -%}
+    {% if hasStigmergy -%}
     now(); // local step
-    {%- endif -%}
+    {%- endif %}
 }
 
-{%- if hasEnvironment -%}
+{% if hasEnvironment -%}
 const TYPEOFKEYEID MAXKEYE = {{ MAXKEYE }};
 TYPEOFVALUES E[{{ MAXKEYE }}];
 void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
@@ -157,12 +156,12 @@ void env(TYPEOFAGENTID id, TYPEOFKEYEID key, TYPEOFVALUES value, _Bool check) {
     now(); // local step
     {%- endif -%}
 }
-{%- endif -%}
+{%- endif %}
 
 // ___concrete-globals___
 // ___end concrete-globals___
 
-{%- if hasStigmergy -%}
+{% if hasStigmergy %}
 //
 //  Rule LSTIG
 //
@@ -254,7 +253,7 @@ void propagate(void) {
     }
     clearHout(guessedcomp, guessedkey);
 }
-{%- endif -%}
+{%- endif %}
 
 // ___includes___
 // ___end includes___

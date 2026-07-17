@@ -1,1 +1,33 @@
---WARNING blocks are not supported in LNT yet
+process action{{label}} [attrGate, l: any] (in out agent: Agent{%- if hasStigmergy-%}, in out m: Matrix{%-endif-%}{%-if hasEnvironment-%}, in out E: Env{%- endif -%}) is
+    {%- for l in labs %}{% unless forloop.first %} {% endunless %}--{{ l }}{%- endfor %}
+
+    {%- for stmt in assignments -%}{%- for item in stmt -%}{%- if item.size != 0 -%}
+    {{item.loc}}{% if item.loc == "attr" %}[attrGate]{% elsif item.loc == "lstig" %}[l]{% endif %}(!?{% if item.loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}} + {{item.offset}}, {{item.expr}}{%- if item.loc == "lstig" -%}, !?m{%- endif -%});{%- else -%}
+    {{item.loc}}{% if item.loc == "attr" %}[attrGate]{% elsif item.loc == "lstig" %}[l]{% endif %}(!?{% if item.loc != "env" %}agent{% else %}E, agent.id{% endif %}, {{item.key}}, {{item.expr}}{%- if item.loc == "lstig" -%}, !?m{%- endif -%});
+    {%- endif -%}{%- endfor -%}{%- endfor -%}
+
+    {%- if hasStigmergy and qrykeys.size > 0 -%}
+    var Zqry: Pending in
+        Zqry := agent.Zqry;
+        {%- for stmt in qrykeys -%}{%- for item in stmt -%}
+        Zqry := insert(TUPLESTART({{ item }}), Zqry);
+        {%- endfor -%}{%- endfor -%}
+        agent := agent.{Zqry -> Zqry}
+    end var;
+    {%- endif -%}
+
+    var p: PC in
+        p := agent.pc;
+        
+        {%- for item in exitcond -%}
+        {%- if item.value.size == 1-%}
+        p[{{ item.name }}] := {{ item.value.first }};
+        {%- else -%}
+        var x: Nat in
+            x := any Nat where ({%- for val in item.value -%}(x == {{ val }}){% unless forloop.last %} or {% endunless %}{%- endfor-%});
+            p[{{ item.name }}] := x
+        end var;
+        {%- endif -%}{%- endfor -%}
+        agent := agent.{pc -> p}
+    end var
+end process
